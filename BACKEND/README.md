@@ -272,7 +272,6 @@ BACKEND/
 │   ├── zona_controller.py
 │   ├── estacion_controller.py
 │   ├── categoria_controller.py
-│   ├── prioridad_controller.py
 │   ├── ticket_controller.py
 │   ├── comentario_controller.py
 │   └── notificacion_controller.py
@@ -284,7 +283,6 @@ BACKEND/
 │   ├── zonas.py
 │   ├── estaciones.py
 │   ├── categorias.py
-│   ├── prioridades.py
 │   ├── tickets.py
 │   ├── comentarios.py
 │   └── notificaciones.py
@@ -295,7 +293,7 @@ BACKEND/
 │   ├── zona_dto.py
 │   ├── estacion_dto.py
 │   ├── categoria_dto.py
-│   ├── prioridad_dto.py
+    
 │   ├── ticket_dto.py
 │   ├── comentario_dto.py
 │   └── notificacion_dto.py
@@ -403,10 +401,7 @@ BACKEND/
 - `DELETE /categorias/{id}` - Eliminar categoría
 
 ### Prioridades
-- `GET /prioridades` - Listar prioridades
-- `POST /prioridades` - Crear prioridad
-- `PUT /prioridades/{id}` - Actualizar prioridad
-- `DELETE /prioridades/{id}` - Eliminar prioridad
+Nota: La funcionalidad de prioridades fue eliminada del backend; los endpoints relacionados ya no están disponibles.
 
 ### Tickets
 - `GET /tickets` - Listar tickets

@@ -18,7 +18,6 @@ class Ticket(Base):
     descripcion = Column(Text, nullable=False)
     estado = Column(Enum(EstadoTicket), default=EstadoTicket.PENDIENTE)
     id_categoria = Column(Integer, ForeignKey("categorias.id_categoria"), nullable=False)
-    id_prioridad = Column(Integer, ForeignKey("prioridades.id_prioridad"), nullable=False)
     id_usuario_creador = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
     id_tecnico_asignado = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=True)
     id_estacion = Column(String(20), ForeignKey("estaciones.id_estacion"), nullable=True)
@@ -27,7 +26,7 @@ class Ticket(Base):
     
     # Relaciones
     categoria = relationship("Categoria", back_populates="tickets")
-    prioridad = relationship("Prioridad", back_populates="tickets")
+    # Nota: El modelo 'Prioridad' fue eliminado; ya no existe relación de prioridad.
     usuario_creador = relationship("Usuario", foreign_keys=[id_usuario_creador], back_populates="tickets_creados")
     tecnico_asignado = relationship("Usuario", foreign_keys=[id_tecnico_asignado], back_populates="tickets_asignados")
     estacion = relationship("Estacion", back_populates="tickets")
