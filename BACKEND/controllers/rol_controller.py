@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+
 from db.session import SessionLocal
 from dtos.rol_dto import RolCreate, RolOut, RolUpdate
 from models.roles import Rol
@@ -15,9 +17,22 @@ def get_db():
 
 @router.post("/", response_model=RolOut, status_code=status.HTTP_201_CREATED)
 def crear_rol(rol: RolCreate, db: Session = Depends(get_db)):
+    # Verificar duplicado por nombre
+    existente = db.query(Rol).filter(Rol.nombre_rol == rol.nombre_rol).first()
+    if existente:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El rol ya existe")
+
     db_rol = Rol(**rol.dict())
     db.add(db_rol)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El rol ya existe (constraint)")
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error al crear el rol")
+
     db.refresh(db_rol)
     return db_rol
 
