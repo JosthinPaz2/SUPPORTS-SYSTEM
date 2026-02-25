@@ -9,6 +9,7 @@ function App() {
     <AuthProvider>
       <TicketProvider>
         <BrowserRouter>
+        
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<AdminDashboard />} />
