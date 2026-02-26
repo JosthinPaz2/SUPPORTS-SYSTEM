@@ -6,6 +6,9 @@ import KanbanBoard from '../components/KanbanBoard';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
+  const role = user?.role ?? '';
+  const isIT = role.toLowerCase() === 'it';
+  const isOperador = role.toLowerCase() === 'operador';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -18,7 +21,7 @@ export default function AdminDashboard() {
                 Welcome, {user?.name}
               </h1>
               <p className="text-sm text-gray-600">
-                Administration Panel
+                {isIT ? 'IT Admin Panel' : isOperador ? 'Operator Panel' : 'Dashboard'}
               </p>
             </div>
             <Button variant="outline" onClick={logout}>
