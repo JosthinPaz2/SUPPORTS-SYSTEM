@@ -61,3 +61,12 @@ def on_startup():
     except Exception:
         # No bloquear el arranque si hay problemas con la BD; se mostrará el error en logs
         pass
+
+
+# Si ejecutas el archivo directamente, arranca Uvicorn usando el puerto
+# que asigne la plataforma (variable de entorno PORT).
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
