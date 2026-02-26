@@ -3,6 +3,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrop } from 'react-dnd';
 import { useTickets } from '../context/TicketContext';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
@@ -16,14 +17,15 @@ interface DropZoneProps {
   tickets: Ticket[];
   onDrop: (ticketId: string, newStatus: TicketStatus) => void;
   onTicketClick: (ticket: Ticket) => void;
+  allowDrop: boolean;
 }
 
-function DropZone({ status, tickets, onDrop, onTicketClick }: DropZoneProps) {
+function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZoneProps) {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'TICKET',
-    drop: (item: { id: string }) => onDrop(item.id, status),
+    drop: allowDrop ? (item: { id: string }) => onDrop(item.id, status) : undefined,
     collect: (monitor) => ({
-      isOver: monitor.isOver(),
+      isOver: allowDrop ? monitor.isOver() : false,
     }),
   }));
 
@@ -84,11 +86,18 @@ function DropZone({ status, tickets, onDrop, onTicketClick }: DropZoneProps) {
 
 export default function KanbanBoard() {
   const { tickets, updateTicket } = useTickets();
+  const { user } = useAuth();
+  const role = user?.role ?? '';
+  const isIT = role.toLowerCase() === 'it';
+  const isOperador = role.toLowerCase() === 'operador';
+
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
 
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
-    updateTicket(ticketId, { status: newStatus });
+    if (isIT) {
+      updateTicket(ticketId, { status: newStatus });
+    }
   };
 
   // Filtrar tickets por categoría
@@ -108,33 +117,35 @@ export default function KanbanBoard() {
     <DndProvider backend={HTML5Backend}>
       <div className="space-y-6">
         {/* Filters */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium">Filter by category:</span>
+        {isIT && (
+          <Card>
+            <CardContent className="py-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium">Filter by category:</span>
+                </div>
+                <Select
+                  value={categoryFilter}
+                  onValueChange={(value) => setCategoryFilter(value as TicketCategory | 'all')}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    <SelectItem value="hardware">Hardware</SelectItem>
+                    <SelectItem value="software">Software</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-sm text-gray-600">
+                  Total: {filteredTickets.length} tickets
+                </div>
               </div>
-              <Select
-                value={categoryFilter}
-                onValueChange={(value) => setCategoryFilter(value as TicketCategory | 'all')}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  <SelectItem value="hardware">Hardware</SelectItem>
-                  <SelectItem value="software">Software</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="text-sm text-gray-600">
-                Total: {filteredTickets.length} tickets
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Kanban Board */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -143,18 +154,21 @@ export default function KanbanBoard() {
             tickets={ticketsByStatus.pending}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
+            allowDrop={isIT}
           />
           <DropZone
             status="in-progress"
             tickets={ticketsByStatus['in-progress']}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
+            allowDrop={isIT}
           />
           <DropZone
             status="resolved"
             tickets={ticketsByStatus.resolved}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
+            allowDrop={isIT}
           />
         </div>
 
@@ -173,7 +187,7 @@ export default function KanbanBoard() {
         <TicketDetailsModal
           ticket={selectedTicket}
           onClose={() => setSelectedTicket(null)}
-          isAdmin={true}
+          isAdmin={isIT}
         />
       )}
     </DndProvider>
