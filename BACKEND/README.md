@@ -183,7 +183,7 @@ Las migraciones se encuentran en la carpeta `migraciones/versions/`.
 
 Para aplicar todas las migraciones pendientes y crear las tablas en la base de datos:
 
-alembic init migraciones
+alembic init migracionesz
 
 ```bash
 # Con el entorno virtual activado
