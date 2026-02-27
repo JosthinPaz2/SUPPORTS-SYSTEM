@@ -28,9 +28,11 @@ app = FastAPI()
 load_dotenv()
 
 # Configuración de CORS
+# durante las pruebas con ngrok permitimos cualquier origen
+# (o bien añade la URL concreta que te genere el túnel).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # URLs del frontend
+    allow_origins=["*"],  # permite peticiones desde ngrok u otros orígenes
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

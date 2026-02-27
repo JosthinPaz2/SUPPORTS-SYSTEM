@@ -72,6 +72,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
+    // Redirect to login so credentials are cleared and user can sign in again
+    try {
+      window.location.href = '/login';
+    } catch (error) {
+      // fallback: do nothing if navigation isn't possible
+      console.warn('Could not redirect after logout', error);
+    }
   };
 
   const requestPasswordRecovery = async (email: string) => {

@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 # connection string
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:ADMIN@localhost:3315/OTDREPORTES"
+SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:admin@localhost:3315/OTDREPORTES"
 
 # crea el objeto de conexion(permite conectarse a la base de datos)
 engine = create_engine(SQLALCHEMY_DATABASE_URL)

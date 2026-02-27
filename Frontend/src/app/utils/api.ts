@@ -1,5 +1,5 @@
 // API configuration and utilities
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://margery-highfalutin-unambiguously.ngrok-free.dev';
 
 export interface LoginRequest {
   institutional_email: string;
