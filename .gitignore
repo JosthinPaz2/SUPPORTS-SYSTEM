@@ -1,9 +1,0 @@
-# Ignore local environment files
-BACKEND/.env
-
-# Python caches
-__pycache__/
-*.py[cod]
-
-# Virtual environment
-venv/
