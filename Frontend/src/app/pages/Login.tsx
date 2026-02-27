@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { Lock, AlertCircle, Mail, CheckCircle, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Lock, AlertCircle, Mail, Eye, EyeOff, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ModalState = 'forgot' | 'verify' | 'reset';

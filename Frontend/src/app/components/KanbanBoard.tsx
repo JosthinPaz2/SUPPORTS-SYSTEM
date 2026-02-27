@@ -89,7 +89,6 @@ export default function KanbanBoard() {
   const { user } = useAuth();
   const role = user?.role ?? '';
   const isIT = role.toLowerCase() === 'it';
-  const isOperador = role.toLowerCase() === 'operador';
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');

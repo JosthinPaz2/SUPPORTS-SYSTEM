@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -26,7 +25,7 @@ export default function AdminDashboard() {
             </div>
             <Button variant="outline" onClick={logout}>
               <LogOut className="w-4 h-4 mr-2" />
-              leave
+              Logout
             </Button>
           </div>
         </div>

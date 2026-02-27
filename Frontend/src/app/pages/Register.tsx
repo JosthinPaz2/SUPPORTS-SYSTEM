@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
-import { Lock, Mail, User, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User, CheckCircle, XCircle} from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Register() {
@@ -166,22 +166,20 @@ export default function Register() {
                     onFocus={() => setPasswordTouched(true)}
                     className="pl-10 pr-10 bg-gray-800 text-white border-teal-500"
                     autoComplete="new-password"
-                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-teal-400"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    
                   </button>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="!text-white">Confirm Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-teal-400 w-4 h-4" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-teal-400 w-4 h-4" /> {/*dibujado del candado*/}
                   <Input
                     id="confirmPassword"
                     type={showConfirm ? 'text' : 'password'}
@@ -189,14 +187,13 @@ export default function Register() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10 pr-10 bg-gray-800 text-white border-teal-500"
-                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-teal-400"
                   >
-                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            
                   </button>
                 </div>
               </div>
