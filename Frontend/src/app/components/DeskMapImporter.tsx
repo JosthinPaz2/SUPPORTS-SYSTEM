@@ -128,8 +128,6 @@ export default function DeskMapImporter() {
         </Alert>
       )}
 
-      
-
       {/* Preview Section */}
       {previewDesks && (
         <Card className="border-blue-200 bg-blue-50">
@@ -221,20 +219,20 @@ export default function DeskMapImporter() {
                 variant="outline"
                 className="w-full"
               >
-                <Upload className="w-4 h-4 mr-2" />
+                <Upload className="w-4 h-4 mr-[-2px] " />
                 {isImporting ? 'Procesando...' : 'Importar CSV/TXT'}
               </Button>
             </div>
 
             {/* Export Button */}
             <Button onClick={handleExportCSV} variant="outline" className="w-full">
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4 mr-[-2px]" />
               Exportar CSV
             </Button>
 
             {/* Reset Button */}
             <Button onClick={handleResetToDefault} variant="outline" className="w-full">
-              <RotateCcw className="w-4 h-4 mr-2" />
+              <RotateCcw className="w-4 h-4 mr-[-9px]" />
               Restaurar Default
             </Button>
           </div>

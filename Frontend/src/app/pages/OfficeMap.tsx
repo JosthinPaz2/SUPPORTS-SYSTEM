@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertCircle, CheckCircle, ArrowLeft, User, Settings } from 'lucide-react';
 import { useTickets } from '../context/TicketContext';
 import { Ticket } from '../types/ticket';
+import DeskMapImporter from '../components/DeskMapImporter';
 
 // Desk definition based on the exact layout from the image
 interface Desk {
@@ -234,7 +235,7 @@ export default function OfficeMap() {
   const [selectedDesk, setSelectedDesk] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [hoveredDesk, setHoveredDesk] = useState<string | null>(null);
-  const [, setShowImporter] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
 
   // Filter pending and in-progress tickets by location
   const getTicketsForDesk = (deskId: string): Ticket[] => {
@@ -336,6 +337,21 @@ export default function OfficeMap() {
               </Button>
             </div>
           </CardHeader>
+          
+        {/* Gestionar Layout Dialog */}
+        <Dialog open={showImporter} onOpenChange={setShowImporter}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Gestionar Layout</DialogTitle>
+              <DialogDescription>
+                Importar, exportar o restaurar la configuración del layout de escritorios
+              </DialogDescription>
+            </DialogHeader>
+            <DeskMapImporter />
+          </DialogContent>
+        </Dialog>
+
+          {/* Legend content */}
           <CardContent className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-green-500 border border-gray-400 rounded"></div>
@@ -411,7 +427,7 @@ export default function OfficeMap() {
                   const hasIssues = getTicketsForDesk(desk.id).length > 0;
                   const ticketCount = getTicketsForDesk(desk.id).length;
                   const isHovered = hoveredDesk === desk.id;
-                  
+               
                   return (
                     <g key={desk.id}>
                       {/* Desk rectangle */}
