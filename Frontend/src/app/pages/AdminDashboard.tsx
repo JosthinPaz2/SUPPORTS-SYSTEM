@@ -1,10 +1,12 @@
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, MapPin } from 'lucide-react';
 import KanbanBoard from '../components/KanbanBoard';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const role = user?.role ?? '';
   const isIT = role.toLowerCase() === 'it';
   const isOperador = role.toLowerCase() === 'operador';
@@ -20,13 +22,19 @@ export default function AdminDashboard() {
                 Welcome, {user?.name}
               </h1>
               <p className="text-sm text-gray-600">
-                {isIT ? 'IT Admin Panel' : isOperador ? 'Operator Panel' : 'Dashboard'}
+                {isIT ? 'IT Admin Panel' : isOperador ? 'Operador Panel' : 'Dashboard'}
               </p>
             </div>
-            <Button variant="outline" onClick={logout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate('/OfficeMap')}>
+                <MapPin className="w-4 h-4 mr-2" />
+                Mapa de Oficina
+              </Button>
+              <Button variant="outline" onClick={logout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Salir
+              </Button>
+            </div>
           </div>
         </div>
       </header>

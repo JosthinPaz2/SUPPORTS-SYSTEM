@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Ticket, TicketStatus, Comment } from '../types/ticket';
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { Ticket, Comment } from '../types/ticket';
 
 interface TicketContextType {
   tickets: Ticket[];
@@ -11,27 +11,9 @@ interface TicketContextType {
 
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
 
-// Dato de ejemplo iniciales
-const mockTickets: Ticket[] = [
-  {
-    id: 'ticket-1',
-    title: 'Impresora no funciona',
-    description: 'La impresora del piso 3 no imprime documentos',
-    category: 'hardware',
-    status: 'pending',
-    priority: 'high',
-    createdBy: 'user-emp1',
-    createdByName: 'María García',
-    reportedBy: 'María García',
-    location: 'D-015',
-    createdAt: new Date('2026-02-20T09:00:00'),
-    updatedAt: new Date('2026-02-20T09:00:00'),
-    comments: [],
-  },
-];
-
 export function TicketProvider({ children }: { children: ReactNode }) {
-  const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
+  // Inicializamos el estado como un arreglo vacío []
+  const [tickets, setTickets] = useState<Ticket[]>([]);
 
   const addTicket = (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
     const newTicket: Ticket = {

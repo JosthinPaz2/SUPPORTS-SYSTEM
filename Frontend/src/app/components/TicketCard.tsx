@@ -1,4 +1,3 @@
-import React from 'react';
 import { useDrag } from 'react-dnd';
 import { Card, CardContent } from './ui/card';
 import { Badge } from '../components/ui/badge';
@@ -23,7 +22,7 @@ const priorityColors = {
 };
 
 export default function TicketCard({ ticket, onClick }: TicketCardProps) {
-  const [{ isDragging }, drag] = useDrag(() => ({
+  const [{ isDragging }] = useDrag(() => ({
     type: 'TICKET',
     item: { id: ticket.id },
     collect: (monitor) => ({
@@ -33,7 +32,6 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
 
   return (
     <Card
-      ref={drag}
       className={`cursor-pointer hover:shadow-md transition-all ${
         isDragging ? 'opacity-50' : 'opacity-100'
       }`}

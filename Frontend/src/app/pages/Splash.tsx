@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import LightPillar from "../components/ui/LighPillar";
+import LightRays from "../components/ui/LighRays";
 
 export default function Splash() {
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ export default function Splash() {
     <div className="relative min-h-screen">
       {/* Fondo animado */}
       <div className="fixed inset-0 -z-10">
-        <LightPillar />
+        <LightRays />
       </div>
 
       {/* Contenido */}
