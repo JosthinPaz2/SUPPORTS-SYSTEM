@@ -6,7 +6,7 @@ import Login from "./app/pages/Login";
 import Register from "./app/pages/Register";
 import AdminDashboard from "./app/pages/AdminDashboard";
 import OfficeMap from "./app/pages/OfficeMap";
-import Splash from "./app/pages/Splash";
+
 
 function App() {
   return (
@@ -15,7 +15,6 @@ function App() {
         <DeskLayoutProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/splash" element={<Splash />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminDashboard />} />

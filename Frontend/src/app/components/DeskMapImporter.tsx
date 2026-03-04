@@ -128,6 +128,8 @@ export default function DeskMapImporter() {
         </Alert>
       )}
 
+      
+
       {/* Preview Section */}
       {previewDesks && (
         <Card className="border-blue-200 bg-blue-50">
@@ -219,41 +221,22 @@ export default function DeskMapImporter() {
                 variant="outline"
                 className="w-full"
               >
-                <Upload className="w-4 h-4 mr-[-2px] " />
+                <Upload className="w-4 h-4 mr-2" />
                 {isImporting ? 'Procesando...' : 'Importar CSV/TXT'}
               </Button>
             </div>
 
             {/* Export Button */}
             <Button onClick={handleExportCSV} variant="outline" className="w-full">
-              <Download className="w-4 h-4 mr-[-2px]" />
+              <Download className="w-4 h-4 mr-2" />
               Exportar CSV
             </Button>
 
             {/* Reset Button */}
             <Button onClick={handleResetToDefault} variant="outline" className="w-full">
-              <RotateCcw className="w-4 h-4 mr-[-9px]" />
+              <RotateCcw className="w-4 h-4 mr-2" />
               Restaurar Default
             </Button>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">Formato CSV esperado:</h4>
-            <code className="text-xs bg-white p-2 rounded block overflow-x-auto text-blue-800">
-              id,x,y,width,height,type<br />
-              D-001,35,120,28,18,regular<br />
-              R-001,730,120,28,18,regular<br />
-              E-001,730,690,28,18,entrance
-            </code>
-            <div className="mt-3 text-sm text-blue-800">
-              <strong>Notas:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-1">
-                <li>El campo <code>type</code> es opcional (valores: regular, management, store, entrance)</li>
-                <li>Los IDs deben ser únicos</li>
-                <li>Las coordenadas deben ser números positivos</li>
-              </ul>
-            </div>
           </div>
         </CardContent>
       </Card>

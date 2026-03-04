@@ -1,601 +1,444 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
+import { 
+  Card, 
+  CardHeader, 
+  CardContent, 
+  CardTitle 
+} from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { AlertCircle, CheckCircle, ArrowLeft, User, Settings } from 'lucide-react';
-import { useTickets } from '../context/TicketContext';
-import { Ticket } from '../types/ticket';
-import DeskMapImporter from '../components/DeskMapImporter';
-
-// Desk definition based on the exact layout from the image
-interface Desk {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  type?: 'management' | 'store' | 'regular' | 'empty';
-}
-
-const desksLayout: Desk[] = [
-  // LEFT SIDE - Column 1 (leftmost)
-  { id: 'D-073', x: 35, y: 120, width: 28, height: 18 },
-  { id: 'D-072', x: 35, y: 140, width: 28, height: 18 },
-  { id: 'D-071', x: 35, y: 160, width: 28, height: 18 },
-  { id: 'D-070', x: 35, y: 180, width: 28, height: 18 },
-  { id: 'D-069', x: 35, y: 200, width: 28, height: 18 },
-  { id: 'D-068', x: 35, y: 220, width: 28, height: 18 },
-  { id: 'D-067', x: 35, y: 240, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 2
-  { id: 'D-066', x: 66, y: 120, width: 28, height: 18 },
-  { id: 'D-065', x: 66, y: 140, width: 28, height: 18 },
-  { id: 'D-064', x: 66, y: 160, width: 28, height: 18 },
-  { id: 'D-063', x: 66, y: 180, width: 28, height: 18 },
-  { id: 'D-062', x: 66, y: 200, width: 28, height: 18 },
-  { id: 'D-061', x: 66, y: 220, width: 28, height: 18 },
-  { id: 'D-060', x: 66, y: 240, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 3
-  { id: 'D-059', x: 122, y: 120, width: 28, height: 18 },
-  { id: 'D-058', x: 122, y: 140, width: 28, height: 18 },
-  { id: 'D-057', x: 122, y: 160, width: 28, height: 18 },
-  { id: 'D-056', x: 122, y: 180, width: 28, height: 18 },
-  { id: 'D-055', x: 122, y: 200, width: 28, height: 18 },
-  { id: 'D-054', x: 122, y: 220, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 4
-  { id: 'D-053', x: 153, y: 120, width: 28, height: 18 },
-  { id: 'D-052', x: 153, y: 140, width: 28, height: 18 },
-  { id: 'D-051', x: 153, y: 160, width: 28, height: 18 },
-  { id: 'D-050', x: 153, y: 180, width: 28, height: 18 },
-  { id: 'D-049', x: 153, y: 200, width: 28, height: 18 },
-  { id: 'D-048', x: 153, y: 220, width: 28, height: 18 },
-  { id: 'D-047', x: 153, y: 240, width: 28, height: 18 },
-  { id: 'D-046', x: 153, y: 260, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 5
-  { id: 'D-045', x: 209, y: 120, width: 28, height: 18 },
-  { id: 'D-044', x: 209, y: 140, width: 28, height: 18 },
-  { id: 'D-043', x: 209, y: 160, width: 28, height: 18 },
-  { id: 'D-042', x: 209, y: 180, width: 28, height: 18 },
-  { id: 'D-041', x: 209, y: 200, width: 28, height: 18 },
-  { id: 'D-040', x: 209, y: 220, width: 28, height: 18 },
-  { id: 'D-039', x: 209, y: 240, width: 28, height: 18 },
-  { id: 'D-038', x: 209, y: 260, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 6
-  { id: 'D-037', x: 240, y: 120, width: 28, height: 18 },
-  { id: 'D-036', x: 240, y: 140, width: 28, height: 18 },
-  { id: 'D-035', x: 240, y: 160, width: 28, height: 18 },
-  { id: 'D-034', x: 240, y: 180, width: 28, height: 18 },
-  { id: 'D-033', x: 240, y: 200, width: 28, height: 18 },
-  { id: 'D-032', x: 240, y: 220, width: 28, height: 18 },
-  { id: 'D-031', x: 240, y: 240, width: 28, height: 18 },
-  { id: 'D-030', x: 240, y: 260, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 7
-  { id: 'D-029', x: 296, y: 120, width: 28, height: 18 },
-  { id: 'D-028', x: 296, y: 140, width: 28, height: 18 },
-  { id: 'D-027', x: 296, y: 160, width: 28, height: 18 },
-  { id: 'D-026', x: 296, y: 180, width: 28, height: 18 },
-  { id: 'D-025', x: 296, y: 200, width: 28, height: 18 },
-  { id: 'D-024', x: 296, y: 220, width: 28, height: 18 },
-  { id: 'D-023', x: 296, y: 240, width: 28, height: 18 },
-  { id: 'D-022', x: 296, y: 260, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 8
-  { id: 'D-021', x: 327, y: 120, width: 28, height: 18 },
-  { id: 'D-020', x: 327, y: 140, width: 28, height: 18 },
-  { id: 'D-019', x: 327, y: 160, width: 28, height: 18 },
-  { id: 'D-018', x: 327, y: 180, width: 28, height: 18 },
-  { id: 'D-017', x: 327, y: 200, width: 28, height: 18 },
-  { id: 'D-016', x: 327, y: 220, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 9
-  { id: 'D-015', x: 383, y: 120, width: 28, height: 18 },
-  { id: 'D-014', x: 383, y: 140, width: 28, height: 18 },
-  { id: 'D-013', x: 383, y: 160, width: 28, height: 18 },
-  { id: 'D-012', x: 383, y: 180, width: 28, height: 18 },
-  { id: 'D-011', x: 383, y: 200, width: 28, height: 18 },
-  { id: 'D-010', x: 383, y: 220, width: 28, height: 18 },
-  
-  // LEFT SIDE - Column 10
-  { id: 'D-009', x: 414, y: 120, width: 28, height: 18 },
-  { id: 'D-008', x: 414, y: 140, width: 28, height: 18 },
-  { id: 'D-007', x: 414, y: 160, width: 28, height: 18 },
-  { id: 'D-006', x: 414, y: 180, width: 28, height: 18 },
-  { id: 'D-005', x: 414, y: 200, width: 28, height: 18 },
-  { id: 'D-004', x: 414, y: 220, width: 28, height: 18 },
-  { id: 'D-003', x: 414, y: 240, width: 28, height: 18 },
-  { id: 'D-002', x: 414, y: 260, width: 28, height: 18 },
-  { id: 'D-001', x: 414, y: 280, width: 28, height: 18 },
-
-  // RIGHT SIDE - Top section (near STORE)
-  // Row 1
-  { id: 'R-001', x: 730, y: 120, width: 28, height: 18 },
-  { id: 'R-002', x: 761, y: 120, width: 28, height: 18 },
-  { id: 'R-003', x: 792, y: 120, width: 28, height: 18 },
-  { id: 'R-004', x: 823, y: 120, width: 28, height: 18 },
-  { id: 'R-005', x: 854, y: 120, width: 28, height: 18 },
-  { id: 'R-006', x: 885, y: 120, width: 28, height: 18 },
-  { id: 'R-007', x: 916, y: 120, width: 28, height: 18 },
-  
-  // Row 2
-  { id: 'R-008', x: 730, y: 141, width: 28, height: 18 },
-  { id: 'R-009', x: 761, y: 141, width: 28, height: 18 },
-  { id: 'R-010', x: 792, y: 141, width: 28, height: 18 },
-  { id: 'R-011', x: 823, y: 141, width: 28, height: 18 },
-  { id: 'R-012', x: 854, y: 141, width: 28, height: 18 },
-  { id: 'R-013', x: 885, y: 141, width: 28, height: 18 },
-  { id: 'R-014', x: 916, y: 141, width: 28, height: 18 },
-  
-  // Row 3
-  { id: 'R-015', x: 730, y: 162, width: 28, height: 18 },
-  { id: 'R-016', x: 761, y: 162, width: 28, height: 18 },
-  { id: 'R-017', x: 792, y: 162, width: 28, height: 18 },
-  { id: 'R-018', x: 823, y: 162, width: 28, height: 18 },
-  { id: 'R-019', x: 854, y: 162, width: 28, height: 18 },
-  { id: 'R-020', x: 885, y: 162, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 2
-  // Row 4
-  { id: 'R-021', x: 730, y: 238, width: 28, height: 18 },
-  { id: 'R-022', x: 761, y: 238, width: 28, height: 18 },
-  { id: 'R-023', x: 792, y: 238, width: 28, height: 18 },
-  { id: 'R-024', x: 823, y: 238, width: 28, height: 18 },
-  { id: 'R-025', x: 854, y: 238, width: 28, height: 18 },
-  { id: 'R-026', x: 885, y: 238, width: 28, height: 18 },
-  { id: 'R-027', x: 916, y: 238, width: 28, height: 18 },
-  
-  // Row 5
-  { id: 'R-028', x: 730, y: 259, width: 28, height: 18 },
-  { id: 'R-029', x: 761, y: 259, width: 28, height: 18 },
-  { id: 'R-030', x: 792, y: 259, width: 28, height: 18 },
-  { id: 'R-031', x: 823, y: 259, width: 28, height: 18 },
-  { id: 'R-032', x: 854, y: 259, width: 28, height: 18 },
-  { id: 'R-033', x: 885, y: 259, width: 28, height: 18 },
-  { id: 'R-034', x: 916, y: 259, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 3
-  // Row 6
-  { id: 'R-035', x: 730, y: 310, width: 28, height: 18 },
-  { id: 'R-036', x: 761, y: 310, width: 28, height: 18 },
-  { id: 'R-037', x: 792, y: 310, width: 28, height: 18 },
-  { id: 'R-038', x: 823, y: 310, width: 28, height: 18 },
-  { id: 'R-039', x: 854, y: 310, width: 28, height: 18 },
-  { id: 'R-040', x: 885, y: 310, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 4
-  // Row 7
-  { id: 'R-041', x: 730, y: 380, width: 28, height: 18 },
-  { id: 'R-042', x: 761, y: 380, width: 28, height: 18 },
-  { id: 'R-043', x: 792, y: 380, width: 28, height: 18 },
-  { id: 'R-044', x: 823, y: 380, width: 28, height: 18 },
-  { id: 'R-045', x: 854, y: 380, width: 28, height: 18 },
-  { id: 'R-046', x: 885, y: 380, width: 28, height: 18 },
-  { id: 'R-047', x: 916, y: 380, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 5
-  // Row 8
-  { id: 'R-048', x: 730, y: 430, width: 28, height: 18 },
-  { id: 'R-049', x: 761, y: 430, width: 28, height: 18 },
-  { id: 'R-050', x: 792, y: 430, width: 28, height: 18 },
-  { id: 'R-051', x: 823, y: 430, width: 28, height: 18 },
-  { id: 'R-052', x: 854, y: 430, width: 28, height: 18 },
-  { id: 'R-053', x: 885, y: 430, width: 28, height: 18 },
-  { id: 'R-054', x: 916, y: 430, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 6
-  // Row 9
-  { id: 'R-055', x: 730, y: 480, width: 28, height: 18 },
-  { id: 'R-056', x: 761, y: 480, width: 28, height: 18 },
-  { id: 'R-057', x: 792, y: 480, width: 28, height: 18 },
-  { id: 'R-058', x: 823, y: 480, width: 28, height: 18 },
-  { id: 'R-059', x: 854, y: 480, width: 28, height: 18 },
-  { id: 'R-060', x: 885, y: 480, width: 28, height: 18 },
-  { id: 'R-061', x: 916, y: 480, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 7
-  // Row 10
-  { id: 'R-062', x: 730, y: 540, width: 28, height: 18 },
-  { id: 'R-063', x: 761, y: 540, width: 28, height: 18 },
-  { id: 'R-064', x: 792, y: 540, width: 28, height: 18 },
-  { id: 'R-065', x: 823, y: 540, width: 28, height: 18 },
-  { id: 'R-066', x: 854, y: 540, width: 28, height: 18 },
-  { id: 'R-067', x: 885, y: 540, width: 28, height: 18 },
-  { id: 'R-068', x: 916, y: 540, width: 28, height: 18 },
-  
-  // RIGHT SIDE - Section 8
-  // Row 11
-  { id: 'R-069', x: 730, y: 590, width: 28, height: 18 },
-  { id: 'R-070', x: 761, y: 590, width: 28, height: 18 },
-  { id: 'R-071', x: 792, y: 590, width: 28, height: 18 },
-  { id: 'R-072', x: 823, y: 590, width: 28, height: 18 },
-  { id: 'R-073', x: 854, y: 590, width: 28, height: 18 },
-  { id: 'R-074', x: 885, y: 590, width: 28, height: 18 },
-  { id: 'R-075', x: 916, y: 590, width: 28, height: 18 },
-  
-  // BOTTOM SECTION (near entrance - blue area)
-  // Row 12
-  { id: 'E-001', x: 730, y: 690, width: 28, height: 18 },
-  { id: 'E-002', x: 761, y: 690, width: 28, height: 18 },
-  { id: 'E-003', x: 792, y: 690, width: 28, height: 18 },
-  { id: 'E-004', x: 823, y: 690, width: 28, height: 18 },
-  { id: 'E-005', x: 854, y: 690, width: 28, height: 18 },
-  { id: 'E-006', x: 885, y: 690, width: 28, height: 18 },
-  { id: 'E-007', x: 916, y: 690, width: 28, height: 18 },
-];
+import { Badge } from '../components/ui/badge';
+import { 
+  ArrowLeft, 
+  Upload, 
+  Search, 
+  GripVertical, 
+  RotateCw, 
+  LayoutGrid, 
+  Package, 
+  Info, 
+  User} from 'lucide-react';
 
 export default function OfficeMap() {
   const navigate = useNavigate();
-  const { tickets } = useTickets();
-  const [selectedDesk, setSelectedDesk] = useState<string | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
-  const [hoveredDesk, setHoveredDesk] = useState<string | null>(null);
-  const [showImporter, setShowImporter] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  // Filter pending and in-progress tickets by location
-  const getTicketsForDesk = (deskId: string): Ticket[] => {
-    return tickets.filter(
-      (ticket) =>
-        ticket.location === deskId &&
-        (ticket.status === 'pending' || ticket.status === 'in-progress')
+  const [search, setSearch] = useState('');
+  const [desks, setDesks] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'inventory' | 'objects'>('inventory');
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [resizingId, setResizingId] = useState<string | null>(null);
+
+
+  const CANVAS_WIDTH = 2400;
+  const CANVAS_HEIGHT = 5000;
+
+// 1. SE AGREGÓ EL OBJETO 'FRAME' AQUÍ
+  const [defaultObjects] = useState([
+    { id: 'GRAY-ZONE', type: 'zone', width: 600, height: 400, placed: false },
+    { id: 'FRAME-OBJECT', type: 'frame', width: 300, height: 600, placed: false },
+    { id: 'STORE-AREA', type: 'store', width: 200, height: 100, placed: false },
+    { id: 'MANAGEMENT', type: 'management', width: 180, height: 80, placed: false },
+    { id: 'ENTRANCE', type: 'entrance', width: 150, height: 60, placed: false },
+  ]);
+
+  // 📊 Stats
+   const totalDesks = desks.filter(d => d.type === 'desk').length;
+  const reports = desks.filter(d => d.hasReport).length;
+  const noIssues = desks.filter(d => d.type === 'desk' && !d.hasReport).length;
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const rows = text.split('\n').slice(1);
+
+      const parsed = rows.map((row, index) => {
+        const [id, x, y, width, height, type] = row.split(',');
+        return {
+          id: id?.trim() || `D-${100 + index}`,
+          x: x && x.trim() !== "" ? Number(x) : null,
+          y: y && y.trim() !== "" ? Number(y) : null,
+          width: Number(width) || 80,
+          height: Number(height) || 50,
+          type: type?.trim() || 'desk',
+          placed: !!(x && x.trim() !== ""),
+          hasReport: Math.random() > 0.9
+        };
+      });
+
+      setDesks(prev => [...prev, ...parsed]);
+    };
+
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const rotateItem = (id: string) => {
+    setDesks(prev => 
+      prev.map(d => d.id === id ? { ...d, width: d.height, height: d.width } : d)
     );
   };
 
-  const handleDeskClick = (deskId: string) => {
-    setSelectedDesk(deskId);
-    setShowDialog(true);
+  const handleSvgDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData("objectData"));
+    if (!svgRef.current) return;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (data.isDefault) {
+      const newObj = {
+        ...data,
+        id: `${data.id}-${Date.now()}`,
+        x: x - data.width / 2,
+        y: y - data.height / 2,
+        placed: true
+      };
+      setDesks(prev => [...prev, newObj]);
+    } else {
+      setDesks(prev =>
+        prev.map(d =>
+          d.id === data.id
+            ? { ...d, x: x - d.width / 2, y: y - d.height / 2, placed: true }
+            : d
+        )
+      );
+    }
   };
 
-  const selectedDeskData = desksLayout.find(d => d.id === selectedDesk);
-  const selectedDeskTickets = selectedDesk ? getTicketsForDesk(selectedDesk) : [];
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-  // Count desks with issues
-  const desksWithIssues = desksLayout.filter(
-    (desk) => getTicketsForDesk(desk.id).length > 0
-  ).length;
+    if (draggingId) {
+      setDesks(prev =>
+        prev.map(d =>
+          d.id === draggingId
+            ? { ...d, x: mouseX - d.width / 2, y: mouseY - d.height / 2 }
+            : d
+        )
+      );
+    }
 
-  const totalDesks = desksLayout.length;
-
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date));
+    if (resizingId) {
+      setDesks(prev =>
+        prev.map(d =>
+          d.id === resizingId
+            ? {
+                ...d,
+                width: Math.max(40, mouseX - d.x),
+                height: Math.max(40, mouseY - d.y)
+              }
+            : d
+        )
+      );
+    }
   };
+
+  // background layers include zones and frames so they render beneath desks
+  const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame'));
+
+  const items = desks.filter(d => d.placed && d.type !== 'zone' && d.type !== 'frame');
+  const inventory = desks.filter(d => !d.placed && d.id.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-[1400px] mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Office Map - Desk Layout
-            </h1>
-            <p className="text-gray-600">
-              Overview of all desks and active reports
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => navigate('/admin')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
+         onMouseUp={() => { setDraggingId(null); setResizingId(null); }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
+        <div>
+           <h1 className="text-xl font-bold text-gray-900">Office Map - Desk Layout</h1>
+            <p className="text-sm text-gray-500">Overview of all desks and active reports</p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+        </Button>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Total Desks
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{totalDesks}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                With Active Reports
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{desksWithIssues}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                No Issues
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">
-                {totalDesks - desksWithIssues}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      </div>
 
-        {/* Legend */}
+      {/* 📊 Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Legend</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setShowImporter(true)}>
-                <Settings className="w-4 h-4 mr-2" />
-                Gestionar Layout
-              </Button>
-            </div>
-          </CardHeader>
-          
-        {/* Gestionar Layout Dialog */}
-        <Dialog open={showImporter} onOpenChange={setShowImporter}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Gestionar Layout</DialogTitle>
-              <DialogDescription>
-                Importar, exportar o restaurar la configuración del layout de escritorios
-              </DialogDescription>
-            </DialogHeader>
-            <DeskMapImporter />
-          </DialogContent>
-        </Dialog>
-
-          {/* Legend content */}
-          <CardContent className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-500 border border-gray-400 rounded"></div>
-              <span className="text-sm">No issues</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-500 border border-gray-400 rounded"></div>
-              <span className="text-sm">With active reports</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-yellow-400 border border-gray-400 rounded"></div>
-              <span className="text-sm">Management / Store area</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-500 border border-gray-400 rounded"></div>
-              <span className="text-sm">Entrance area</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-gray-700" />
-              <span className="text-sm">Click on any desk to view details</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Office map */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Office Floor Plan</CardTitle>
-            <CardDescription>
-              {desksLayout.length} desks mapped - Click on any desk for information
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
+              Total Desks
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-gray-100 rounded-lg p-6 overflow-x-auto">
-              <svg
-                viewBox="0 0 1000 750"
-                className="w-full"
-                style={{ minWidth: '900px' }}
-              >
-                {/* Background areas */}
-                {/* Left gray area */}
-                <rect x="20" y="100" width="450" height="220" fill="#6b7280" opacity="0.3" />
-                
-                {/* Right gray area */}
-                <rect x="710" y="85" width="260" height="640" fill="#6b7280" opacity="0.3" />
-                
-                {/* White central area (hallway) */}
-                <rect x="480" y="140" width="220" height="540" fill="white" stroke="#9ca3af" strokeWidth="2" />
-                
-                {/* Blue entrance area */}
-                <rect x="710" y="670" width="260" height="50" fill="#3b82f6" opacity="0.5" rx="4" />
-                <text x="840" y="697" textAnchor="middle" fill="#1e40af" fontSize="14" fontWeight="bold">
-                  ENTRANCE
-                </text>
-                
-                {/* Yellow Management area */}
-                <rect x="525" y="15" width="105" height="45" fill="#fbbf24" rx="4" />
-                <text x="577" y="32" textAnchor="middle" fill="#78350f" fontSize="11" fontWeight="bold">
-                  MANAGE-
-                </text>
-                <text x="577" y="45" textAnchor="middle" fill="#78350f" fontSize="11" fontWeight="bold">
-                  MENT
-                </text>
-                
-                {/* Yellow Store area */}
-                <rect x="845" y="15" width="105" height="45" fill="#fbbf24" rx="4" />
-                <text x="897" y="42" textAnchor="middle" fill="#78350f" fontSize="14" fontWeight="bold">
-                  STORE
-                </text>
-
-                {/* Draw all desks */}
-                {desksLayout.map((desk) => {
-                  const hasIssues = getTicketsForDesk(desk.id).length > 0;
-                  const ticketCount = getTicketsForDesk(desk.id).length;
-                  const isHovered = hoveredDesk === desk.id;
-               
-                  return (
-                    <g key={desk.id}>
-                      {/* Desk rectangle */}
-                      <rect
-                        x={desk.x}
-                        y={desk.y}
-                        width={desk.width}
-                        height={desk.height}
-                        fill={hasIssues ? '#ef4444' : '#22c55e'}
-                        stroke={isHovered ? '#1f2937' : '#374151'}
-                        strokeWidth={isHovered ? '2' : '1'}
-                        rx="2"
-                        style={{ 
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          opacity: isHovered ? 1 : 0.9
-                        }}
-                        onClick={() => handleDeskClick(desk.id)}
-                        onMouseEnter={() => setHoveredDesk(desk.id)}
-                        onMouseLeave={() => setHoveredDesk(null)}
-                      />
-                      
-                      {/* Desk ID */}
-                      <text
-                        x={desk.x + desk.width / 2}
-                        y={desk.y + desk.height / 2 + 1}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fill="white"
-                        fontSize="7"
-                        fontWeight="bold"
-                        style={{ pointerEvents: 'none' }}
-                      >
-                        {desk.id}
-                      </text>
-                      
-                      {/* Ticket count indicator */}
-                      {hasIssues && (
-                        <>
-                          <circle
-                            cx={desk.x + desk.width - 5}
-                            cy={desk.y + 5}
-                            r="5"
-                            fill="#7f1d1d"
-                            stroke="white"
-                            strokeWidth="1"
-                            style={{ pointerEvents: 'none' }}
-                          />
-                          <text
-                            x={desk.x + desk.width - 5}
-                            y={desk.y + 5}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fill="white"
-                            fontSize="7"
-                            fontWeight="bold"
-                            style={{ pointerEvents: 'none' }}
-                          >
-                            {ticketCount}
-                          </text>
-                        </>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
+            <div className="text-3xl font-bold text-gray-900">{totalDesks}</div>
           </CardContent>
         </Card>
 
-        {/* Desk details dialog */}
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Desk {selectedDeskData?.id}
-              </DialogTitle>
-              <DialogDescription>
-                Desk location and status information
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              {selectedDeskTickets.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                  <p className="text-lg font-medium text-gray-900">
-                    No Active Reports
-                  </p>
-                  <p className="text-gray-600">
-                    This desk has no reported issues
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-4">
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                    <span className="font-medium">
-                      {selectedDeskTickets.length} active report(s)
-                    </span>
-                  </div>
-                  {selectedDeskTickets.map((ticket) => (
-                    <Card key={ticket.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-base">
-                              {ticket.title}
-                            </CardTitle>
-                            <CardDescription className="text-sm mt-1">
-                              Ticket #{ticket.id} • Created {formatDateTime(ticket.createdAt)}
-                            </CardDescription>
-                          </div>
-                          <div className="flex flex-col gap-1 items-end">
-                            <Badge
-                              variant={
-                                ticket.status === 'pending'
-                                  ? 'secondary'
-                                  : ticket.status === 'in-progress'
-                                  ? 'default'
-                                  : 'outline'
-                              }
-                            >
-                              {ticket.status === 'pending' && 'Pending'}
-                              {ticket.status === 'in-progress' && 'In Progress'}
-                              {ticket.status === 'resolved' && 'Resolved'}
-                            </Badge>
-                            <Badge
-                              variant={
-                                ticket.priority === 'high'
-                                  ? 'destructive'
-                                  : ticket.priority === 'medium'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {ticket.priority === 'high' && 'High'}
-                              {ticket.priority === 'medium' && 'Medium'}
-                              {ticket.priority === 'low' && 'Low'}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-600">{ticket.description}</p>
-                        <div className="flex gap-4 mt-3 text-xs text-gray-500">
-                          <span>Category: {ticket.category}</span>
-                          <span>Reported by: {ticket.reportedBy}</span>
-                        </div>
-                        {ticket.assignedToName && (
-                          <div className="mt-2 text-xs text-gray-500">
-                            <span>Assigned to: {ticket.assignedToName}</span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-              <div className="flex justify-end pt-4">
-                <Button variant="outline" onClick={() => setShowDialog(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
+              With Active Reports
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-red-600">{reports}</div>
+          </CardContent>
+        </Card>
+
+        
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
+              No Issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">{noIssues}</div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* 🎨 NUEVA SECCIÓN: Legend / Map Labels */}
+      <Card>
+        <CardContent className="flex flex-wrap gap-6 py-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 border border-gray-300 rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-gray-700">No issues</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 border border-gray-300 rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-gray-700">With active reports</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-400 border border-gray-300 rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-gray-700">Management / Store area</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 border border-gray-300 rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-gray-700">Entrance area</span>
+          </div>
+          <div className="flex items-center gap-2 border-l pl-4">
+            <User className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-gray-500">Click on any desk to view details</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Layout */}
+      <div className="flex gap-6 h-[700px]">
+
+        {/* Sidebar */}
+   {/* Sidebar */}
+<Card className="w-80 flex flex-col border-none shadow-xl bg-white rounded-3xl overflow-hidden h-[700px]">
+
+  {/* Tabs + Search */}
+  <div className="p-5 space-y-4">
+
+    <div className="flex p-1 bg-slate-100 rounded-xl">
+      <button
+        onClick={() => setActiveTab('inventory')}
+        className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
+          activeTab === 'inventory'
+            ? 'bg-white shadow text-blue-600'
+            : 'text-slate-400'
+        }`}
+      >
+        <LayoutGrid size={14} /> INVENTORY
+      </button>
+
+      <button
+        onClick={() => setActiveTab('objects')}
+        className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
+          activeTab === 'objects'
+            ? 'bg-white shadow text-blue-600'
+            : 'text-slate-400'
+        }`}
+      >
+        <Package size={14} /> OBJECTS
+      </button>
+    </div>
+
+    {/* Search */}
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <input
+        type="text"
+        placeholder="Search item..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/10"
+      />
+    </div>
+  </div>
+
+  {/* List */}
+  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+
+    {(activeTab === 'inventory' ? inventory : defaultObjects)
+      .filter(item =>
+        item.id.toLowerCase().includes(search.toLowerCase())
+      )
+      .map(item => (
+        <div
+          key={item.id}
+          draggable
+          onDragStart={(e) =>
+            e.dataTransfer.setData(
+              "objectData",
+              JSON.stringify({
+                ...item,
+                isDefault: activeTab === 'objects'
+              })
+            )
+          }
+          className="group flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm cursor-grab hover:border-blue-400 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <GripVertical className="w-4 h-4 text-slate-300" />
+            <span className="text-xs font-bold text-slate-600">
+              {item.id}
+            </span>
+          </div>
+
+          <RotateCw
+            size={14}
+            className="text-slate-300 group-hover:text-blue-500 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              rotateItem(item.id);
+            }}
+          />
+        </div>
+      ))}
+  </div>
+
+  {/* Upload */}
+  <div className="p-5 border-t">
+    <input
+      type="file"
+      ref={fileInputRef}
+      onChange={handleFileUpload}
+      className="hidden"
+      accept=".csv"
+    />
+    <Button
+      className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-5 font-bold shadow-lg shadow-blue-100"
+      onClick={() => fileInputRef.current?.click()}
+    >
+      <Upload className="w-4 h-4 mr-2" /> SUBIR CSV
+    </Button>
+  </div>
+
+</Card>
+
+        {/* Canvas */}
+        <Card className="flex-1 relative overflow-hidden bg-white shadow-inner">
+
+          {/* Badges */}
+          <div className="absolute top-4 right-4 z-10 flex gap-2">
+            <Badge className="bg-green-600 text-white border-none">
+              {items.length} Located
+            </Badge>
+            <Badge variant="outline">
+              {inventory.length} Pending
+            </Badge>
+          </div>
+
+          <div className="w-full h-full"
+               onDrop={handleSvgDrop}
+               onDragOver={(e) => e.preventDefault()}
+               onMouseMove={handleMouseMove}>
+
+            <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT}>
+              <defs>
+                <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1.5" fill="#CBD5E1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#dotGrid)" />
+
+              {/* render zones/frames beneath */}
+              {bgLayers.map(el => (
+                <g key={el.id} transform={`translate(${el.x}, ${el.y})`}>
+                  <rect
+                    width={el.width} height={el.height}
+                    fill={el.type === 'frame' ? 'transparent' : '#94A3B8'}
+                    stroke={el.type === 'frame' ? '#94A3B8' : 'none'}
+                    strokeWidth={el.type === 'frame' ? 2 : 0}
+                    rx={4}
+                    onMouseDown={(e) => { e.stopPropagation(); setDraggingId(el.id); }}
+                    className="cursor-move opacity-90 shadow-sm"
+                  />
+                  {el.type === 'zone' && (
+                    <rect width={el.width} height={12} fill="white" fillOpacity={0.8} rx={2} />
+                  )}
+                  <circle
+                    cx={el.width} cy={el.height} r={8} fill="white" stroke="#94A3B8" strokeWidth={2}
+                    className="cursor-nwse-resize shadow-md"
+                    onMouseDown={(e) => { e.stopPropagation(); setResizingId(el.id); }}
+                  />
+                </g>
+              ))}
+
+              {/* desks & objects */}
+              {items.map((item) => {
+                let fill = item.hasReport ? "#EF4444" : "#22C55E";
+                if (item.type === 'management' || item.type === 'store') fill = "#F59E0B";
+                if (item.type === 'entrance') fill = "#3B82F6";
+
+                const adaptiveSize = Math.min(item.width / (item.id.length * 0.7), item.height * 0.4, 14);
+
+                return (
+                  <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
+                    <rect
+                      width={item.width} height={item.height}
+                      fill={fill}
+                      rx={6}
+                      onMouseDown={(e) => { e.stopPropagation(); setDraggingId(item.id); }}
+                      className="cursor-move"
+                    />
+                    <text
+                      x={item.width / 2} y={item.height / 2}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fill="white" className="text-[10px] font-bold pointer-events-none"
+                      style={{ fontSize: adaptiveSize }}
+                    >
+                      {item.id}
+                    </text>
+                    <circle
+                      cx={item.width} cy={item.height} r={8}
+                      fill="white" stroke="#00000033" strokeWidth={1}
+                      className="cursor-nwse-resize"
+                      onMouseDown={(e) => { e.stopPropagation(); setResizingId(item.id); }}
+                    />
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tip */}
+      <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-4 items-center">
+        <div className="bg-blue-100 p-2 rounded-full">
+          <Info className="w-5 h-5 text-blue-600" />
+        </div>
+        <div className="text-xs text-blue-800">
+          <p className="font-bold mb-1">Tip 💡</p>
+          <p>
+            Drag desks or objects from the sidebar to the map.
+            You can resize and rotate items directly on the canvas.
+          </p>
+        </div>
+      </div>
+
     </div>
   );
 }
