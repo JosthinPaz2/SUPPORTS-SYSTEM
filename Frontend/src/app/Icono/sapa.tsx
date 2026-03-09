@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Upload, Search, GripVertical, RotateCw, LayoutGrid, Package, Info } from 'lucide-react';
+import { ArrowLeft, Upload, Search, GripVertical, RotateCw, LayoutGrid, Package } from 'lucide-react';
 
 export default function OfficeMap() {
   const navigate = useNavigate();

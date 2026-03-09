@@ -368,22 +368,6 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="selectFloor">Select Floor</Label>
-              <select 
-                id="selectFloor"
-                value={selectedFloor}
-                onChange={(e) => setSelectedFloor(e.target.value)}
-                title="Select floor"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={!selectedSeat || loadingFloors}
-              >
-                <option value="">{loadingFloors ? 'Loading floors...' : '-- Select a floor --'}</option>
-                {viewFloors.map((floor) => (
-                  <option key={floor.id_floor} value={String(floor.id_floor)}>{floor.floor_name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-2">
               <Label htmlFor="selectSeat">Select Location</Label>
               <select 
                 id="selectSeat"
@@ -400,6 +384,22 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
                   <option key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
                   </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="selectFloor">Select Floor</Label>
+              <select 
+                id="selectFloor"
+                value={selectedFloor}
+                onChange={(e) => setSelectedFloor(e.target.value)}
+                title="Select floor"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={!selectedSeat || loadingFloors}
+              >
+                <option value="">{loadingFloors ? 'Loading floors...' : '-- Select a floor --'}</option>
+                {viewFloors.map((floor) => (
+                  <option key={floor.id_floor} value={String(floor.id_floor)}>{floor.floor_name}</option>
                 ))}
               </select>
             </div>

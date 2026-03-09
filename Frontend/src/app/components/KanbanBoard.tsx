@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrop } from 'react-dnd';
@@ -51,7 +51,9 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
 
   return (
     <div
-      ref={drop}
+      ref={(node) => {
+        drop(node);
+      }}
       className={`flex-1 min-h-[600px] transition-colors ${
         isOver ? 'bg-blue-50' : ''
       }`}

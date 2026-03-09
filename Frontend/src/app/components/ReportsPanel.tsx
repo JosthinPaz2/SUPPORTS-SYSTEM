@@ -1,7 +1,6 @@
 import { useTickets } from '../context/TicketContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { TicketCategory, TicketStatus } from '../types/ticket';
 
 const COLORS = {
   pending: '#fbbf24',

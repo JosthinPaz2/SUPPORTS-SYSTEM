@@ -77,7 +77,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
     addComment(ticket.id, {
       ticketId: ticket.id,
-      userId: user?.id || '',
+      userId: String(user?.id ?? ''),
       userName: user?.name || '',
       content: comment,
       isInternal: isInternalNote,

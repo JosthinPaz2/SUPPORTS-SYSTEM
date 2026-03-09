@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
-import type { User } from '../types/auth';
+import type { User, UserRole } from '../types/auth';
 import { apiService } from '../utils/api';
 
 interface AuthContextType {
@@ -42,11 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiService.login({ institutional_email: email, password });
 
+      const normalizedRole = response.role_name.toLowerCase();
+      const role: UserRole = normalizedRole === 'it' || normalizedRole === 'admin' ? 'admin' : 'employee';
+
       const userData: User = {
         id: response.id_user,
         name: response.full_name,
         email: response.institutional_email,
-        role: response.role_name, // use exact role name
+        role,
         campaign: response.campaign,
         access_token: response.access_token,
       };
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (fullName: string, email: string, password: string, campaign: string) => {
     // simply call API and return, do not log in automatically
     try {
-      return await apiService.register({ full_name: fullName, institutional_email: email, password, campaign });
+      await apiService.register({ full_name: fullName, institutional_email: email, password, campaign });
     } catch (error) {
       throw error;
     }
