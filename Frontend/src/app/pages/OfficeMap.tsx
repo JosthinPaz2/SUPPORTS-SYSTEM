@@ -1,50 +1,100 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router';
+/**
+ * Página: OfficeMap
+ * 
+ * Descripción:
+ * Este es el componente principal de la página del mapa de oficinas (Office Map).
+ * Actúa como contenedor que orquesta todos los subcomponentes y gestiona el estado
+ * global de la aplicación de mapas de escritorios.
+ * 
+ * Esta página permite:
+ * - Visualizar un mapa interactivo de la oficina con escritorios
+ * - Arrastrar y soltar (drag-and-drop) escritorios desde el sidebar al mapa
+ * - Importar datos de escritorios desde archivos CSV
+ * - Buscar y filtrar elementos en el inventario
+ * - Rotar y posicionar elementos en el canvas
+ * - Ver estadísticas en tiempo real sobre los escritorios
+ * 
+ * Estructura de componentes:
+ * 1. OfficeMapHeader - Encabezado con título y navegación
+ * 2. StatsCards - Tarjetas de estadísticas (total, con reportes, sin problemas)
+ * 3. MapLegend - Leyenda de colores del mapa
+ * 4. MapSidebar - Panel lateral con inventario y herramientas
+ * 5. MapCanvas - Área principal del mapa con elementos SVG
+ * 6. TipBox - Caja de consejos para el usuario
+ * 
+ * Estados (State Management):
+ * - search: Valor del campo de búsqueda
+ * - desks: Array de todos los escritorios/objetos
+ * - activeTab: Pestaña activa en el sidebar (inventory/objects)
+ * - draggingId: ID del elemento actualmente siendo arrastrado
+ * - resizingId: ID del elemento actualmente siendo redimensionado
+ * 
+ * Handlers:
+ * - handleFileUpload: Procesa archivos CSV subidos por el usuario
+ * - rotateItem: Rota un elemento intercambiando width y height
+ * - handleSvgDrop: Maneja el evento de soltar un elemento en el canvas
+ * - handleMouseMove: Maneja el movimiento del mouse para arrastrar/redimensionar
+ * - handleMouseUp: Finaliza las operaciones de arrastre/redimensionado
+ * - handleCanvasMouseDown: Inicia el arrastre de un elemento en el mapa
+ * 
+ * Constantes:
+ * - CANVAS_WIDTH: Ancho del área del mapa (2400px)
+ * - CANVAS_HEIGHT: Alto del área del mapa (5000px)
+ * - defaultObjects: Objetos por defecto disponibles para agregar al mapa
+ * 
+ * Dependencias:
+ * - react: use_state, useRef para gestión de estado
+ * - ../components/OfficeMap: Subcomponentes del mapa de oficinas
+ */
+
+import { useEffect, useState, useRef } from 'react';
 import { 
-  Card, 
-  CardHeader, 
-  CardContent, 
-  CardTitle 
-} from '../components/ui/card';
+  OfficeMapHeader, 
+  StatsCards, 
+  MapLegend, 
+  MapSidebar, 
+  MapCanvas, 
+  TipBox 
+} from '../components/OfficeMap';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { 
-  ArrowLeft, 
-  Upload, 
-  Search, 
-  GripVertical, 
-  RotateCw, 
-  LayoutGrid, 
-  Package, 
-  Info, 
-  User} from 'lucide-react';
+import { apiService, MapDecorationSavePayload, MapStationSavePayload } from '../utils/api';
+import { toast } from 'sonner'; // Importamos toast para las notificaciones
+
+// Objetos por defecto disponibles para agregar al mapa
+// Incluye zonas, marcos, áreas de tienda, gestión y entrada
+const defaultObjects = [
+  { id: 'GRAY-ZONE', type: 'zone', width: 600, height: 400, placed: false, isDefault: true },
+  { id: 'FRAME-OBJECT', type: 'frame', width: 300, height: 600, placed: false, isDefault: true },
+  { id: 'STORE-AREA', type: 'store', width: 200, height: 100, placed: false, isDefault: true },
+  { id: 'MANAGEMENT', type: 'management', width: 180, height: 80, placed: false, isDefault: true },
+  { id: 'ENTRANCE', type: 'entrance', width: 150, height: 60, placed: false, isDefault: true },
+];
 
 export default function OfficeMap() {
-  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
 
   const [search, setSearch] = useState('');
-  const [desks, setDesks] = useState<any[]>([]);
+  // Inicializar desks con los objetos por defecto en el inventario
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [desks, setDesks] = useState<any[]>(defaultObjects);
   const [activeTab, setActiveTab] = useState<'inventory' | 'objects'>('inventory');
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [resizingId, setResizingId] = useState<string | null>(null);
-
+  const [activeMode, setActiveMode] = useState<'select' | 'add' | 'edit' | 'view'>('select');
+  const [currentZoneId, setCurrentZoneId] = useState<number | null>(null);
+  const [initialPlacedDeskIds, setInitialPlacedDeskIds] = useState<string[]>([]);
+  const [savingMap, setSavingMap] = useState(false);
+  const [loadingMap, setLoadingMap] = useState(false);
+  const [scale, setScale] = useState(1);
+  
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 2;
 
   const CANVAS_WIDTH = 2400;
   const CANVAS_HEIGHT = 5000;
 
-// 1. SE AGREGÓ EL OBJETO 'FRAME' AQUÍ
-  const [defaultObjects] = useState([
-    { id: 'GRAY-ZONE', type: 'zone', width: 600, height: 400, placed: false },
-    { id: 'FRAME-OBJECT', type: 'frame', width: 300, height: 600, placed: false },
-    { id: 'STORE-AREA', type: 'store', width: 200, height: 100, placed: false },
-    { id: 'MANAGEMENT', type: 'management', width: 180, height: 80, placed: false },
-    { id: 'ENTRANCE', type: 'entrance', width: 150, height: 60, placed: false },
-  ]);
-
   // 📊 Stats
-   const totalDesks = desks.filter(d => d.type === 'desk').length;
+  const totalDesks = desks.filter(d => d.type === 'desk').length;
   const reports = desks.filter(d => d.hasReport).length;
   const noIssues = desks.filter(d => d.type === 'desk' && !d.hasReport).length;
 
@@ -55,45 +105,63 @@ export default function OfficeMap() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const rows = text.split('\n').slice(1);
+      const rows = text
+        .split('\n')
+        .slice(1)
+        .map((row) => row.trim())
+        .filter((row) => row.length > 0);
 
       const parsed = rows.map((row, index) => {
-        const [id, x, y, width, height, type] = row.split(',');
+        const [id, , , width, height, type] = row.split(',');
         return {
           id: id?.trim() || `D-${100 + index}`,
-          x: x && x.trim() !== "" ? Number(x) : null,
-          y: y && y.trim() !== "" ? Number(y) : null,
+          // CSV desks always start in inventory and are placed manually by drag/drop.
+          x: null,
+          y: null,
           width: Number(width) || 80,
           height: Number(height) || 50,
           type: type?.trim() || 'desk',
-          placed: !!(x && x.trim() !== ""),
+          placed: false,
           hasReport: Math.random() > 0.9
         };
       });
 
       setDesks(prev => [...prev, ...parsed]);
+      
+      // Notificación de éxito al importar CSV
+      toast.success('CSV imported correctly', {
+        description: `${parsed.length} desks have been imported`,
+        duration: 5000,
+      });
     };
 
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Función para rotar un elemento (intercambia width por height)
   const rotateItem = (id: string) => {
     setDesks(prev => 
       prev.map(d => d.id === id ? { ...d, width: d.height, height: d.width } : d)
     );
+    // Notificación de éxito al rotar
+    toast.success('Element rotated', {
+      description: 'The element has been rotated 90 degrees',
+      duration: 3000,
+    });
   };
 
   const handleSvgDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData("objectData"));
-    if (!svgRef.current) return;
+    // svgRef ya no se usa - usamos e.currentTarget
 
-    const rect = svgRef.current.getBoundingClientRect();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     if (data.isDefault) {
+      // Es un objeto por defecto: crear nueva instancia
       const newObj = {
         ...data,
         id: `${data.id}-${Date.now()}`,
@@ -102,6 +170,11 @@ export default function OfficeMap() {
         placed: true
       };
       setDesks(prev => [...prev, newObj]);
+      // Notificación de éxito al agregar elemento
+      toast.success('Element added', {
+        description: `The element ${data.id} has been added to the map`,
+        duration: 3000,
+      });
     } else {
       setDesks(prev =>
         prev.map(d =>
@@ -114,8 +187,8 @@ export default function OfficeMap() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
+    // svgRef ya no se usa - usamos e.currentTarget
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
@@ -144,301 +217,349 @@ export default function OfficeMap() {
     }
   };
 
-  // background layers include zones and frames so they render beneath desks
-  const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame'));
+  // Capas de fondo: zonas, marcos y otros objetos placed en el mapa
+  const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance'));
+  // Items: escritorios placed en el mapa
+  const items = desks.filter(d => d.placed && d.type === 'desk');
+  // Inventario: elementos no placed que coinciden con la búsqueda
+  const inventory = desks.filter(d => !d.placed && d.type === 'desk' && d.id.toLowerCase().includes(search.toLowerCase()));
+  // Objects: objetos no placed (zonas, frames, store, management, entrance)
+  const objects = desks.filter(d => !d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance') && d.id.toLowerCase().includes(search.toLowerCase()));
 
-  const items = desks.filter(d => d.placed && d.type !== 'zone' && d.type !== 'frame');
-  const inventory = desks.filter(d => !d.placed && d.id.toLowerCase().includes(search.toLowerCase()));
+  // Handler para el mouse up global
+  const handleMouseUp = () => {
+    setDraggingId(null);
+    setResizingId(null);
+  };
 
-  return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
-         onMouseUp={() => { setDraggingId(null); setResizingId(null); }}>
+  // Handler para iniciar drag desde el canvas
+  const handleCanvasMouseDown = (id: string) => {
+    setDraggingId(id);
+  };
 
-      {/* Header */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
-        <div>
-           <h1 className="text-xl font-bold text-gray-900">Office Map - Desk Layout</h1>
-            <p className="text-sm text-gray-500">Overview of all desks and active reports</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
-        </Button>
+  // Handler para iniciar el redimensionamiento
+  const handleResizeStart = (id: string) => {
+    setResizingId(id);
+  };
 
-      </div>
+  // Handler para cambiar el modo activo
+  const handleModeChange = (mode: 'add' | 'edit' | 'view') => {
+    setActiveMode(mode);
+  };
 
-      {/* 📊 Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
-              Total Desks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{totalDesks}</div>
-          </CardContent>
-        </Card>
+  useEffect(() => {
+    if (!currentZoneId) return;
+    if (activeMode !== 'edit' && activeMode !== 'view') return;
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
-              With Active Reports
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">{reports}</div>
-          </CardContent>
-        </Card>
+    const toCanvasX = (value: number) => (value / 100) * CANVAS_WIDTH;
+    const toCanvasY = (value: number) => (value / 100) * CANVAS_HEIGHT;
 
-        
+    const loadSelectedMap = async () => {
+      try {
+        setLoadingMap(true);
+        const mapData = await apiService.getMapByZone(currentZoneId);
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
-              No Issues
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{noIssues}</div>
-          </CardContent>
-        </Card>
-      </div>
+        const mappedStations = mapData.stations.map((station) => {
+          const placed = (station.pos_x ?? 0) > 0 || (station.pos_y ?? 0) > 0;
+          return {
+            id: station.id_station,
+            x: placed ? toCanvasX(station.pos_x ?? 0) : null,
+            y: placed ? toCanvasY(station.pos_y ?? 0) : null,
+            width: toCanvasX(station.width ?? 8),
+            height: toCanvasY(station.height ?? 4),
+            type: 'desk',
+            placed,
+            hasReport: station.has_active_reports,
+          };
+        });
 
-      {/* 🎨 NUEVA SECCIÓN: Legend / Map Labels */}
-      <Card>
-        <CardContent className="flex flex-wrap gap-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">No issues</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">With active reports</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-400 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">Management / Store area</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">Entrance area</span>
-          </div>
-          <div className="flex items-center gap-2 border-l pl-4">
-            <User className="w-4 h-4 text-blue-600" />
-            <span className="text-sm text-gray-500">Click on any desk to view details</span>
-          </div>
-        </CardContent>
-      </Card>
+        setInitialPlacedDeskIds(
+          mappedStations.filter((station) => station.placed).map((station) => station.id),
+        );
 
-      {/* Layout */}
-      <div className="flex gap-6 h-[700px]">
+        const mappedDecorations = mapData.decorations.map((decoration) => {
+          const normalizedType = String(decoration.decoration_type || '').toLowerCase();
+          const placed = (decoration.pos_x ?? 0) > 0 || (decoration.pos_y ?? 0) > 0;
+          return {
+            id: decoration.label || `${normalizedType}-${decoration.id_decoration}`,
+            x: placed ? toCanvasX(decoration.pos_x ?? 0) : null,
+            y: placed ? toCanvasY(decoration.pos_y ?? 0) : null,
+            width: toCanvasX(decoration.width ?? 10),
+            height: toCanvasY(decoration.height ?? 10),
+            type: normalizedType,
+            placed,
+          };
+        });
 
-        {/* Sidebar */}
-   {/* Sidebar */}
-<Card className="w-80 flex flex-col border-none shadow-xl bg-white rounded-3xl overflow-hidden h-[700px]">
+        setDesks([...defaultObjects, ...mappedStations, ...mappedDecorations]);
+      } catch (error) {
+        toast.error((error as Error).message || 'No se pudo cargar el mapa seleccionado');
+      } finally {
+        setLoadingMap(false);
+      }
+    };
 
-  {/* Tabs + Search */}
-  <div className="p-5 space-y-4">
+    loadSelectedMap();
+  }, [activeMode, currentZoneId]);
 
-    <div className="flex p-1 bg-slate-100 rounded-xl">
-      <button
-        onClick={() => setActiveTab('inventory')}
-        className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
-          activeTab === 'inventory'
-            ? 'bg-white shadow text-blue-600'
-            : 'text-slate-400'
-        }`}
-      >
-        <LayoutGrid size={14} /> INVENTORY
-      </button>
+  const handleSaveMap = async () => {
+    if (!currentZoneId) {
+      toast.error('Primero crea o selecciona un piso para poder guardar');
+      return;
+    }
 
-      <button
-        onClick={() => setActiveTab('objects')}
-        className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
-          activeTab === 'objects'
-            ? 'bg-white shadow text-blue-600'
-            : 'text-slate-400'
-        }`}
-      >
-        <Package size={14} /> OBJECTS
-      </button>
-    </div>
+    const toPercentX = (value: number) => Math.max(0, Math.min(100, (value / CANVAS_WIDTH) * 100));
+    const toPercentY = (value: number) => Math.max(0, Math.min(100, (value / CANVAS_HEIGHT) * 100));
 
-    {/* Search */}
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-      <input
-        type="text"
-        placeholder="Search item..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/10"
-      />
-    </div>
-  </div>
+    const placedDesks = desks.filter((d) => d.type === 'desk' && d.placed);
+    const placedDeskIds = new Set(placedDesks.map((d) => d.id));
 
-  {/* List */}
-  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+    const stationPayloadPlaced: MapStationSavePayload[] = placedDesks.map((d) => ({
+        id_station: d.id,
+        id_zone: currentZoneId,
+        pos_x: toPercentX(d.x ?? 0),
+        pos_y: toPercentY(d.y ?? 0),
+        rotation: 0,
+        width: toPercentX(d.width),
+        height: toPercentY(d.height),
+      }));
 
-    {(activeTab === 'inventory' ? inventory : defaultObjects)
-      .filter(item =>
-        item.id.toLowerCase().includes(search.toLowerCase())
+    // Only clear coordinates for desks that were on canvas when edit started and are now removed.
+    const removedDeskPayload: MapStationSavePayload[] = initialPlacedDeskIds
+      .filter((id) => !placedDeskIds.has(id))
+      .map((id) => {
+        const existingDesk = desks.find((d) => d.id === id);
+        return {
+          id_station: id,
+          id_zone: currentZoneId,
+          pos_x: 0,
+          pos_y: 0,
+          rotation: 0,
+          width: toPercentX(existingDesk?.width ?? 80),
+          height: toPercentY(existingDesk?.height ?? 50),
+        };
+      });
+
+    const stationPayload: MapStationSavePayload[] = [...stationPayloadPlaced, ...removedDeskPayload];
+
+    const decorationPayload: MapDecorationSavePayload[] = desks
+      .filter((d) => d.placed && d.type !== 'desk')
+      .map((d) => ({
+        decoration_type: String(d.type || '').toUpperCase(),
+        label: d.id,
+        pos_x: toPercentX(d.x ?? 0),
+        pos_y: toPercentY(d.y ?? 0),
+        width: toPercentX(d.width),
+        height: toPercentY(d.height),
+        rotation: 0,
+        color: null,
+      }));
+
+    try {
+      setSavingMap(true);
+      const stationResult = await apiService.saveMapStations(stationPayload);
+      const decorationResult = await apiService.saveMapDecorations(currentZoneId, decorationPayload);
+
+      toast.success('Mapa guardado correctamente', {
+        description: `${stationResult.updated} estaciones y ${decorationResult.saved} objetos guardados`,
+      });
+
+      setInitialPlacedDeskIds(placedDesks.map((d) => d.id));
+    } catch (error) {
+      toast.error((error as Error).message || 'No se pudo guardar el mapa');
+    } finally {
+      setSavingMap(false);
+    }
+  };
+
+  // Handler para volver al menú inicial
+  const handleBackToMenu = () => {
+    setActiveMode('select');
+    setScale(1); // Resetear zoom al volver al menú
+  };
+
+  // Handlers para zoom
+  const handleZoomIn = () => setScale((s) => Math.min(s + 0.1, MAX_SCALE));
+  const handleZoomOut = () => setScale((s) => Math.max(s - 0.1, MIN_SCALE));
+
+  // Handler para eliminar un elemento placed y devolverlo al inventory
+  const handleDeleteItem = (id: string) => {
+    setDesks(prev =>
+      prev.map(d =>
+        d.id === id
+          ? { ...d, x: null, y: null, placed: false }
+          : d
       )
-      .map(item => (
-        <div
-          key={item.id}
-          draggable
-          onDragStart={(e) =>
-            e.dataTransfer.setData(
-              "objectData",
-              JSON.stringify({
-                ...item,
-                isDefault: activeTab === 'objects'
-              })
-            )
-          }
-          className="group flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm cursor-grab hover:border-blue-400 transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <GripVertical className="w-4 h-4 text-slate-300" />
-            <span className="text-xs font-bold text-slate-600">
-              {item.id}
-            </span>
-          </div>
+    );
+  };
 
-          <RotateCw
-            size={14}
-            className="text-slate-300 group-hover:text-blue-500 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              rotateItem(item.id);
-            }}
+  // Si el modo es 'view', mostrar solo el canvas sin sidebars
+  if (activeMode === 'view') {
+    return (
+      <div className="space-y-4 p-6 bg-gray-50 min-h-screen select-none flex flex-col"
+           onMouseUp={handleMouseUp}>
+
+        {/* Header simple */}
+        <OfficeMapHeader />
+
+        {/* Leyenda */}
+        <MapLegend
+          onModeChange={handleModeChange}
+          onBackToMenu={handleBackToMenu}
+          onZoneSelected={setCurrentZoneId}
+        />
+
+        {/* Canvas a pantalla completa */}
+        <div className="flex-1 flex gap-6 relative">
+          <MapCanvas
+            items={items}
+            bgLayers={bgLayers}
+            inventory={inventory}
+            CANVAS_WIDTH={CANVAS_WIDTH}
+            CANVAS_HEIGHT={CANVAS_HEIGHT}
+            onDrop={handleSvgDrop}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleCanvasMouseDown}
+            onResizeStart={handleResizeStart}
+            onDeleteItem={handleDeleteItem}
+            scale={scale}
+            isReadOnly
           />
-        </div>
-      ))}
-  </div>
 
-  {/* Upload */}
-  <div className="p-5 border-t">
-    <input
-      type="file"
-      ref={fileInputRef}
-      onChange={handleFileUpload}
-      className="hidden"
-      accept=".csv"
-    />
-    <Button
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-5 font-bold shadow-lg shadow-blue-100"
-      onClick={() => fileInputRef.current?.click()}
-    >
-      <Upload className="w-4 h-4 mr-2" /> SUBIR CSV
-    </Button>
-  </div>
-
-</Card>
-
-        {/* Canvas */}
-        <Card className="flex-1 relative overflow-hidden bg-white shadow-inner">
-
-          {/* Badges */}
-          <div className="absolute top-4 right-4 z-10 flex gap-2">
-            <Badge className="bg-green-600 text-white border-none">
-              {items.length} Located
-            </Badge>
-            <Badge variant="outline">
-              {inventory.length} Pending
-            </Badge>
+          {/* Botones de zoom en la esquina inferior derecha */}
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomIn}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomOut}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
           </div>
-
-          <div className="w-full h-full"
-               onDrop={handleSvgDrop}
-               onDragOver={(e) => e.preventDefault()}
-               onMouseMove={handleMouseMove}>
-
-            <svg ref={svgRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT}>
-              <defs>
-                <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <circle cx="2" cy="2" r="1.5" fill="#CBD5E1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#dotGrid)" />
-
-              {/* render zones/frames beneath */}
-              {bgLayers.map(el => (
-                <g key={el.id} transform={`translate(${el.x}, ${el.y})`}>
-                  <rect
-                    width={el.width} height={el.height}
-                    fill={el.type === 'frame' ? 'transparent' : '#94A3B8'}
-                    stroke={el.type === 'frame' ? '#94A3B8' : 'none'}
-                    strokeWidth={el.type === 'frame' ? 2 : 0}
-                    rx={4}
-                    onMouseDown={(e) => { e.stopPropagation(); setDraggingId(el.id); }}
-                    className="cursor-move opacity-90 shadow-sm"
-                  />
-                  {el.type === 'zone' && (
-                    <rect width={el.width} height={12} fill="white" fillOpacity={0.8} rx={2} />
-                  )}
-                  <circle
-                    cx={el.width} cy={el.height} r={8} fill="white" stroke="#94A3B8" strokeWidth={2}
-                    className="cursor-nwse-resize shadow-md"
-                    onMouseDown={(e) => { e.stopPropagation(); setResizingId(el.id); }}
-                  />
-                </g>
-              ))}
-
-              {/* desks & objects */}
-              {items.map((item) => {
-                let fill = item.hasReport ? "#EF4444" : "#22C55E";
-                if (item.type === 'management' || item.type === 'store') fill = "#F59E0B";
-                if (item.type === 'entrance') fill = "#3B82F6";
-
-                const adaptiveSize = Math.min(item.width / (item.id.length * 0.7), item.height * 0.4, 14);
-
-                return (
-                  <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
-                    <rect
-                      width={item.width} height={item.height}
-                      fill={fill}
-                      rx={6}
-                      onMouseDown={(e) => { e.stopPropagation(); setDraggingId(item.id); }}
-                      className="cursor-move"
-                    />
-                    <text
-                      x={item.width / 2} y={item.height / 2}
-                      textAnchor="middle" dominantBaseline="middle"
-                      fill="white" className="text-[10px] font-bold pointer-events-none"
-                      style={{ fontSize: adaptiveSize }}
-                    >
-                      {item.id}
-                    </text>
-                    <circle
-                      cx={item.width} cy={item.height} r={8}
-                      fill="white" stroke="#00000033" strokeWidth={1}
-                      className="cursor-nwse-resize"
-                      onMouseDown={(e) => { e.stopPropagation(); setResizingId(item.id); }}
-                    />
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </Card>
-      </div>
-
-      {/* Tip */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-4 items-center">
-        <div className="bg-blue-100 p-2 rounded-full">
-          <Info className="w-5 h-5 text-blue-600" />
-        </div>
-        <div className="text-xs text-blue-800">
-          <p className="font-bold mb-1">Tip 💡</p>
-          <p>
-            Drag desks or objects from the sidebar to the map.
-            You can resize and rotate items directly on the canvas.
-          </p>
         </div>
       </div>
+    );
+  }
 
+  // Si el modo es 'add' o 'edit', mostrar interfaz completa de mapeo
+  if (activeMode === 'add' || activeMode === 'edit') {
+    return (
+      <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
+           onMouseUp={handleMouseUp}>
+
+        {/* Header */}
+        <OfficeMapHeader />
+
+        {/*Statistics */}
+        <StatsCards 
+          totalDesks={totalDesks} 
+          reports={reports} 
+          noIssues={noIssues} 
+        />
+
+        {/* Leyenda del Mapa */}
+        <MapLegend
+          onModeChange={handleModeChange}
+          onBackToMenu={handleBackToMenu}
+          onZoneSelected={setCurrentZoneId}
+        />
+
+        <div className="flex items-center justify-end gap-3">
+          {loadingMap && <span className="text-sm text-slate-500">Cargando mapa...</span>}
+          <Button onClick={handleSaveMap} disabled={savingMap}>
+            {savingMap ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </div>
+
+        {/* Layout */}
+        <div className="flex gap-6 h-[700px] relative">
+
+          {/* Sidebar */}
+          <MapSidebar
+            search={search}
+            setSearch={setSearch}
+            inventory={inventory}
+            objects={objects}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onRotateItem={rotateItem}
+            onFileUpload={handleFileUpload}
+          />
+
+          {/* Canvas */}
+          <MapCanvas
+            items={items}
+            bgLayers={bgLayers}
+            inventory={inventory}
+            CANVAS_WIDTH={CANVAS_WIDTH}
+            CANVAS_HEIGHT={CANVAS_HEIGHT}
+            onDrop={handleSvgDrop}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleCanvasMouseDown}
+            onResizeStart={handleResizeStart}
+            onDeleteItem={handleDeleteItem}
+            scale={scale}
+            isReadOnly={false}
+          />
+
+          {/* Botones de zoom en la esquina inferior derecha */}
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomIn}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomOut}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
+          </div>
+        </div>
+
+        {/* Tip */}
+        <TipBox />
+
+      </div>
+    );
+  }
+
+  // Si el modo es 'select', mostrar solo el menú de opciones y el canvas en blanco
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col p-6 space-y-6">
+      <OfficeMapHeader />
+      <MapLegend
+        onModeChange={handleModeChange}
+        onBackToMenu={handleBackToMenu}
+        onZoneSelected={setCurrentZoneId}
+      />
+      
+      {/* Canvas vacío para visualizar el espacio de mapeo */}
+      <div className="flex-1 bg-white rounded-lg border-2 border-dashed border-gray-300 shadow-sm flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400 text-lg font-medium">Select an option from the menu to begin</p>
+        </div>
+      </div>
     </div>
   );
 }
+

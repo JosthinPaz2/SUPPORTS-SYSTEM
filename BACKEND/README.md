@@ -1,6 +1,6 @@
 # Support System API
 
-A full REST API built with **FastAPI** for managing technical support tickets, including users, stations, zones, categories, priorities, comments, and notifications.
+A full REST API built with **FastAPI** for managing technical support tickets, including users, stations, floors, categories, priorities, comments, and notifications.
 
 ## 📋 Tabla de Contenidos
 
@@ -395,11 +395,11 @@ BACKEND/
 - `PUT /users/{id}` - Update user data
 - `DELETE /users/{id}` - Delete user
 
-### Zones
-- `GET /zones` - List zones
-- `POST /zones` - Create zone
-- `PUT /zones/{id}` - Update zone
-- `DELETE /zones/{id}` - Delete zone
+### Floors
+- `GET /floors` - List floors
+- `POST /floors` - Create floor
+- `PUT /floors/{id}` - Update floor
+- `DELETE /floors/{id}` - Delete floor
 
 ### Locations
 - `GET /locations` - List locations

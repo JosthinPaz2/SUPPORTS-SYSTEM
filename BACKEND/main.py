@@ -13,9 +13,10 @@ from controllers.notification_controller import router as notification_router
 from controllers.role_controller import router as role_router
 from controllers.ticket_controller import router as ticket_router
 from controllers.user_controller import router as user_router
-from controllers.zone_controller import router as zone_router
+from controllers.floor_controller import router as floor_router
 from controllers.location_controller import router as location_router
 from controllers.change_history_controller import router as change_router
+from controllers.map_controller import router as map_router
 
 # Importar Base y engine para crear las tablas al iniciar la app
 from db import Base, engine
@@ -46,13 +47,14 @@ from fastapi import Request
 app.include_router(category_router)
 app.include_router(user_router)
 app.include_router(role_router)
-app.include_router(zone_router)
+app.include_router(floor_router)
 app.include_router(location_router)
 app.include_router(station_router)
 app.include_router(ticket_router)
 app.include_router(comment_router)
 app.include_router(notification_router)
 app.include_router(change_router)
+app.include_router(map_router)
 
 
 # Crear tablas al iniciar la aplicación (si no existen)

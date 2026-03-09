@@ -10,4 +10,4 @@ class Location(Base):
     location_name = Column(String(100), nullable=False)
     
     # Relationships
-    zones = relationship("Zone", back_populates="location")
+    floors = relationship("Floor", back_populates="location")

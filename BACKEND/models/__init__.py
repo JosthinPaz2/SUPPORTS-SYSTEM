@@ -1,6 +1,6 @@
 from .role import Role
 from .user import User
-from .zone import Zone
+from .floor import Floor
 from .station import Station
 from .category import Category
 from .ticket import Ticket
@@ -8,3 +8,4 @@ from .comment import Comment
 from .notification import Notification
 from .location import Location
 from .change_history import ChangeHistory
+from .map_decoration import MapDecoration

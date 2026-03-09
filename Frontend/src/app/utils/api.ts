@@ -42,6 +42,74 @@ export interface ResetPasswordResponse {
   message: string;
 }
 
+export interface LocationOption {
+  id_location: number;
+  location_name: string;
+}
+
+export interface FloorOption {
+  id_floor: number;
+  floor_name: string;
+  id_location: number;
+}
+
+export interface FloorCreate {
+  floor_name: string;
+  id_location: number;
+}
+
+export interface MapDecorationDto {
+  id_decoration: number;
+  id_zone: number;
+  decoration_type: string;
+  label?: string | null;
+  pos_x: number;
+  pos_y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  color?: string | null;
+}
+
+export interface MapStationDto {
+  id_station: string;
+  id_zone: number;
+  current_status: string;
+  pos_x: number;
+  pos_y: number;
+  rotation: number;
+  width: number;
+  height: number;
+  has_active_reports: boolean;
+}
+
+export interface MapZoneResponseDto {
+  id_zone: number;
+  stations: MapStationDto[];
+  decorations: MapDecorationDto[];
+}
+
+export interface MapStationSavePayload {
+  id_station: string;
+  id_zone: number;
+  pos_x: number;
+  pos_y: number;
+  rotation: number;
+  width: number;
+  height: number;
+}
+
+export interface MapDecorationSavePayload {
+  decoration_type: string;
+  label?: string | null;
+  pos_x: number;
+  pos_y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  color?: string | null;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -57,19 +125,33 @@ class ApiService {
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         ...options.headers,
       },
       ...options,
     };
 
-    const response = await fetch(url, config);
+    try {
+      const response = await fetch(url, config);
+      
+      // Check if response is HTML instead of JSON
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que el backend esté corriendo correctamente.');
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error HTTP: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        throw new Error('No se puede conectar al servidor. Verifica que el backend esté activo.');
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -105,6 +187,42 @@ class ApiService {
     return this.request<ResetPasswordResponse>('/users/reset-password', {
       method: 'POST',
       body: JSON.stringify(request),
+    });
+  }
+
+  async getLocations(): Promise<LocationOption[]> {
+    return this.request<LocationOption[]>('/locations/');
+  }
+
+  async getFloors(): Promise<FloorOption[]> {
+    return this.request<FloorOption[]>('/floors/');
+  }
+
+  async createFloor(floorData: FloorCreate): Promise<FloorOption> {
+    return this.request<FloorOption>('/floors/', {
+      method: 'POST',
+      body: JSON.stringify(floorData),
+    });
+  }
+
+  async getMapByZone(idZone: number): Promise<MapZoneResponseDto> {
+    return this.request<MapZoneResponseDto>(`/api/map/${idZone}`);
+  }
+
+  async saveMapStations(stations: MapStationSavePayload[]): Promise<{ updated: number; message: string }> {
+    return this.request<{ updated: number; message: string }>('/api/map/save', {
+      method: 'PUT',
+      body: JSON.stringify({ stations }),
+    });
+  }
+
+  async saveMapDecorations(
+    idZone: number,
+    decorations: MapDecorationSavePayload[]
+  ): Promise<{ saved: number; message: string }> {
+    return this.request<{ saved: number; message: string }>('/api/map/decorations/save', {
+      method: 'PUT',
+      body: JSON.stringify({ id_zone: idZone, decorations }),
     });
   }
 }
