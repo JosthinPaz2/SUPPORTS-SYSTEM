@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Lock, AlertCircle, Mail, Eye, EyeOff, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import BackgroundCircles from '../components/ui/BackgroundCircles';
+
 
 type ModalState = 'forgot' | 'verify' | 'reset';
 
@@ -166,17 +168,21 @@ export default function Login() {
     setNewPasswordTouched(false);
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-black to-teal-600 p-4">
+return (
+
+  
+    <div className="min-h-screen flex items-center justify-center p-4">
+      {/* Background */}
+      <BackgroundCircles />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-20 h-20 bg-teal-500 rounded-full flex items-center justify-center mb-4">
             <Lock className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-teal-600 mb-2">
             IT Support System
           </h1>
-          <p className="text-teal-200">
+          <p className="text-teal-600">
             Sign in to continue
           </p>
         </div>
@@ -256,7 +262,7 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-teal-200 mt-4">
+        <p className="text-center text-teal-600 mt-4">
           Don't have an account?{' '}
           <button
             className="text-teal-400 hover:text-teal-300 hover:underline"

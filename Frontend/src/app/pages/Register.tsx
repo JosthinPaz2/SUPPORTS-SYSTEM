@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 import { Lock, Mail, User, CheckCircle, XCircle} from 'lucide-react';
 import { toast } from 'sonner';
+import BackgroundCircles from '../components/ui/BackgroundCircles';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -83,15 +84,16 @@ export default function Register() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-black to-teal-600 p-4">
+return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <BackgroundCircles />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-20 h-20 bg-teal-500 rounded-full flex items-center justify-center mb-4">
             <User className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-          <p className="text-teal-200">Fill in the form to create a new account</p>
+          <h1 className="text-3xl font-bold text-teal-600 mb-2">Create Account</h1>
+          <p className="text-teal-600">Fill in the form to create a new account</p>
         </div>
 
         <Card className="bg-gray-900 shadow-xl">
@@ -228,7 +230,7 @@ export default function Register() {
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-teal-200 mt-4">
+        <p className="text-center text-teal-600 mt-4">
           Already have an account?{' '}
           <button
             className="text-teal-400 hover:text-teal-300 hover:underline"
