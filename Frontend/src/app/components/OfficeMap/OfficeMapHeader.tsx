@@ -57,10 +57,6 @@ export default function OfficeMapHeader({
         <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
       
-      {/* Botón para regresar al dashboard anterior */}
-      <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
-      </Button>
     </div>
   );
 }

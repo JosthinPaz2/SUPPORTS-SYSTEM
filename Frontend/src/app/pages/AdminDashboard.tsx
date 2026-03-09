@@ -22,23 +22,17 @@ export default function AdminDashboard() {
     { id: 'map' as const, label: 'Office Map', icon: Map },
   ];
 
-  const renderRestricted = () => (
-    <div className="rounded-md border bg-white p-6 text-center">
-      <h2 className="text-lg font-medium text-gray-900">Access Restricted</h2>
-      <p className="text-sm text-gray-600 mt-2">You do not have permission to view this section.</p>
-    </div>
-  );
 
   const renderContent = () => {
     switch (activeTab) {
       case 'kanban':
-        return isIT ? <KanbanBoard /> : renderRestricted();
+        return <KanbanBoard /> ;
       case 'reports':
-        return isIT ? <ReportsPanel /> : renderRestricted();
+        return <ReportsPanel />;
       case 'map':
         return <OfficeMap />;
       default:
-        return isIT ? <KanbanBoard /> : renderRestricted();
+        return <KanbanBoard />;
     }
   };
 
