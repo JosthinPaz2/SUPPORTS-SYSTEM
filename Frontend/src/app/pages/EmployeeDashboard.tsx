@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { LogOut, Plus, Clock, CheckCircle2, AlertCircle, Map, FilterX } from 'lucide-react';
+import { LogOut, Plus, Clock, CheckCircle2, AlertCircle, Map } from 'lucide-react';
 import TicketForm from '../components/TicketForm';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import NotificationsButton from '../components/NotificationsButton';

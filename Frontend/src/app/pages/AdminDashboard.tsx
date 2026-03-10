@@ -52,7 +52,7 @@ export default function AdminDashboard() {
                 className="group flex items-center overflow-hidden transition-all duration-300 ease-in-out hover:bg-black-50 hover:text-black-600 border-black-100"
               >
                 <LogOut className="w-2 h-2" />
-                <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-0">
+                <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-">
                   Logout
                 </span>
               </Button>
