@@ -113,6 +113,23 @@ export default function MapSidebar({
   // Determinar qué lista mostrar según la pestaña activa
   const displayedItems = activeTab === 'inventory' ? inventory : objects;
 
+  const getPreviewClasses = (type: string) => {
+    switch (type) {
+      case 'zone':
+        return 'w-7 h-5 rounded bg-slate-500 border border-slate-600';
+      case 'frame':
+        return 'w-7 h-5 rounded border-2 border-slate-400 bg-transparent';
+      case 'store':
+        return 'w-7 h-4 rounded bg-amber-500 border border-amber-600';
+      case 'management':
+        return 'w-7 h-4 rounded bg-yellow-400 border border-yellow-500';
+      case 'entrance':
+        return 'w-7 h-3 rounded bg-blue-500 border border-blue-600';
+      default:
+        return 'w-7 h-4 rounded bg-emerald-500 border border-emerald-600';
+    }
+  };
+
   return (
     // Contenedor principal: Card con ancho fijo de 320px, flex column y overflow oculto
     <Card className="w-80 flex flex-col overflow-hidden">
@@ -169,15 +186,24 @@ export default function MapSidebar({
               <GripVertical className="w-4 h-4 text-gray-300" />
               <span className="text-sm font-semibold">{item.id}</span>
             </div>
-            {/* Botón de rotación del elemento */}
-            <RotateCw
-              size={14}
-              className="text-gray-400 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevenir propagación del evento
-                onRotateItem(item.id); // Ejecutar callback de rotación
-              }}
-            />
+            <div className="flex items-center gap-2">
+              {activeTab === 'objects' && (
+                <div
+                  className={`${getPreviewClasses(item.type)} shrink-0`}
+                  title={`${item.type} preview`}
+                />
+              )}
+
+              {/* Botón de rotación del elemento */}
+              <RotateCw
+                size={14}
+                className="text-gray-400 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevenir propagación del evento
+                  onRotateItem(item.id); // Ejecutar callback de rotación
+                }}
+              />
+            </div>
           </div>
         ))}
       </CardContent>
@@ -188,6 +214,8 @@ export default function MapSidebar({
           type="file"
           ref={fileInputRef}
           onChange={onFileUpload}
+          title="Import CSV file"
+          aria-label="Import CSV file"
           className="hidden"
         />
         <Button

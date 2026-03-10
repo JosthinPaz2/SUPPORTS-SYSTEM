@@ -18,6 +18,15 @@ export interface LoginResponse {
   token_type: string;
 }
 
+export interface UserListItemDto {
+  id_user: number;
+  full_name: string;
+  institutional_email: string;
+  id_role: number;
+  campaign: string;
+  created_at: string;
+}
+
 export interface PasswordRecoveryRequest {
   institutional_email: string;
 }
@@ -58,6 +67,53 @@ export interface FloorOption {
 export interface FloorCreate {
   floor_name: string;
   id_location: number;
+}
+
+export interface StationOption {
+  id_station: string;
+  id_floor: number;
+  id_zone?: number | null;
+}
+
+export interface CategoryOption {
+  id_category: number;
+  category_name: string;
+}
+
+export interface CreateTicketRequest {
+  title: string;
+  description: string;
+  id_category: number;
+  created_by: number;
+  id_station?: string;
+  priority?: string;
+}
+
+export interface TicketResponseDto {
+  id_ticket: number;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  id_category: number;
+  created_by: number;
+  primary_technician?: number | null;
+  secondary_technician?: number | null;
+  id_station?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+}
+
+export interface UpdateTicketRequest {
+  title?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  id_category?: number;
+  primary_technician?: number;
+  secondary_technician?: number;
+  id_station?: string;
+  resolved_at?: string;
 }
 
 export interface MapDecorationDto {
@@ -192,6 +248,10 @@ class ApiService {
     });
   }
 
+  async getUsers(): Promise<UserListItemDto[]> {
+    return this.request<UserListItemDto[]>('/users/');
+  }
+
   async getLocations(): Promise<LocationOption[]> {
     return this.request<LocationOption[]>('/locations/');
   }
@@ -204,6 +264,32 @@ class ApiService {
     return this.request<FloorOption>('/floors/', {
       method: 'POST',
       body: JSON.stringify(floorData),
+    });
+  }
+
+  async getStations(): Promise<StationOption[]> {
+    return this.request<StationOption[]>('/stations/');
+  }
+
+  async getCategories(): Promise<CategoryOption[]> {
+    return this.request<CategoryOption[]>('/categories/');
+  }
+
+  async createTicket(payload: CreateTicketRequest): Promise<TicketResponseDto> {
+    return this.request<TicketResponseDto>('/tickets/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getTickets(): Promise<TicketResponseDto[]> {
+    return this.request<TicketResponseDto[]>('/tickets/');
+  }
+
+  async updateTicket(ticketId: number | string, payload: UpdateTicketRequest): Promise<TicketResponseDto> {
+    return this.request<TicketResponseDto>(`/tickets/${ticketId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     });
   }
 

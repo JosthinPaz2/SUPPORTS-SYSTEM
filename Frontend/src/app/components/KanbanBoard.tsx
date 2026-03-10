@@ -54,7 +54,7 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
       ref={(node) => {
         drop(node);
       }}
-      className={`flex-1 min-h-[600px] transition-colors ${
+      className={`flex-1 min-h-150 transition-colors ${
         isOver ? 'bg-blue-50' : ''
       }`}
     >

@@ -1,14 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { LogOut, Plus, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LogOut, Plus, Clock, CheckCircle2, AlertCircle, Map } from 'lucide-react';
 import TicketForm from '../components/TicketForm';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import { Ticket } from '../types/ticket';
 
 export default function EmployeeDashboard() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { tickets } = useTickets();
   const [showForm, setShowForm] = useState(false);
@@ -32,6 +34,13 @@ export default function EmployeeDashboard() {
               <p className="text-sm text-gray-600">Welcome, {user?.name}</p>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/OfficeMap?viewOnly=true')}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                Office Map
+              </Button>
               <Button onClick={() => setShowForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Ticket

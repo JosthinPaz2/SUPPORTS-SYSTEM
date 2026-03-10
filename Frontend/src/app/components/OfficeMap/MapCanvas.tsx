@@ -97,6 +97,8 @@ interface MapCanvasProps {
   scale?: number;
   /** Modo solo visualizacion: desactiva mover/eliminar/redimensionar/drop */
   isReadOnly?: boolean;
+  /** Callback opcional para abrir detalles o acciones al hacer click en un escritorio */
+  onItemClick?: (id: string) => void;
 }
 
 /**
@@ -149,6 +151,7 @@ export default function MapCanvas({
   onDeleteItem,
   scale = 1,
   isReadOnly = false,
+  onItemClick,
 }: MapCanvasProps) {
   // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
@@ -179,13 +182,9 @@ export default function MapCanvas({
         {/* Elemento SVG principal del canvas */}
         <svg 
           ref={svgRef} 
-          width={CANVAS_WIDTH} 
-          height={CANVAS_HEIGHT}
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: '0 0',
-            transition: 'transform 0.1s ease-out'
-          }}
+          width={CANVAS_WIDTH * scale}
+          height={CANVAS_HEIGHT * scale}
+          viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
         >
           
           {/* Definiciones SVG: patrones y filtros */}
@@ -286,7 +285,8 @@ export default function MapCanvas({
                 fill={getFillColor(item)}
                 rx={8} // Bordes redondeados
                 onMouseDown={isReadOnly ? undefined : () => onMouseDown(item.id)} // Iniciar arrastre
-                className={isReadOnly ? '' : 'cursor-move'} // Cursor de movimiento
+                onClick={isReadOnly ? () => onItemClick?.(item.id) : undefined}
+                className={isReadOnly ? 'cursor-pointer' : 'cursor-move'} // Cursor de movimiento
               />
               {/* Texto con el ID del elemento centrado */}
               <text

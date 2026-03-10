@@ -47,7 +47,9 @@
  * - ../components/OfficeMap: Subcomponentes del mapa de oficinas
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   OfficeMapHeader, 
   StatsCards, 
@@ -57,7 +59,10 @@ import {
   TipBox 
 } from '../components/OfficeMap';
 import { Button } from '../components/ui/button';
-import { apiService, MapDecorationSavePayload, MapStationSavePayload } from '../utils/api';
+import { Card, CardContent } from '../components/ui/card';
+import TicketForm from '../components/TicketForm';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { apiService, FloorOption, LocationOption, MapDecorationSavePayload, MapStationSavePayload } from '../utils/api';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
 
 // Objetos por defecto disponibles para agregar al mapa
@@ -71,6 +76,9 @@ const defaultObjects = [
 ];
 
 export default function OfficeMap() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [search, setSearch] = useState('');
@@ -86,12 +94,25 @@ export default function OfficeMap() {
   const [savingMap, setSavingMap] = useState(false);
   const [loadingMap, setLoadingMap] = useState(false);
   const [scale, setScale] = useState(1);
+  const [viewLocations, setViewLocations] = useState<LocationOption[]>([]);
+  const [viewFloors, setViewFloors] = useState<FloorOption[]>([]);
+  const [selectedViewLocationId, setSelectedViewLocationId] = useState('');
+  const [selectedViewFloorId, setSelectedViewFloorId] = useState('');
+  const [loadingViewMetadata, setLoadingViewMetadata] = useState(false);
+  const [selectedStationForTicket, setSelectedStationForTicket] = useState<string | null>(null);
+  const [adminLocations, setAdminLocations] = useState<LocationOption[]>([]);
+  const [adminFloors, setAdminFloors] = useState<FloorOption[]>([]);
+  const [adminSelectedLocationId, setAdminSelectedLocationId] = useState('');
+  const [adminSelectedFloorId, setAdminSelectedFloorId] = useState('');
+  const [loadingAdminMetadata, setLoadingAdminMetadata] = useState(false);
   
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
+  const isViewOnly = searchParams.get('viewOnly') === 'true';
+  const autoOpenViewSelector = searchParams.get('openViewSelector') === 'true';
 
-  const CANVAS_WIDTH = 2400;
-  const CANVAS_HEIGHT = 5000;
+  const BASE_CANVAS_WIDTH = 2400;
+  const BASE_CANVAS_HEIGHT = 5000;
 
   // 📊 Stats
   const totalDesks = desks.filter(d => d.type === 'desk').length;
@@ -226,6 +247,25 @@ export default function OfficeMap() {
   // Objects: objetos no placed (zonas, frames, store, management, entrance)
   const objects = desks.filter(d => !d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance') && d.id.toLowerCase().includes(search.toLowerCase()));
 
+  const canvasSize = useMemo(() => {
+    const placedItems = desks.filter((item) => item.placed && item.x != null && item.y != null);
+
+    const maxRight = placedItems.reduce(
+      (max, item) => Math.max(max, (item.x ?? 0) + (item.width ?? 0)),
+      BASE_CANVAS_WIDTH,
+    );
+
+    const maxBottom = placedItems.reduce(
+      (max, item) => Math.max(max, (item.y ?? 0) + (item.height ?? 0)),
+      BASE_CANVAS_HEIGHT,
+    );
+
+    return {
+      width: Math.max(BASE_CANVAS_WIDTH, Math.ceil((maxRight + 200) / 100) * 100),
+      height: Math.max(BASE_CANVAS_HEIGHT, Math.ceil((maxBottom + 200) / 100) * 100),
+    };
+  }, [desks]);
+
   // Handler para el mouse up global
   const handleMouseUp = () => {
     setDraggingId(null);
@@ -248,11 +288,77 @@ export default function OfficeMap() {
   };
 
   useEffect(() => {
-    if (!currentZoneId) return;
-    if (activeMode !== 'edit' && activeMode !== 'view') return;
+    if (!isViewOnly) return;
 
-    const toCanvasX = (value: number) => (value / 100) * CANVAS_WIDTH;
-    const toCanvasY = (value: number) => (value / 100) * CANVAS_HEIGHT;
+    const loadViewMetadata = async () => {
+      setLoadingViewMetadata(true);
+      try {
+        const [locationData, floorData] = await Promise.all([
+          apiService.getLocations(),
+          apiService.getFloors(),
+        ]);
+        setViewLocations(locationData);
+        setViewFloors(floorData);
+      } catch (error) {
+        toast.error((error as Error).message || 'Could not load locations and floors');
+      } finally {
+        setLoadingViewMetadata(false);
+      }
+    };
+
+    loadViewMetadata();
+  }, [isViewOnly]);
+
+  useEffect(() => {
+    if (isViewOnly || (activeMode !== 'select' && activeMode !== 'view')) return;
+
+    const loadAdminMetadata = async () => {
+      setLoadingAdminMetadata(true);
+      try {
+        const [locationData, floorData] = await Promise.all([
+          apiService.getLocations(),
+          apiService.getFloors(),
+        ]);
+
+        setAdminLocations(locationData);
+        setAdminFloors(floorData);
+      } catch (error) {
+        toast.error((error as Error).message || 'Could not load locations and floors');
+      } finally {
+        setLoadingAdminMetadata(false);
+      }
+    };
+
+    loadAdminMetadata();
+  }, [isViewOnly, activeMode]);
+
+  useEffect(() => {
+    if (isViewOnly || !currentZoneId || adminFloors.length === 0) return;
+
+    const selectedFloor = adminFloors.find((floor) => floor.id_floor === currentZoneId);
+    if (!selectedFloor) return;
+
+    setAdminSelectedFloorId(String(selectedFloor.id_floor));
+    setAdminSelectedLocationId(String(selectedFloor.id_location));
+  }, [isViewOnly, currentZoneId, adminFloors]);
+
+  useEffect(() => {
+    if (!isViewOnly) return;
+
+    if (!selectedViewFloorId) {
+      setCurrentZoneId(null);
+      return;
+    }
+
+    setCurrentZoneId(Number(selectedViewFloorId));
+  }, [isViewOnly, selectedViewFloorId]);
+
+  useEffect(() => {
+    if (!currentZoneId) return;
+    if (!isViewOnly && activeMode !== 'edit' && activeMode !== 'view') return;
+
+    const toCanvasX = (value: number) => (value / 100) * BASE_CANVAS_WIDTH;
+    const toCanvasY = (value: number) => (value / 100) * BASE_CANVAS_HEIGHT;
 
     const loadSelectedMap = async () => {
       try {
@@ -308,8 +414,8 @@ export default function OfficeMap() {
       return;
     }
 
-    const toPercentX = (value: number) => Math.max(0, Math.min(100, (value / CANVAS_WIDTH) * 100));
-    const toPercentY = (value: number) => Math.max(0, Math.min(100, (value / CANVAS_HEIGHT) * 100));
+    const toPercentX = (value: number) => Math.max(0, Math.min(100, (value / BASE_CANVAS_WIDTH) * 100));
+    const toPercentY = (value: number) => Math.max(0, Math.min(100, (value / BASE_CANVAS_HEIGHT) * 100));
 
     const placedDesks = desks.filter((d) => d.type === 'desk' && d.placed);
     const placedDeskIds = new Set(placedDesks.map((d) => d.id));
@@ -374,6 +480,11 @@ export default function OfficeMap() {
 
   // Handler para volver al menú inicial
   const handleBackToMenu = () => {
+    if (isViewOnly) {
+      navigate('/employee');
+      return;
+    }
+
     setActiveMode('select');
     setScale(1); // Resetear zoom al volver al menú
   };
@@ -393,30 +504,273 @@ export default function OfficeMap() {
     );
   };
 
+  const availableViewFloors = selectedViewLocationId
+    ? viewFloors.filter((floor) => floor.id_location === Number(selectedViewLocationId))
+    : [];
+
+  const selectedViewLocation = viewLocations.find(
+    (location) => location.id_location === Number(selectedViewLocationId),
+  );
+
+  const selectedViewFloor = viewFloors.find(
+    (floor) => floor.id_floor === Number(selectedViewFloorId),
+  );
+
+  const adminAvailableFloors = adminSelectedLocationId
+    ? adminFloors
+        .filter((floor) => floor.id_location === Number(adminSelectedLocationId))
+        .sort((a, b) => a.floor_name.localeCompare(b.floor_name))
+    : [];
+
+  if (isViewOnly) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
+        <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-7xl flex-col gap-4 overflow-hidden">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
+              <p className="text-sm text-gray-600">Read-only office layout view</p>
+            </div>
+            <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
+          </div>
+
+          <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <Card className="border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+              <CardContent className="pt-6 space-y-5">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Map Filter
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Choose the office area you want to inspect.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-700">
+                    Location
+                  </label>
+                  <Select
+                    value={selectedViewLocationId}
+                    onValueChange={(value) => {
+                      setSelectedViewLocationId(value);
+                      setSelectedViewFloorId('');
+                    }}
+                    disabled={loadingViewMetadata}
+                  >
+                    <SelectTrigger
+                      id="employeeViewLocation"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                    >
+                      <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {viewLocations.map((location) => (
+                        <SelectItem key={location.id_location} value={String(location.id_location)}>
+                          {location.location_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-700">
+                    Floor
+                  </label>
+                  <Select
+                    value={selectedViewFloorId}
+                    onValueChange={setSelectedViewFloorId}
+                    disabled={!selectedViewLocationId || loadingViewMetadata}
+                  >
+                    <SelectTrigger
+                      id="employeeViewFloor"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                    >
+                      <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableViewFloors.map((floor) => (
+                        <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
+                          {floor.floor_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 text-sm text-slate-600">
+                  <p className="font-medium text-slate-700">Read-only view</p>
+                  <p className="mt-1 leading-6">
+                    Select a location and floor to view the office layout. You can inspect the map and use zoom, but not edit anything.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="min-h-0 relative">
+              {currentZoneId ? (
+                <>
+                  <MapCanvas
+                    items={items}
+                    bgLayers={bgLayers}
+                    inventory={inventory}
+                    CANVAS_WIDTH={canvasSize.width}
+                    CANVAS_HEIGHT={canvasSize.height}
+                    onDrop={handleSvgDrop}
+                    onMouseMove={handleMouseMove}
+                    onMouseDown={handleCanvasMouseDown}
+                    onResizeStart={handleResizeStart}
+                    onDeleteItem={handleDeleteItem}
+                    scale={scale}
+                    isReadOnly
+                    onItemClick={setSelectedStationForTicket}
+                  />
+
+                  <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+                      onClick={handleZoomIn}
+                      aria-label="Zoom in"
+                      title="Zoom in"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+                      onClick={handleZoomOut}
+                      aria-label="Zoom out"
+                      title="Zoom out"
+                    >
+                      −
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white text-center shadow-sm">
+                  <div>
+                    <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
+                    <p className="mt-2 text-sm text-slate-500">The map will be displayed here.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {selectedStationForTicket && user && (
+          <TicketForm
+            onClose={() => setSelectedStationForTicket(null)}
+            userId={String(user.id)}
+            userName={user.name}
+            presetLocationId={selectedViewLocationId}
+            presetLocationName={selectedViewLocation?.location_name}
+            presetFloorId={selectedViewFloorId}
+            presetFloorName={selectedViewFloor?.floor_name}
+            presetStationId={selectedStationForTicket}
+            hideStationSelectors
+          />
+        )}
+      </div>
+    );
+  }
+
   // Si el modo es 'view', mostrar solo el canvas sin sidebars
   if (activeMode === 'view') {
     return (
-      <div className="space-y-4 p-6 bg-gray-50 min-h-screen select-none flex flex-col"
+      <div className="p-6 bg-gray-50 h-screen select-none flex flex-col gap-4 overflow-hidden"
            onMouseUp={handleMouseUp}>
 
         {/* Header simple */}
-        <OfficeMapHeader />
+        <div className="shrink-0">
+          <OfficeMapHeader />
+        </div>
 
         {/* Leyenda */}
-        <MapLegend
-          onModeChange={handleModeChange}
-          onBackToMenu={handleBackToMenu}
-          onZoneSelected={setCurrentZoneId}
-        />
+        <div className="shrink-0">
+          <MapLegend
+            onModeChange={handleModeChange}
+            onBackToMenu={handleBackToMenu}
+            onZoneSelected={setCurrentZoneId}
+            viewOnly={isViewOnly}
+            autoOpenViewModal={autoOpenViewSelector}
+          />
+        </div>
+
+        <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+          <div className="max-w-md">
+            <label htmlFor="adminViewLocationFilter" className="text-sm font-medium text-slate-700">
+              Filter by Location
+            </label>
+            <Select
+              value={adminSelectedLocationId}
+              onValueChange={(value) => {
+                setAdminSelectedLocationId(value);
+                setAdminSelectedFloorId('');
+              }}
+              disabled={loadingAdminMetadata}
+            >
+              <SelectTrigger id="adminViewLocationFilter" className="mt-2 h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
+              </SelectTrigger>
+              <SelectContent>
+                {adminLocations.map((location) => (
+                  <SelectItem key={location.id_location} value={String(location.id_location)}>
+                    {location.location_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+            {adminSelectedLocationId ? (
+              adminAvailableFloors.length > 0 ? (
+                <div className="overflow-x-auto pb-1">
+                  <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-300">
+                    {adminAvailableFloors.map((floor) => {
+                      const floorId = String(floor.id_floor);
+                      const isActive = adminSelectedFloorId === floorId;
+
+                      return (
+                        <button
+                          key={floor.id_floor}
+                          type="button"
+                          onClick={() => {
+                            setAdminSelectedFloorId(floorId);
+                            setCurrentZoneId(floor.id_floor);
+                          }}
+                          className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
+                            isActive
+                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                          }`}
+                        >
+                          {floor.floor_name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 px-2 py-1">This location has no floors created yet.</p>
+              )
+            ) : (
+              <p className="text-sm text-slate-500 px-2 py-1">Select a location to load floor tabs.</p>
+            )}
+          </div>
+        </div>
 
         {/* Canvas a pantalla completa */}
-        <div className="flex-1 flex gap-6 relative">
+        <div className="flex-1 min-h-0 flex gap-6 relative">
           <MapCanvas
             items={items}
             bgLayers={bgLayers}
             inventory={inventory}
-            CANVAS_WIDTH={CANVAS_WIDTH}
-            CANVAS_HEIGHT={CANVAS_HEIGHT}
+            CANVAS_WIDTH={canvasSize.width}
+            CANVAS_HEIGHT={canvasSize.height}
             onDrop={handleSvgDrop}
             onMouseMove={handleMouseMove}
             onMouseDown={handleCanvasMouseDown}
@@ -473,6 +827,7 @@ export default function OfficeMap() {
           onModeChange={handleModeChange}
           onBackToMenu={handleBackToMenu}
           onZoneSelected={setCurrentZoneId}
+          viewOnly={isViewOnly}
         />
 
         <div className="flex items-center justify-end gap-3">
@@ -483,7 +838,7 @@ export default function OfficeMap() {
         </div>
 
         {/* Layout */}
-        <div className="flex gap-6 h-[700px] relative">
+        <div className="flex gap-6 h-175 relative">
 
           {/* Sidebar */}
           <MapSidebar
@@ -502,8 +857,8 @@ export default function OfficeMap() {
             items={items}
             bgLayers={bgLayers}
             inventory={inventory}
-            CANVAS_WIDTH={CANVAS_WIDTH}
-            CANVAS_HEIGHT={CANVAS_HEIGHT}
+            CANVAS_WIDTH={canvasSize.width}
+            CANVAS_HEIGHT={canvasSize.height}
             onDrop={handleSvgDrop}
             onMouseMove={handleMouseMove}
             onMouseDown={handleCanvasMouseDown}
@@ -551,12 +906,75 @@ export default function OfficeMap() {
         onModeChange={handleModeChange}
         onBackToMenu={handleBackToMenu}
         onZoneSelected={setCurrentZoneId}
+        viewOnly={isViewOnly}
+        autoOpenViewModal={autoOpenViewSelector}
       />
       
-      {/* Canvas vacío para visualizar el espacio de mapeo */}
-      <div className="flex-1 bg-white rounded-lg border-2 border-dashed border-gray-300 shadow-sm flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400 text-lg font-medium">Select an option from the menu to begin</p>
+      <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm p-5 space-y-5">
+        <div className="max-w-md space-y-2">
+          <label htmlFor="adminLocationFilter" className="text-sm font-medium text-slate-700">
+            Filter by Location
+          </label>
+          <Select
+            value={adminSelectedLocationId}
+            onValueChange={(value) => {
+              setAdminSelectedLocationId(value);
+              setAdminSelectedFloorId('');
+            }}
+            disabled={loadingAdminMetadata}
+          >
+            <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
+            </SelectTrigger>
+            <SelectContent>
+              {adminLocations.map((location) => (
+                <SelectItem key={location.id_location} value={String(location.id_location)}>
+                  {location.location_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+          {adminSelectedLocationId ? (
+            adminAvailableFloors.length > 0 ? (
+              <div className="overflow-x-auto pb-1">
+                <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-300">
+                  {adminAvailableFloors.map((floor) => {
+                    const floorId = String(floor.id_floor);
+                    const isActive = adminSelectedFloorId === floorId;
+                    return (
+                      <button
+                        key={floor.id_floor}
+                        type="button"
+                        onClick={() => {
+                          setAdminSelectedFloorId(floorId);
+                          setCurrentZoneId(floor.id_floor);
+                          setActiveMode('view');
+                        }}
+                        className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
+                          isActive
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {floor.floor_name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">This location has no floors created yet.</p>
+            )
+          ) : (
+            <p className="text-sm text-slate-500">Select a location to load floor tabs.</p>
+          )}
+        </div>
+
+        <div className="flex-1 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center">
+          <p className="text-slate-400 text-base font-medium">Select a floor tab to open the map</p>
         </div>
       </div>
     </div>

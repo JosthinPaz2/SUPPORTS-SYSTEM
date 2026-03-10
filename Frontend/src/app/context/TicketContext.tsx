@@ -1,10 +1,18 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { Ticket, Comment } from '../types/ticket';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { Ticket, Comment, TicketCategory, TicketPriority, TicketStatus } from '../types/ticket';
+import { apiService } from '../utils/api';
+import { toast } from 'sonner';
 
 interface TicketContextType {
   tickets: Ticket[];
-  addTicket: (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => void;
-  updateTicket: (id: string, updates: Partial<Ticket>) => void;
+  addTicket: (
+    ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'> & {
+      id?: string;
+      createdAt?: Date;
+      updatedAt?: Date;
+    }
+  ) => void;
+  updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
   addComment: (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => void;
   deleteTicket: (id: string) => void;
 }
@@ -15,25 +23,131 @@ export function TicketProvider({ children }: { children: ReactNode }) {
   // Inicializamos el estado como un arreglo vacío []
   const [tickets, setTickets] = useState<Ticket[]>([]);
 
-  const addTicket = (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
+  useEffect(() => {
+    const normalizeCategory = (categoryName: string): TicketCategory => {
+      const normalized = categoryName.trim().toLowerCase();
+      if (normalized === 'hardware') return 'hardware';
+      if (normalized === 'software') return 'software';
+      return 'other';
+    };
+
+    const normalizeStatus = (status: string): TicketStatus => {
+      const normalized = status.trim().toLowerCase();
+      if (normalized === 'in progress' || normalized === 'in-progress') return 'in-progress';
+      if (normalized === 'resolved') return 'resolved';
+      return 'pending';
+    };
+
+    const normalizePriority = (priority: string): TicketPriority => {
+      const normalized = priority.trim().toLowerCase();
+      if (normalized === 'medium') return 'medium';
+      if (normalized === 'high' || normalized === 'urgent') return 'high';
+      return 'low';
+    };
+
+    const loadTickets = async () => {
+      try {
+        const [ticketRows, categories, users] = await Promise.all([
+          apiService.getTickets(),
+          apiService.getCategories(),
+          apiService.getUsers(),
+        ]);
+
+        const categoryById = new Map(
+          categories.map((category) => [category.id_category, category.category_name]),
+        );
+
+        const usersById = new Map(
+          users.map((user) => [String(user.id_user), user.full_name]),
+        );
+
+        const mappedTickets: Ticket[] = ticketRows.map((ticket) => ({
+          id: String(ticket.id_ticket),
+          title: ticket.title,
+          description: ticket.description,
+          category: normalizeCategory(categoryById.get(ticket.id_category) || 'other'),
+          status: normalizeStatus(ticket.status),
+          priority: normalizePriority(ticket.priority),
+          createdBy: String(ticket.created_by),
+          createdByName: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
+          reportedBy: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
+          location: ticket.id_station || undefined,
+          createdAt: new Date(ticket.created_at),
+          updatedAt: new Date(ticket.created_at),
+          comments: [],
+        }));
+
+        setTickets(mappedTickets);
+      } catch (error) {
+        toast.error((error as Error).message || 'Could not load tickets');
+      }
+    };
+
+    loadTickets();
+  }, []);
+
+  const addTicket = (
+    ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'> & {
+      id?: string;
+      createdAt?: Date;
+      updatedAt?: Date;
+    }
+  ) => {
     const newTicket: Ticket = {
       ...ticket,
-      id: `ticket-${Date.now()}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      id: ticket.id ?? `ticket-${Date.now()}`,
+      createdAt: ticket.createdAt ?? new Date(),
+      updatedAt: ticket.updatedAt ?? new Date(),
       comments: [],
     };
     setTickets((prev) => [newTicket, ...prev]);
   };
 
-  const updateTicket = (id: string, updates: Partial<Ticket>) => {
+  const updateTicket = async (id: string, updates: Partial<Ticket>) => {
+    let previousTicket: Ticket | undefined;
+
     setTickets((prev) =>
-      prev.map((ticket) =>
-        ticket.id === id
-          ? { ...ticket, ...updates, updatedAt: new Date() }
-          : ticket
-      )
+      prev.map((ticket) => {
+        if (ticket.id !== id) {
+          return ticket;
+        }
+
+        previousTicket = ticket;
+        return { ...ticket, ...updates, updatedAt: new Date() };
+      })
     );
+
+    const numericTicketId = Number(id);
+    if (!Number.isFinite(numericTicketId)) {
+      return;
+    }
+
+    if (!updates.status) {
+      return;
+    }
+
+    const statusMap: Record<string, string> = {
+      pending: 'Pending',
+      'in-progress': 'In Progress',
+      resolved: 'Resolved',
+    };
+
+    try {
+      await apiService.updateTicket(numericTicketId, {
+        status: statusMap[updates.status] ?? updates.status,
+        resolved_at: updates.status === 'resolved' ? new Date().toISOString() : undefined,
+      });
+    } catch (error) {
+      if (previousTicket) {
+        setTickets((prev) =>
+          prev.map((ticket) =>
+            ticket.id === id ? previousTicket as Ticket : ticket
+          )
+        );
+      }
+
+      toast.error((error as Error).message || 'Could not update the ticket status');
+    }
   };
 
   const addComment = (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => {

@@ -4,6 +4,8 @@ import { User, MoreVertical, Plus, Edit2, Eye, Home } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { apiService, FloorOption, LocationOption } from '../../utils/api';
 import { toast } from 'sonner';
 
@@ -11,9 +13,17 @@ interface MapLegendProps {
   onModeChange?: (mode: 'add' | 'edit' | 'view') => void;
   onBackToMenu?: () => void;
   onZoneSelected?: (zoneId: number) => void;
+  viewOnly?: boolean;
+  autoOpenViewModal?: boolean;
 }
 
-export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }: MapLegendProps) {
+export default function MapLegend({
+  onModeChange,
+  onBackToMenu,
+  onZoneSelected,
+  viewOnly = false,
+  autoOpenViewModal = false,
+}: MapLegendProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +94,12 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
 
     loadMetadata();
   }, [addMapModal, editMapModal, viewMapModal]);
+
+  useEffect(() => {
+    if (autoOpenViewModal) {
+      setViewMapModal(true);
+    }
+  }, [autoOpenViewModal]);
 
   // Funciones del menú
   const handleAddMap = () => {
@@ -214,28 +230,32 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-[9999] py-2 border border-gray-200 overflow-hidden">
-                <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 gap-3 transition-colors duration-150"
-                  onClick={handleAddMap}
-                >
-                  <Plus size={18} className="text-blue-500 flex-shrink-0" /> 
-                  <span>Add Map</span>
-                </button>
-                
-                <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-green-50 gap-3 transition-colors duration-150"
-                  onClick={handleEditMap}
-                >
-                  <Edit2 size={18} className="text-green-500 flex-shrink-0" /> 
-                  <span>Edit Map</span>
-                </button>
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-9999 py-2 border border-gray-200 overflow-hidden">
+                {!viewOnly && (
+                  <>
+                    <button 
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 gap-3 transition-colors duration-150"
+                      onClick={handleAddMap}
+                    >
+                      <Plus size={18} className="text-blue-500 shrink-0" /> 
+                      <span>Add Map</span>
+                    </button>
+                    
+                    <button 
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-green-50 gap-3 transition-colors duration-150"
+                      onClick={handleEditMap}
+                    >
+                      <Edit2 size={18} className="text-green-500 shrink-0" /> 
+                      <span>Edit Map</span>
+                    </button>
+                  </>
+                )}
 
                 <button 
                   className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 gap-3 transition-colors duration-150"
                   onClick={handleViewMap}
                 >
-                  <Eye size={18} className="text-purple-500 flex-shrink-0" /> 
+                  <Eye size={18} className="text-purple-500 shrink-0" /> 
                   <span>View Map</span>
                 </button>
 
@@ -248,7 +268,7 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
                     onBackToMenu?.();
                   }}
                 >
-                  <Home size={18} className="text-red-500 flex-shrink-0" /> 
+                  <Home size={18} className="text-red-500 shrink-0" /> 
                   <span>Back to Menu</span>
                 </button>
               </div>
@@ -260,37 +280,38 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
 
       {/* MODAL: AGREGAR MAPA */}
       <Dialog open={addMapModal} onOpenChange={setAddMapModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-106.25">
           <DialogHeader>
             <DialogTitle>Add Map</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
               <Label htmlFor="addSeat">Select Location</Label>
-              <select 
-                id="addSeat"
+              <Select
                 value={addSeat}
-                onChange={(e) => setAddSeat(e.target.value)}
-                title="Select location"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onValueChange={setAddSeat}
+                disabled={loadingLocations}
               >
-                <option value="">{loadingLocations ? 'Loading locations...' : '-- Select a location --'}</option>
-                {locations.map((location) => (
-                  <option key={location.id_location} value={String(location.id_location)}>
-                    {location.location_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="addSeat" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                  <SelectValue placeholder={loadingLocations ? 'Loading locations...' : 'Select a location'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id_location} value={String(location.id_location)}>
+                      {location.location_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="space-y-2">
               <Label htmlFor="addFloor">Floor Number</Label>
-              <input
+              <Input
                 id="addFloor"
                 value={addFloor}
                 onChange={(e) => setAddFloor(e.target.value)}
                 placeholder="Type floor number. Ex: 1"
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
               />
             </div>
           </div>
@@ -307,46 +328,51 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
 
       {/* MODAL: EDITAR MAPA */}
       <Dialog open={editMapModal} onOpenChange={setEditMapModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-106.25">
           <DialogHeader>
             <DialogTitle>Edit Map</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
               <Label htmlFor="editSeat">Select Location</Label>
-              <select 
-                id="editSeat"
+              <Select
                 value={editSeat}
-                onChange={(e) => {
-                  setEditSeat(e.target.value);
+                onValueChange={(value) => {
+                  setEditSeat(value);
                   setEditFloor('');
                 }}
-                title="Select location"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={loadingLocations}
               >
-                <option value="">{loadingLocations ? 'Loading locations...' : '-- Select a location --'}</option>
-                {locations.map((location) => (
-                  <option key={location.id_location} value={String(location.id_location)}>
-                    {location.location_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="editSeat" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                  <SelectValue placeholder={loadingLocations ? 'Loading locations...' : 'Select a location'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id_location} value={String(location.id_location)}>
+                      {location.location_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="space-y-2">
               <Label htmlFor="editFloor">Select Floor</Label>
-              <select 
-                id="editFloor"
+              <Select
                 value={editFloor}
-                onChange={(e) => setEditFloor(e.target.value)}
-                title="Select floor"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onValueChange={setEditFloor}
                 disabled={!editSeat || loadingFloors}
               >
-                <option value="">{loadingFloors ? 'Loading floors...' : '-- Select a floor --'}</option>
-                {editFloors.map((floor) => (
-                  <option key={floor.id_floor} value={String(floor.id_floor)}>{floor.floor_name}</option>
-                ))}
-              </select>
+                <SelectTrigger id="editFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                  <SelectValue placeholder={loadingFloors ? 'Loading floors...' : 'Select a floor'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {editFloors.map((floor) => (
+                    <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
+                      {floor.floor_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -362,46 +388,51 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
 
       {/* MODAL: VER MAPA */}
       <Dialog open={viewMapModal} onOpenChange={setViewMapModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-106.25">
           <DialogHeader>
             <DialogTitle>View Map</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
               <Label htmlFor="selectSeat">Select Location</Label>
-              <select 
-                id="selectSeat"
+              <Select
                 value={selectedSeat}
-                onChange={(e) => {
-                  setSelectedSeat(e.target.value);
+                onValueChange={(value) => {
+                  setSelectedSeat(value);
                   setSelectedFloor('');
                 }}
-                title="Select location"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={loadingLocations}
               >
-                <option value="">{loadingLocations ? 'Loading locations...' : '-- Select a location --'}</option>
-                {locations.map((location) => (
-                  <option key={location.id_location} value={String(location.id_location)}>
-                    {location.location_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="selectSeat" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                  <SelectValue placeholder={loadingLocations ? 'Loading locations...' : 'Select a location'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id_location} value={String(location.id_location)}>
+                      {location.location_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="space-y-2">
               <Label htmlFor="selectFloor">Select Floor</Label>
-              <select 
-                id="selectFloor"
+              <Select
                 value={selectedFloor}
-                onChange={(e) => setSelectedFloor(e.target.value)}
-                title="Select floor"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onValueChange={setSelectedFloor}
                 disabled={!selectedSeat || loadingFloors}
               >
-                <option value="">{loadingFloors ? 'Loading floors...' : '-- Select a floor --'}</option>
-                {viewFloors.map((floor) => (
-                  <option key={floor.id_floor} value={String(floor.id_floor)}>{floor.floor_name}</option>
-                ))}
-              </select>
+                <SelectTrigger id="selectFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                  <SelectValue placeholder={loadingFloors ? 'Loading floors...' : 'Select a floor'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {viewFloors.map((floor) => (
+                    <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
+                      {floor.floor_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
