@@ -6,13 +6,19 @@ import Login from "./app/pages/Login";
 import Register from "./app/pages/Register";
 import AdminDashboard from "./app/pages/AdminDashboard";
 import OfficeMap from "./app/pages/OfficeMap";
-
+import { Toaster } from "sonner"; 
 
 function App() {
   return (
     <AuthProvider>
       <TicketProvider>
         <DeskLayoutProvider>
+          <Toaster // componentes de la notificacion como colores, tiempo, posicion y si se muestra el boton de cerrar
+            position="top-right"
+            richColors 
+            closeButton 
+            duration={3000} 
+          />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />

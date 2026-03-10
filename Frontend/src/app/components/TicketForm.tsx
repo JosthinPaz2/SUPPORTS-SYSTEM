@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { TicketCategory } from '../types/ticket';
+import { toast } from 'sonner';
 
 interface TicketFormProps {
   onClose: () => void;
@@ -59,7 +60,11 @@ export default function TicketForm({ onClose, userId, userName }: TicketFormProp
       reportedBy: userName,
       location: location || undefined,
     });
-
+    // Mostrar notificación de éxito
+    toast.success('Ticket created successfully', {
+      description: `The ticket "${title}" has been created successfully`,
+      duration: 5000,
+    });
     onClose();
   };
 

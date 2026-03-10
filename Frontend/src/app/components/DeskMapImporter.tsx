@@ -23,10 +23,10 @@ export default function DeskMapImporter() {
       const csvContent = desksToCSV(desks);
       const timestamp = new Date().toISOString().split('T')[0];
       downloadCSV(csvContent, `office-layout-${timestamp}.csv`);
-      setSuccessMessage('Layout exportado exitosamente');
+      setSuccessMessage('Layout exported successfully');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setValidationErrors(['Error al exportar: ' + (error as Error).message]);
+      setValidationErrors(['Error exporting: ' + (error as Error).message]);
     }
   };
 
@@ -34,9 +34,9 @@ export default function DeskMapImporter() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo de archivo
+    // Validate file type
     if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
-      setValidationErrors(['Por favor seleccione un archivo CSV o TXT']);
+      setValidationErrors(['Please select a CSV or TXT file']);
       return;
     }
 
@@ -72,7 +72,7 @@ export default function DeskMapImporter() {
       setPreviewDesks(sanitized);
 
     } catch (error) {
-      setValidationErrors(['Error al procesar archivo: ' + (error as Error).message]);
+      setValidationErrors(['Error processing file: ' + (error as Error).message]);
     } finally {
       setIsImporting(false);
       // Limpiar input
@@ -86,7 +86,7 @@ export default function DeskMapImporter() {
     if (!previewDesks) return;
 
     setDesks(previewDesks);
-    setSuccessMessage(`Layout actualizado: ${previewDesks.length} escritorios importados`);
+    setSuccessMessage(`Layout updated: ${previewDesks.length} desks imported`);
     setPreviewDesks(null);
     setValidationWarnings([]);
     
@@ -100,9 +100,9 @@ export default function DeskMapImporter() {
   };
 
   const handleResetToDefault = () => {
-    if (confirm('¿Está seguro de restaurar la configuración por defecto? Se perderán los cambios actuales.')) {
+    if (confirm('Are you sure you want to restore the default configuration? Current changes will be lost.')) {
       resetToDefault();
-      setSuccessMessage('Layout restaurado a configuración por defecto');
+      setSuccessMessage('Layout restored to default configuration');
       setPreviewDesks(null);
       setValidationErrors([]);
       setValidationWarnings([]);
@@ -118,7 +118,7 @@ export default function DeskMapImporter() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <div className="font-semibold mb-2">Errores encontrados:</div>
+            <div className="font-semibold mb-2">Errors found:</div>
             <ul className="list-disc list-inside space-y-1">
               {validationErrors.map((error, index) => (
                 <li key={index} className="text-sm">{error}</li>
@@ -136,9 +136,9 @@ export default function DeskMapImporter() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-blue-900">Vista Previa del Layout</CardTitle>
+                <CardTitle className="text-blue-900">Layout Preview</CardTitle>
                 <CardDescription className="text-blue-700">
-                  {previewDesks.length} escritorios listos para importar
+                  {previewDesks.length} desks ready to import
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={handleCancelImport}>
@@ -162,7 +162,7 @@ export default function DeskMapImporter() {
                 ))}
                 {previewDesks.length > 50 && (
                   <div className="text-xs p-2 bg-gray-100 rounded border border-gray-300 flex items-center justify-center">
-                    +{previewDesks.length - 50} más
+                    +{previewDesks.length - 50} more
                   </div>
                 )}
               </div>
@@ -170,10 +170,10 @@ export default function DeskMapImporter() {
             <div className="flex gap-2">
               <Button onClick={handleApplyImport} className="flex-1">
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Aplicar Cambios
+                Apply Changes
               </Button>
               <Button variant="outline" onClick={handleCancelImport}>
-                Cancelar
+                Cancel
               </Button>
             </div>
           </CardContent>
@@ -183,9 +183,9 @@ export default function DeskMapImporter() {
       {/* Main Control Panel */}
       <Card>
         <CardHeader>
-          <CardTitle>Gestión del Mapa de Oficina</CardTitle>
+          <CardTitle>Office Map Management</CardTitle>
           <CardDescription>
-            Importar, exportar o restaurar la configuración del layout de escritorios
+            Import, export or restore the desk layout configuration
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -193,12 +193,12 @@ export default function DeskMapImporter() {
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-gray-600">Configuración Actual</div>
-                <div className="text-2xl font-bold text-gray-900">{desks.length} escritorios</div>
+                <div className="text-sm text-gray-600">Current Configuration</div>
+                <div className="text-2xl font-bold text-gray-900">{desks.length} desks</div>
               </div>
               <Badge variant="outline" className="text-sm">
                 <FileText className="w-3 h-3 mr-1" />
-                Activo
+                Active
               </Badge>
             </div>
           </div>
@@ -222,20 +222,20 @@ export default function DeskMapImporter() {
                 className="w-full"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {isImporting ? 'Procesando...' : 'Importar CSV/TXT'}
+                {isImporting ? 'Processing...' : 'Import CSV/TXT'}
               </Button>
             </div>
 
             {/* Export Button */}
             <Button onClick={handleExportCSV} variant="outline" className="w-full">
               <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
+              Export CSV
             </Button>
 
             {/* Reset Button */}
             <Button onClick={handleResetToDefault} variant="outline" className="w-full">
               <RotateCcw className="w-4 h-4 mr-2" />
-              Restaurar Default
+              Restore Default
             </Button>
           </div>
         </CardContent>

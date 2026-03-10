@@ -12,7 +12,7 @@ interface TicketCardProps {
 const categoryLabels: Record<TicketCategory, string> = {
   hardware: 'Hardware',
   software: 'Software',
-  other: 'Otros',
+  other: 'Other',
 };
 
 const priorityColors = {
@@ -44,9 +44,9 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
               {ticket.title}
             </h3>
             <Badge className={priorityColors[ticket.priority]} variant="secondary">
-              {ticket.priority === 'low' && 'Baja'}
-              {ticket.priority === 'medium' && 'Media'}
-              {ticket.priority === 'high' && 'Alta'}
+              {ticket.priority === 'low' && 'Low'}
+              {ticket.priority === 'medium' && 'Medium'}
+              {ticket.priority === 'high' && 'High'}
             </Badge>
           </div>
 

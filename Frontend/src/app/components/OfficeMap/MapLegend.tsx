@@ -106,11 +106,11 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
     const locationId = Number(addSeat);
 
     if (!locationId || !floorInput) {
-      toast.error('Selecciona una ubicacion y escribe el piso');
+      toast.error('Select a location and enter the floor number');
       return;
     }
 
-    const floorName = /^piso\s+/i.test(floorInput) ? floorInput : `Piso ${floorInput}`;
+    const floorName = /^piso\s+/i.test(floorInput) ? floorInput : `Floor ${floorInput}`;
     const normalizedFloorName = floorName.trim().toLowerCase();
 
     const floorAlreadyExists = floors.some(
@@ -120,7 +120,7 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
     );
 
     if (floorAlreadyExists) {
-      toast.error('Ese piso ya esta mapeado. Ve a Edit Map para modificarlo.');
+      toast.error('This floor is already mapped. Go to Edit Map to modify it.');
       return;
     }
 
@@ -131,14 +131,14 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
         id_location: locationId,
       });
 
-      toast.success('Piso creado correctamente');
+      toast.success('Floor created successfully');
       onZoneSelected?.(createdFloor.id_floor);
       setAddMapModal(false);
       setAddSeat('');
       setAddFloor('');
       onModeChange?.('add');
     } catch (error) {
-      toast.error((error as Error).message || 'No se pudo crear el piso');
+      toast.error((error as Error).message || 'Could not create the floor');
     } finally {
       setCreatingFloor(false);
     }
@@ -146,7 +146,7 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
 
   const handleConfirmEditMap = () => {
     if (!editSeat || !editFloor) {
-      toast.error('Selecciona una ubicacion y un piso');
+      toast.error('Select a location and a floor');
       return;
     }
 
@@ -159,7 +159,7 @@ export default function MapLegend({ onModeChange, onBackToMenu, onZoneSelected }
 
   const handleConfirmViewMap = () => {
     if (!selectedSeat || !selectedFloor) {
-      toast.error('Selecciona una ubicacion y un piso');
+      toast.error('Select a location and a floor');
       return;
     }
 

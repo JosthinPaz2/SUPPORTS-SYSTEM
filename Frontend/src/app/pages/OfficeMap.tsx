@@ -293,7 +293,7 @@ export default function OfficeMap() {
 
         setDesks([...defaultObjects, ...mappedStations, ...mappedDecorations]);
       } catch (error) {
-        toast.error((error as Error).message || 'No se pudo cargar el mapa seleccionado');
+        toast.error((error as Error).message || 'Could not load the selected map');
       } finally {
         setLoadingMap(false);
       }
@@ -304,7 +304,7 @@ export default function OfficeMap() {
 
   const handleSaveMap = async () => {
     if (!currentZoneId) {
-      toast.error('Primero crea o selecciona un piso para poder guardar');
+      toast.error('First create or select a floor to be able to save');
       return;
     }
 
@@ -360,13 +360,13 @@ export default function OfficeMap() {
       const stationResult = await apiService.saveMapStations(stationPayload);
       const decorationResult = await apiService.saveMapDecorations(currentZoneId, decorationPayload);
 
-      toast.success('Mapa guardado correctamente', {
-        description: `${stationResult.updated} estaciones y ${decorationResult.saved} objetos guardados`,
+      toast.success('Map saved successfully', {
+        description: `${stationResult.updated} stations and ${decorationResult.saved} objects saved`,
       });
 
       setInitialPlacedDeskIds(placedDesks.map((d) => d.id));
     } catch (error) {
-      toast.error((error as Error).message || 'No se pudo guardar el mapa');
+      toast.error((error as Error).message || 'Could not save the map');
     } finally {
       setSavingMap(false);
     }
@@ -476,9 +476,9 @@ export default function OfficeMap() {
         />
 
         <div className="flex items-center justify-end gap-3">
-          {loadingMap && <span className="text-sm text-slate-500">Cargando mapa...</span>}
+          {loadingMap && <span className="text-sm text-slate-500">Loading map...</span>}
           <Button onClick={handleSaveMap} disabled={savingMap}>
-            {savingMap ? 'Guardando...' : 'Guardar'}
+            {savingMap ? 'Saving...' : 'Save'}
           </Button>
         </div>
 
