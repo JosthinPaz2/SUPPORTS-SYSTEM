@@ -25,6 +25,10 @@ export default function EmployeeDashboard() {
     setShowForm(false);
   };
 
+  // Clase reutilizable para el efecto de despliegue
+  const expandibleClass = "group flex items-center overflow-hidden transition-all duration-300 ease-in-out";
+  const textClass = "max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-2";
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b">
@@ -34,22 +38,37 @@ export default function EmployeeDashboard() {
               <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
               <p className="text-sm text-gray-600">Welcome, {user?.name}</p>
             </div>
+            
             <div className="flex items-center gap-3">
+              {/* BOTÓN OFFICE MAP */}
               <Button
                 variant="outline"
                 onClick={() => navigate('/OfficeMap?viewOnly=true')}
+                className={expandibleClass}
               >
-                <Map className="w-4 h-4 mr-2" />
-                Office Map
+                <Map className="w-4 h-4" />
+                <span className={textClass}>Office Map</span>
               </Button>
-              <Button onClick={() => setShowForm(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Ticket
+
+              {/* BOTÓN NEW TICKET */}
+              <Button 
+                onClick={() => setShowForm(true)}
+                className={`${expandibleClass} bg-black hover:bg-black-700`}
+              >
+                <Plus className="w-2 h-2" />
+                <span className={textClass}>New Ticket</span>
               </Button>
+
               <NotificationsButton />
-              <Button variant="outline" onClick={logout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+
+              {/* BOTÓN LOGOUT */}
+              <Button 
+                variant="outline" 
+                onClick={logout}
+                className={`${expandibleClass} hover:bg-black-50 hover:text-black-600 border-black-100`}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className={textClass}>Logout</span>
               </Button>
             </div>
           </div>
@@ -95,7 +114,7 @@ export default function EmployeeDashboard() {
           </Card>
         </div>
 
-        {/* LISTA DE TICKETS AÑADIDA */}
+        {/* LISTA DE TICKETS */}
         <Card className="overflow-hidden">
           <CardHeader className="border-b bg-white">
             <CardTitle className="text-lg">Recent Tickets</CardTitle>

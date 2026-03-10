@@ -21,23 +21,17 @@ export default function AdminDashboard() {
     { id: 'map' as const, label: 'Office Map', icon: Map },
   ];
 
-
   const renderContent = () => {
     switch (activeTab) {
-      case 'kanban':
-        return <KanbanBoard /> ;
-      case 'reports':
-        return <ReportsPanel />;
-      case 'map':
-        return <OfficeMap />;
-      default:
-        return <KanbanBoard />;
+      case 'kanban': return <KanbanBoard />;
+      case 'reports': return <ReportsPanel />;
+      case 'map': return <OfficeMap />;
+      default: return <KanbanBoard />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -47,18 +41,26 @@ export default function AdminDashboard() {
                 {isIT ? 'IT Admin Panel' : 'Dashboard'}
               </p>
             </div>
+            
             <div className="flex items-center gap-3">
               <NotificationsButton />
-              <Button variant="outline" onClick={logout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+              
+              {/* BOTÓN CON TEXTO DESPLEGABLE */}
+              <Button 
+                variant="outline" 
+                onClick={logout}
+                className="group flex items-center overflow-hidden transition-all duration-300 ease-in-out hover:bg-black-50 hover:text-black-600 border-black-100"
+              >
+                <LogOut className="w-2 h-2" />
+                <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-0">
+                  Logout
+                </span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Tab Navigation + Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex gap-2 mb-6">
           {tabs.map((tab) => {
@@ -68,7 +70,7 @@ export default function AdminDashboard() {
                 key={tab.id}
                 variant={activeTab === tab.id ? 'default' : 'outline'}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 ${
+                className={`flex items-center gap-2 transition-all ${
                   activeTab === tab.id ? 'bg-teal-600 hover:bg-teal-700' : 'text-gray-600'
                 }`}
               >
