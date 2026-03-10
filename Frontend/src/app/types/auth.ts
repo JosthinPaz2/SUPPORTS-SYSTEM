@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  id_role: number;
   campaign?: string;
   access_token?: string;
 }

@@ -18,7 +18,6 @@ class Station(Base):
     # id_zone is used by the office mapping module and references the selected floor/zone.
     id_zone = Column(Integer, ForeignKey("floors.id_floor"), nullable=True, index=True)
     current_status = Column(Enum(EstadoEstacion), default=EstadoEstacion.DISPONIBLE)
-    operating_system = Column(String(50), nullable=True)
     pos_x = Column(Float, nullable=True, default=0)
     pos_y = Column(Float, nullable=True, default=0)
     rotation = Column(Integer, nullable=False, default=0)

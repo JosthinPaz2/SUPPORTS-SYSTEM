@@ -132,12 +132,29 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       resolved: 'Resolved',
     };
 
+    const basePayload = {
+      status: statusMap[updates.status] ?? updates.status,
+      resolved_at: updates.status === 'resolved' ? new Date().toISOString() : undefined,
+    };
+
     try {
       await apiService.updateTicket(numericTicketId, {
-        status: statusMap[updates.status] ?? updates.status,
-        resolved_at: updates.status === 'resolved' ? new Date().toISOString() : undefined,
+        ...basePayload,
+        moved_by: updates.movedBy ? Number(updates.movedBy) : undefined,
       });
     } catch (error) {
+      // Compatibility fallback: if backend is not migrated yet for moved_by,
+      // retry status update without moved_by so board movement still persists.
+      if (updates.movedBy) {
+        try {
+          await apiService.updateTicket(numericTicketId, basePayload);
+          toast.warning('Estado actualizado, pero no se pudo guardar quién movió el ticket.');
+          return;
+        } catch {
+          // Continue to rollback below if fallback also fails.
+        }
+      }
+
       if (previousTicket) {
         setTickets((prev) =>
           prev.map((ticket) =>

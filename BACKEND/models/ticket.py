@@ -33,12 +33,15 @@ class Ticket(Base):
     created_at = Column(TIMESTAMP, default=func.current_timestamp())
     last_updated = Column(TIMESTAMP, default=func.current_timestamp(), onupdate=func.current_timestamp())
     resolved_at = Column(TIMESTAMP, nullable=True)
-    
+    category_detail = Column(Text, nullable=True)
+    moved_by = Column(Integer, ForeignKey("users.id_user"), nullable=True)
+
     # Relationships
     category = relationship("Category", back_populates="tickets")
     creator = relationship("User", foreign_keys=[created_by], back_populates="tickets_created")
     primary_tech = relationship("User", foreign_keys=[primary_technician], back_populates="tickets_assigned")
     secondary_tech = relationship("User", foreign_keys=[secondary_technician], back_populates="tickets_assigned")
+    moved_by_user = relationship("User", foreign_keys=[moved_by])
     station = relationship("Station", back_populates="tickets")
     comments = relationship("Comment", back_populates="ticket")
     changes = relationship("ChangeHistory", back_populates="ticket")

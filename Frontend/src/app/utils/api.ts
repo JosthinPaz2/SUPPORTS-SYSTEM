@@ -13,6 +13,7 @@ export interface LoginResponse {
   full_name: string;
   institutional_email: string;
   role_name: string;
+  id_role: number;
   campaign?: string;
   access_token: string;
   token_type: string;
@@ -87,6 +88,7 @@ export interface CreateTicketRequest {
   created_by: number;
   id_station?: string;
   priority?: string;
+  category_detail?: string;
 }
 
 export interface TicketResponseDto {
@@ -102,6 +104,8 @@ export interface TicketResponseDto {
   id_station?: string | null;
   created_at: string;
   resolved_at?: string | null;
+  category_detail?: string | null;
+  moved_by?: number | null;
 }
 
 export interface UpdateTicketRequest {
@@ -114,6 +118,8 @@ export interface UpdateTicketRequest {
   secondary_technician?: number;
   id_station?: string;
   resolved_at?: string;
+  moved_by?: number;
+  category_detail?: string;
 }
 
 export interface MapDecorationDto {

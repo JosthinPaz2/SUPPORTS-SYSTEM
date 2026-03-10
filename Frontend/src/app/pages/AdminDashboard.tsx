@@ -6,15 +6,14 @@ import { LogOut, LayoutDashboard, BarChart3, Map } from 'lucide-react';
 import KanbanBoard from '../components/KanbanBoard';
 import ReportsPanel from '../components/ReportsPanel';
 import OfficeMap from './OfficeMap';
+import NotificationsButton from '../components/NotificationsButton';
 
 type AdminTab = 'kanban' | 'reports' | 'map';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('kanban');
-  const role = user?.role ?? '';
-  const isIT = role.toLowerCase() === 'it';
-  const isOperador = role.toLowerCase() === 'operador';
+  const isIT = user?.id_role === 1;
 
   const tabs = [
     { id: 'kanban' as const, label: 'Kanban Board', icon: LayoutDashboard },
@@ -45,10 +44,11 @@ export default function AdminDashboard() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Welcome, {user?.name}</h1>
               <p className="text-sm text-gray-600">
-                {isIT ? 'IT Admin Panel' : isOperador ? 'Operador Panel' : 'Dashboard'}
+                {isIT ? 'IT Admin Panel' : 'Dashboard'}
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <NotificationsButton />
               <Button variant="outline" onClick={logout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout

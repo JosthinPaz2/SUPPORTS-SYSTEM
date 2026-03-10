@@ -187,19 +187,16 @@ export default function TicketForm({
       return;
     }
 
-    const finalDescription = isOtherCategory
-      ? `${description.trim()}\n\nOther detail: ${otherCategoryDetail.trim()}`
-      : description.trim();
-
     try {
       setSubmitting(true);
 
       const createdTicket = await apiService.createTicket({
         title: title.trim(),
-        description: finalDescription,
+        description: description.trim(),
         id_category: Number(selectedCategoryId),
         created_by: creatorId,
         id_station: location || undefined,
+        category_detail: isOtherCategory ? otherCategoryDetail.trim() : undefined,
       });
 
       addTicket({

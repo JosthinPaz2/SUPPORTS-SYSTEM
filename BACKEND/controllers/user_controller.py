@@ -102,6 +102,7 @@ async def register(register_data: RegisterRequest, db: Session = Depends(get_db)
         full_name=new_user.full_name,
         institutional_email=new_user.institutional_email,
         role_name=new_user.role.role_name if new_user.role else "employee",
+        id_role=new_user.id_role,
         campaign=new_user.campaign,
         access_token=access_token
     )
@@ -172,6 +173,7 @@ def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         full_name=user.full_name,
         institutional_email=user.institutional_email,
         role_name=user.role.role_name if user.role else "employee",
+        id_role=user.id_role,
         campaign=user.campaign,
         access_token=access_token
     )

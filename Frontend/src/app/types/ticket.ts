@@ -37,4 +37,6 @@ export interface Ticket {
   createdAt: Date;
   updatedAt: Date;
   comments: Comment[];
+  movedBy?: string;
+  categoryDetail?: string;
 }

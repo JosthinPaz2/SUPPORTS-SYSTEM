@@ -89,15 +89,14 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
 export default function KanbanBoard() {
   const { tickets, updateTicket } = useTickets();
   const { user } = useAuth();
-  const role = user?.role ?? '';
-  const isIT = role.toLowerCase() === 'it';
+  const isIT = user?.id_role === 1;
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
 
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
     if (isIT) {
-      updateTicket(ticketId, { status: newStatus });
+      updateTicket(ticketId, { status: newStatus, movedBy: String(user?.id ?? '') });
     }
   };
 

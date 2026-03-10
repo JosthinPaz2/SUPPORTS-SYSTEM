@@ -42,14 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiService.login({ institutional_email: email, password });
 
-      const normalizedRole = response.role_name.toLowerCase();
-      const role: UserRole = normalizedRole === 'it' || normalizedRole === 'admin' ? 'admin' : 'employee';
+      // Map role based on id_role: 1 = admin, 2+ = employee
+      const role: UserRole = response.id_role === 1 ? 'admin' : 'employee';
 
       const userData: User = {
         id: response.id_user,
         name: response.full_name,
         email: response.institutional_email,
         role,
+        id_role: response.id_role,
         campaign: response.campaign,
         access_token: response.access_token,
       };
@@ -102,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const isAdmin = user?.role?.toLowerCase() === 'it';
+  const isAdmin = user?.id_role === 1;
 
   return (
     <AuthContext.Provider value={{

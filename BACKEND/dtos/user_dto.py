@@ -49,6 +49,7 @@ class LoginResponse(BaseModel):
     full_name: str
     institutional_email: str
     role_name: str
+    id_role: int
     campaign: Optional[str] = None
     access_token: str
     token_type: str = "bearer"

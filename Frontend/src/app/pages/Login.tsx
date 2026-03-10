@@ -59,7 +59,7 @@ export default function Login() {
       const loggedInUser = await login(email, password);
       toast.success('Login successful!', { duration: 5000 });
       // Redirect based on user role - IT users go to admin, others go to employee dashboard
-      const destination = loggedInUser?.role?.toLowerCase() === 'admin' ? '/admin' : '/employee';
+      const destination = loggedInUser?.id_role === 1 ? '/admin' : '/employee';
       navigate(destination);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Login failed';

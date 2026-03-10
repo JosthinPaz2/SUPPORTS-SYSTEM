@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { LogOut, Plus, Clock, CheckCircle2, AlertCircle, Map } from 'lucide-react';
 import TicketForm from '../components/TicketForm';
 import TicketDetailsModal from '../components/TicketDetailsModal';
+import NotificationsButton from '../components/NotificationsButton';
 import { Ticket } from '../types/ticket';
 
 export default function EmployeeDashboard() {
@@ -45,6 +46,7 @@ export default function EmployeeDashboard() {
                 <Plus className="w-4 h-4 mr-2" />
                 New Ticket
               </Button>
+              <NotificationsButton />
               <Button variant="outline" onClick={logout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout

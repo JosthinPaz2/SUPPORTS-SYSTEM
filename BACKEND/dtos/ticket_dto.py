@@ -15,7 +15,7 @@ class TicketBase(BaseModel):
 
 
 class TicketCreate(TicketBase):
-    pass
+    category_detail: Optional[str] = None
 
 
 class TicketUpdate(BaseModel):
@@ -28,6 +28,8 @@ class TicketUpdate(BaseModel):
     secondary_technician: Optional[int] = None
     id_station: Optional[str] = None
     resolved_at: Optional[datetime] = None
+    moved_by: Optional[int] = None
+    category_detail: Optional[str] = None
 
 
 class TicketOut(TicketBase):
@@ -36,6 +38,8 @@ class TicketOut(TicketBase):
     priority: str
     created_at: datetime
     resolved_at: Optional[datetime]
+    category_detail: Optional[str] = None
+    moved_by: Optional[int] = None
 
     class Config:
         from_attributes = True

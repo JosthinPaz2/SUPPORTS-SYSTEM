@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from db.session import SessionLocal
 from dtos.ticket_dto import TicketCreate, TicketOut, TicketUpdate
 from models.ticket import Ticket
+from models.station import Station, EstadoEstacion
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -20,6 +21,14 @@ def get_db():
 def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
     db_ticket = Ticket(**ticket.dict())
     db.add(db_ticket)
+    db.flush()
+
+    # Auto-update station status to Not Available when a ticket is reported
+    if db_ticket.id_station:
+        station = db.query(Station).filter(Station.id_station == db_ticket.id_station).first()
+        if station:
+            station.current_status = EstadoEstacion.NO_DISPONIBLE
+
     db.commit()
     db.refresh(db_ticket)
     return db_ticket
@@ -48,6 +57,14 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
         setattr(db_ticket, key, value)
     
     db.add(db_ticket)
+    db.flush()
+
+    # When a ticket is resolved, restore station to Available
+    if ticket.status == "Resolved" and db_ticket.id_station:
+        station = db.query(Station).filter(Station.id_station == db_ticket.id_station).first()
+        if station:
+            station.current_status = EstadoEstacion.DISPONIBLE
+
     db.commit()
     db.refresh(db_ticket)
     return db_ticket
