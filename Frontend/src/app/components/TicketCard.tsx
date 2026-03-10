@@ -2,7 +2,7 @@ import { useDrag } from 'react-dnd';
 import { Card, CardContent } from './ui/card';
 import { Badge } from '../components/ui/badge';
 import { Ticket, TicketCategory } from '../types/ticket';
-import { Clock, User, Tag, AlertCircle } from 'lucide-react';
+import { Clock, User, Tag, AlertCircle, MapPin, Route } from 'lucide-react';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -31,11 +31,9 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
   }));
 
   return (
+    <div ref={drag} className={isDragging ? 'opacity-50' : 'opacity-100'}>
     <Card
-      ref={drag}
-      className={`cursor-pointer hover:shadow-md transition-all ${
-        isDragging ? 'opacity-50' : 'opacity-100'
-      }`}
+      className="cursor-pointer hover:shadow-md transition-all"
       onClick={onClick}
     >
       <CardContent className="p-4">
@@ -60,14 +58,32 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
               <Tag className="w-3 h-3" />
               <span>{categoryLabels[ticket.category]}</span>
             </div>
+            {ticket.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                <span className="truncate">Desk {ticket.location}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1">
               <User className="w-3 h-3" />
               <span className="truncate">{ticket.createdByName}</span>
             </div>
+            {ticket.movedByName && (
+              <div className="flex items-center gap-1">
+                <Route className="w-3 h-3" />
+                <span className="truncate">Moved by: {ticket.movedByName}</span>
+              </div>
+            )}
             {ticket.assignedToName && (
               <div className="flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                <span className="truncate">→ {ticket.assignedToName}</span>
+                <span className="truncate">Primero: {ticket.assignedToName}</span>
+              </div>
+            )}
+            {ticket.secondaryTechnicianName && (
+              <div className="flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                <span className="truncate">Segundo: {ticket.secondaryTechnicianName}</span>
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -78,5 +94,6 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }

@@ -44,6 +44,17 @@ def get_map_by_zone(id_zone: int, db: Session = Depends(get_db)):
         )
         active_ticket_count = {row[0]: row[1] for row in rows if row[0] is not None}
 
+    # Sync current_status in DB to match actual active ticket state
+    needs_commit = False
+    for station in stations:
+        has_active = active_ticket_count.get(station.id_station, 0) > 0
+        expected = EstadoEstacion.NO_DISPONIBLE if has_active else EstadoEstacion.DISPONIBLE
+        if station.current_status != expected:
+            station.current_status = expected
+            needs_commit = True
+    if needs_commit:
+        db.commit()
+
     decorations = (
         db.query(MapDecoration)
         .filter(MapDecoration.id_zone == id_zone)
@@ -67,6 +78,7 @@ def get_map_by_zone(id_zone: int, db: Session = Depends(get_db)):
         )
         for station in stations
     ]
+
 
     return MapZoneResponse(id_zone=id_zone, stations=station_payload, decorations=decorations)
 

@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useTickets } from '../context/TicketContext';
+import { apiService, UserListItemDto } from '../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
@@ -13,6 +15,40 @@ const COLORS = {
 
 export default function ReportsPanel() {
   const { tickets } = useTickets();
+
+  // Technician resolution data fetched directly from API
+  const [techData, setTechData] = useState<{ name: string; Resolved: number }[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [rawTickets, users] = await Promise.all([
+          apiService.getTickets(),
+          apiService.getUsers(),
+        ]);
+        const techs: UserListItemDto[] = users.filter((u) => u.id_role === 1);
+        const userById = new Map(users.map((u) => [u.id_user, u.full_name]));
+        const countById = new Map<number, number>(techs.map((t) => [t.id_user, 0]));
+
+        rawTickets
+          .filter((t) => (t.status ?? '').toLowerCase() === 'resolved')
+          .forEach((t) => {
+            // Credit whoever resolved it: moved_by first, then primary_technician
+            const resolver = t.moved_by ?? t.primary_technician ?? null;
+            if (resolver !== null && resolver !== undefined && countById.has(resolver)) {
+              countById.set(resolver, (countById.get(resolver) ?? 0) + 1);
+            }
+          });
+
+        const data = techs.map((t) => ({
+          name: userById.get(t.id_user) ?? `User #${t.id_user}`,
+          Resolved: countById.get(t.id_user) ?? 0,
+        }));
+        setTechData(data);
+      } catch { /* non-critical */ }
+    };
+    load();
+  }, []);
 
   // Estadísticas por estado
   const byStatus = {
@@ -276,6 +312,34 @@ export default function ReportsPanel() {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+      {/* Resolved Tickets by Technician */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Resolved Reports by Technician</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {techData.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-8">No data available</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={techData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  angle={-35}
+                  textAnchor="end"
+                  interval={0}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend verticalAlign="top" />
+                <Bar dataKey="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>

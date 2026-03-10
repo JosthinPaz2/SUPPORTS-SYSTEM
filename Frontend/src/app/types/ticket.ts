@@ -34,9 +34,12 @@ export interface Ticket {
   location?: string;
   assignedTo?: string;
   assignedToName?: string;
+  secondaryTechnicianId?: string;
+  secondaryTechnicianName?: string;
   createdAt: Date;
   updatedAt: Date;
   comments: Comment[];
   movedBy?: string;
+  movedByName?: string;
   categoryDetail?: string;
 }

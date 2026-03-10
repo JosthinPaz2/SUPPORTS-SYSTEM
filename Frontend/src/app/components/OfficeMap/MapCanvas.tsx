@@ -64,6 +64,8 @@ interface DeskItem {
   placed: boolean;
   /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
+  /** Estado actual del puesto: 'Available', 'Not available', 'Available with issues' */
+  currentStatus?: string;
   /** Indica si es un objeto por defecto */
   isDefault?: boolean;
 }
@@ -106,12 +108,10 @@ interface MapCanvasProps {
  * Cada tipo de elemento tiene un color distintivo para mejor visualización
  */
 const getFillColor = (item: DeskItem): string => {
-  // Si es un escritorio con reporte activo, mostrar en rojo
-  if (item.type === 'desk' && item.hasReport) {
-    return "#EF4444"; // Rojo
-  }
-  // Si es un escritorio sin problemas, mostrar en verde
   if (item.type === 'desk') {
+    const status = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
+    if (status === 'Not available') return "#EF4444";       // Rojo
+    if (status === 'Available with issues') return "#F97316"; // Naranja
     return "#22C55E"; // Verde
   }
   // Para los diferentes tipos de objetos/zonas

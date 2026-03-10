@@ -15,12 +15,13 @@ import { Filter, BarChart3, ChevronRight } from 'lucide-react';
 interface DropZoneProps {
   status: TicketStatus;
   tickets: Ticket[];
+  totalCount?: number;
   onDrop: (ticketId: string, newStatus: TicketStatus) => void;
   onTicketClick: (ticket: Ticket) => void;
   allowDrop: boolean;
 }
 
-function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZoneProps) {
+function DropZone({ status, tickets, totalCount, onDrop, onTicketClick, allowDrop }: DropZoneProps) {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'TICKET',
     drop: allowDrop ? (item: { id: string }) => onDrop(item.id, status) : undefined,
@@ -47,7 +48,7 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
           <CardTitle className="flex items-center justify-between text-lg">
             <span>{config.title}</span>
             <Badge className={`${config.badge} text-white`}>
-              {tickets.length}
+              {totalCount ?? tickets.length}
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -59,6 +60,11 @@ function DropZone({ status, tickets, onDrop, onTicketClick, allowDrop }: DropZon
               onClick={() => onTicketClick(ticket)}
             />
           ))}
+          {status === 'resolved' && totalCount !== undefined && totalCount > tickets.length && (
+            <p className="text-center text-xs text-gray-400 italic pt-1">
+              Showing {tickets.length} of {totalCount} resolved — older tickets in Change History
+            </p>
+          )}
           {tickets.length === 0 && (
             <div className="text-center py-8 text-gray-400 text-sm italic">
               No tickets in this status
@@ -90,7 +96,11 @@ export default function KanbanBoard() {
 
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
     if (isIT) {
-      updateTicket(ticketId, { status: newStatus, movedBy: String(user?.id ?? '') });
+      updateTicket(ticketId, {
+        status: newStatus,
+        movedBy: String(user?.id ?? ''),
+        movedByName: user?.name ?? undefined,
+      });
     }
   };
 
@@ -100,10 +110,13 @@ export default function KanbanBoard() {
     return categoryMatch && priorityMatch;
   });
 
+  const allResolved = filteredTickets.filter((t) => t.status === 'resolved');
   const ticketsByStatus = {
     pending: filteredTickets.filter((t) => t.status === 'pending'),
     'in-progress': filteredTickets.filter((t) => t.status === 'in-progress'),
-    resolved: filteredTickets.filter((t) => t.status === 'resolved'),
+    resolved: [...allResolved]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3),
   };
 
   return (
@@ -189,6 +202,7 @@ export default function KanbanBoard() {
           <DropZone
             status="resolved"
             tickets={ticketsByStatus.resolved}
+            totalCount={allResolved.length}
             onDrop={handleDrop}
             onTicketClick={setSelectedTicket}
             allowDrop={isIT}

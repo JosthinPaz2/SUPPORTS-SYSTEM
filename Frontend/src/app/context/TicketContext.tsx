@@ -72,6 +72,22 @@ export function TicketProvider({ children }: { children: ReactNode }) {
           createdByName: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
           reportedBy: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
           location: ticket.id_station || undefined,
+          assignedTo: ticket.primary_technician != null ? String(ticket.primary_technician) : undefined,
+          assignedToName:
+            ticket.primary_technician != null
+              ? (usersById.get(String(ticket.primary_technician)) || `User ${ticket.primary_technician}`)
+              : undefined,
+          secondaryTechnicianId:
+            ticket.secondary_technician != null ? String(ticket.secondary_technician) : undefined,
+          secondaryTechnicianName:
+            ticket.secondary_technician != null
+              ? (usersById.get(String(ticket.secondary_technician)) || `User ${ticket.secondary_technician}`)
+              : undefined,
+          movedBy: ticket.moved_by != null ? String(ticket.moved_by) : undefined,
+          movedByName:
+            ticket.moved_by != null
+              ? (usersById.get(String(ticket.moved_by)) || `User ${ticket.moved_by}`)
+              : undefined,
           createdAt: new Date(ticket.created_at),
           updatedAt: new Date(ticket.created_at),
           comments: [],

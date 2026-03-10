@@ -48,6 +48,7 @@
  */
 
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { CheckCircle2, AlertCircle, User } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -58,11 +59,26 @@ import {
   MapCanvas, 
   TipBox 
 } from '../components/OfficeMap';
-import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
 import TicketForm from '../components/TicketForm';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { apiService, FloorOption, LocationOption, MapDecorationSavePayload, MapStationSavePayload } from '../utils/api';
+import {
+  apiService,
+  FloorOption,
+  LocationOption,
+  MapDecorationSavePayload,
+  MapStationSavePayload,
+  TicketResponseDto,
+} from '../utils/api';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
 
 // Objetos por defecto disponibles para agregar al mapa
@@ -99,7 +115,14 @@ export default function OfficeMap() {
   const [selectedViewLocationId, setSelectedViewLocationId] = useState('');
   const [selectedViewFloorId, setSelectedViewFloorId] = useState('');
   const [loadingViewMetadata, setLoadingViewMetadata] = useState(false);
-  const [selectedStationForTicket, setSelectedStationForTicket] = useState<string | null>(null);
+  const [selectedDeskId, setSelectedDeskId] = useState<string | null>(null);
+  const [selectedDeskTickets, setSelectedDeskTickets] = useState<TicketResponseDto[]>([]);
+  const [selectedDeskTicketDetail, setSelectedDeskTicketDetail] = useState<TicketResponseDto | null>(null);
+  const [selectedDeskForTicket, setSelectedDeskForTicket] = useState<string | null>(null);
+  const [showDeskTicketForm, setShowDeskTicketForm] = useState(false);
+  const [deskTicketUsers, setDeskTicketUsers] = useState<Map<number, string>>(new Map());
+  const [deskTicketCategories, setDeskTicketCategories] = useState<Map<number, string>>(new Map());
+  const [loadingDeskTicket, setLoadingDeskTicket] = useState(false);
   const [adminLocations, setAdminLocations] = useState<LocationOption[]>([]);
   const [adminFloors, setAdminFloors] = useState<FloorOption[]>([]);
   const [adminSelectedLocationId, setAdminSelectedLocationId] = useState('');
@@ -132,18 +155,38 @@ export default function OfficeMap() {
         .map((row) => row.trim())
         .filter((row) => row.length > 0);
 
+      // Parse header to find column indices dynamically
+      const allLines = text.split('\n').map((r) => r.trim()).filter((r) => r.length > 0);
+      const headerLine = allLines[0] ?? '';
+      const headers = headerLine.toLowerCase().split(',').map((h) => h.trim());
+      const idxId             = headers.indexOf('id');
+      const idxWidth          = headers.indexOf('width');
+      const idxHeight         = headers.indexOf('height');
+      const idxType           = headers.indexOf('type');
+      const idxCurrentStatus  = headers.indexOf('current_status');
+
       const parsed = rows.map((row, index) => {
-        const [id, , , width, height, type] = row.split(',');
+        const cols = row.split(',').map((c) => c.trim());
+        const idVal     = idxId     >= 0 ? cols[idxId]     : cols[0];
+        const widthVal  = idxWidth  >= 0 ? cols[idxWidth]  : cols[3];
+        const heightVal = idxHeight >= 0 ? cols[idxHeight] : cols[4];
+        const typeVal   = idxType   >= 0 ? cols[idxType]   : cols[5];
+        const statusVal = idxCurrentStatus >= 0 ? cols[idxCurrentStatus] : 'Available';
+
+        const currentStatus = statusVal || 'Available';
+        const hasReport = currentStatus === 'Not available' || currentStatus === 'Available with issues';
+
         return {
-          id: id?.trim() || `D-${100 + index}`,
+          id: idVal || `D-${100 + index}`,
           // CSV desks always start in inventory and are placed manually by drag/drop.
           x: null,
           y: null,
-          width: Number(width) || 80,
-          height: Number(height) || 50,
-          type: type?.trim() || 'desk',
+          width: Number(widthVal) || 80,
+          height: Number(heightVal) || 50,
+          type: typeVal || 'desk',
           placed: false,
-          hasReport: Math.random() > 0.9
+          currentStatus,
+          hasReport,
         };
       });
 
@@ -376,6 +419,7 @@ export default function OfficeMap() {
             type: 'desk',
             placed,
             hasReport: station.has_active_reports,
+            currentStatus: station.current_status,
           };
         });
 
@@ -406,7 +450,7 @@ export default function OfficeMap() {
     };
 
     loadSelectedMap();
-  }, [activeMode, currentZoneId]);
+  }, [activeMode, currentZoneId, isViewOnly]);
 
   const handleSaveMap = async () => {
     if (!currentZoneId) {
@@ -504,23 +548,305 @@ export default function OfficeMap() {
     );
   };
 
+  const normalizeTicketStatus = (status: string): 'pending' | 'in-progress' | 'resolved' => {
+    const normalized = status.trim().toLowerCase().replace(/_/g, '-');
+    if (normalized === 'resolved') return 'resolved';
+    if (normalized === 'in progress' || normalized === 'in-progress') return 'in-progress';
+    return 'pending';
+  };
+
+  const handleDeskClick = async (stationId: string) => {
+    const clickedDesk = desks.find((desk) => desk.id === stationId && desk.type === 'desk');
+    const currentStatus = String(clickedDesk?.currentStatus || '').trim().toLowerCase();
+    const isAvailableDesk = currentStatus === 'available' || currentStatus === 'disponible';
+
+    if (isViewOnly && isAvailableDesk) {
+      openTicketFormForDesk(stationId);
+      return;
+    }
+
+    setSelectedDeskId(stationId);
+    setSelectedDeskTickets([]);
+
+    try {
+      setLoadingDeskTicket(true);
+      const [tickets, users, categories] = await Promise.all([
+        apiService.getTickets(),
+        apiService.getUsers(),
+        apiService.getCategories(),
+      ]);
+
+      const activeTickets = tickets
+        .filter((ticket) => ticket.id_station === stationId)
+        .filter((ticket) => normalizeTicketStatus(ticket.status) !== 'resolved')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setSelectedDeskTickets(activeTickets);
+      setDeskTicketUsers(new Map(users.map((u) => [u.id_user, u.full_name])));
+      setDeskTicketCategories(new Map(categories.map((c) => [c.id_category, c.category_name])));
+    } catch {
+      setSelectedDeskTickets([]);
+    } finally {
+      setLoadingDeskTicket(false);
+    }
+  };
+
   const availableViewFloors = selectedViewLocationId
     ? viewFloors.filter((floor) => floor.id_location === Number(selectedViewLocationId))
     : [];
 
-  const selectedViewLocation = viewLocations.find(
-    (location) => location.id_location === Number(selectedViewLocationId),
-  );
+  const selectedViewLocationName =
+    viewLocations.find((location) => String(location.id_location) === selectedViewLocationId)?.location_name || '';
 
-  const selectedViewFloor = viewFloors.find(
-    (floor) => floor.id_floor === Number(selectedViewFloorId),
-  );
+  const selectedViewFloorName =
+    viewFloors.find((floor) => String(floor.id_floor) === selectedViewFloorId)?.floor_name || '';
 
   const adminAvailableFloors = adminSelectedLocationId
     ? adminFloors
         .filter((floor) => floor.id_location === Number(adminSelectedLocationId))
         .sort((a, b) => a.floor_name.localeCompare(b.floor_name))
     : [];
+
+  const getStatusBadgeClass = (status: string) => {
+    const s = normalizeTicketStatus(status);
+    if (s === 'resolved') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    if (s === 'in-progress') return 'bg-slate-800 text-white border-slate-700';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const s = normalizeTicketStatus(status);
+    if (s === 'resolved') return 'Resolved';
+    if (s === 'in-progress') return 'In Progress';
+    return 'Pending';
+  };
+
+  const getPriorityBadgeClass = (priority: string) => {
+    const p = priority?.toLowerCase();
+    if (p === 'high' || p === 'urgent') return 'bg-red-100 text-red-700 border-red-200';
+    if (p === 'medium') return 'bg-orange-100 text-orange-700 border-orange-200';
+    return 'bg-slate-100 text-slate-600 border-slate-200';
+  };
+
+  const formatTicketDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const openTicketFormForDesk = (stationId: string) => {
+    if (!user?.id) {
+      toast.error('You must be logged in to create a ticket');
+      return;
+    }
+
+    setSelectedDeskId(null);
+    setSelectedDeskForTicket(stationId);
+    setShowDeskTicketForm(true);
+  };
+
+  const stationReportLimitReached = selectedDeskTickets.length >= 3;
+
+  const deskStatusDialog = (
+    <Dialog open={Boolean(selectedDeskId)} onOpenChange={(open) => !open && setSelectedDeskId(null)}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col overflow-hidden p-0">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+              <User className="h-4 w-4 text-slate-600" />
+            </span>
+            Desk {selectedDeskId}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
+            Desk location and status information
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {loadingDeskTicket && (
+            <div className="flex items-center justify-center py-10 text-slate-400 text-sm">
+              Loading report details...
+            </div>
+          )}
+
+          {!loadingDeskTicket && selectedDeskTickets.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
+              <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} />
+              <p className="text-lg font-bold text-slate-800">No Active Reports</p>
+              <p className="text-sm italic text-slate-500">This desk has no reported issues</p>
+            </div>
+          )}
+
+          {!loadingDeskTicket && selectedDeskTickets.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2">
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                <span className="text-sm font-medium text-red-700">
+                  {selectedDeskTickets.length} active report{selectedDeskTickets.length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {selectedDeskTickets.map((ticket) => (
+                <div key={ticket.id_ticket} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-2">
+                  {/* Title row + status badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-slate-900 text-sm leading-snug">{ticket.title}</p>
+                    <Badge className={`text-xs shrink-0 border ${getStatusBadgeClass(ticket.status)}`}>
+                      {getStatusLabel(ticket.status)}
+                    </Badge>
+                  </div>
+
+                  {/* Ticket ID + date */}
+                  <p className="text-xs text-slate-400">
+                    Ticket #{ticket.id_ticket} &bull; Created {formatTicketDate(ticket.created_at)}
+                  </p>
+
+                  {/* Priority */}
+                  <Badge className={`text-xs border ${getPriorityBadgeClass(ticket.priority)}`}>
+                    {ticket.priority}
+                  </Badge>
+
+                  {/* Description */}
+                  {ticket.description && (
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{ticket.description}</p>
+                  )}
+
+                  {/* Category + Reported by */}
+                  <div className="pt-1 space-y-1 text-xs text-slate-500">
+                    {ticket.id_category != null && (
+                      <p>
+                        <span className="font-medium text-slate-600">Category:</span>{' '}
+                        {deskTicketCategories.get(ticket.id_category) ?? `#${ticket.id_category}`}
+                      </p>
+                    )}
+                    {ticket.created_by != null && (
+                      <p>
+                        <span className="font-medium text-slate-600">Reported by:</span>{' '}
+                        {deskTicketUsers.get(ticket.created_by) ?? `User #${ticket.created_by}`}
+                      </p>
+                    )}
+                    {ticket.primary_technician != null && (
+                      <p>
+                        <span className="font-medium text-slate-600">Assigned to:</span>{' '}
+                        {deskTicketUsers.get(ticket.primary_technician) ?? `User #${ticket.primary_technician}`}
+                      </p>
+                    )}
+                  </div>
+
+                  {!isViewOnly && (
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedDeskId(null);
+                          setSelectedDeskTicketDetail(ticket);
+                        }}
+                      >
+                        View details
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 px-6 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+          {isViewOnly && selectedDeskId && (
+            <Button
+              type="button"
+              disabled={stationReportLimitReached}
+              onClick={() => openTicketFormForDesk(selectedDeskId)}
+            >
+              {stationReportLimitReached ? 'Station blocked (3 reports)' : 'Create report'}
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setSelectedDeskId(null)}>Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const deskTicketDetailsDialog = (
+    <Dialog open={Boolean(selectedDeskTicketDetail)} onOpenChange={(open) => !open && setSelectedDeskTicketDetail(null)}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span>Ticket #{selectedDeskTicketDetail?.id_ticket}</span>
+            {selectedDeskTicketDetail && (
+              <Badge className={`text-xs shrink-0 border ${getStatusBadgeClass(selectedDeskTicketDetail.status)}`}>
+                {getStatusLabel(selectedDeskTicketDetail.status)}
+              </Badge>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            Full report details for the selected desk issue.
+          </DialogDescription>
+        </DialogHeader>
+
+        {selectedDeskTicketDetail && (
+          <div className="space-y-4 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Title</p>
+              <p className="font-semibold text-slate-900">{selectedDeskTicketDetail.title}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Badge className={`text-xs border ${getPriorityBadgeClass(selectedDeskTicketDetail.priority)}`}>
+                Priority: {selectedDeskTicketDetail.priority}
+              </Badge>
+              <Badge variant="outline">Created: {formatTicketDate(selectedDeskTicketDetail.created_at)}</Badge>
+            </div>
+
+            {selectedDeskTicketDetail.description && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Description</p>
+                <p className="rounded-md border border-slate-200 bg-slate-50 p-3 whitespace-pre-wrap text-slate-700">
+                  {selectedDeskTicketDetail.description}
+                </p>
+              </div>
+            )}
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <p>
+                <span className="font-medium text-slate-600">Category:</span>{' '}
+                {deskTicketCategories.get(selectedDeskTicketDetail.id_category) ?? `#${selectedDeskTicketDetail.id_category}`}
+              </p>
+              <p>
+                <span className="font-medium text-slate-600">Reported by:</span>{' '}
+                {deskTicketUsers.get(selectedDeskTicketDetail.created_by) ?? `User #${selectedDeskTicketDetail.created_by}`}
+              </p>
+              <p>
+                <span className="font-medium text-slate-600">Assigned to:</span>{' '}
+                {selectedDeskTicketDetail.primary_technician != null
+                  ? (deskTicketUsers.get(selectedDeskTicketDetail.primary_technician) ?? `User #${selectedDeskTicketDetail.primary_technician}`)
+                  : 'Unassigned'}
+              </p>
+              <p>
+                <span className="font-medium text-slate-600">Desk:</span>{' '}
+                {selectedDeskTicketDetail.id_station || 'N/A'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-2">
+          <Button variant="outline" onClick={() => setSelectedDeskTicketDetail(null)}>Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   if (isViewOnly) {
     return (
@@ -531,7 +857,7 @@ export default function OfficeMap() {
               <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
               <p className="text-sm text-gray-600">Read-only office layout view</p>
             </div>
-            <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
+            <Button variant="outline" onClick={handleBackToMenu}>B  ack</Button>
           </div>
 
           <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -608,7 +934,7 @@ export default function OfficeMap() {
               </CardContent>
             </Card>
 
-            <div className="min-h-0 relative">
+            <div className="h-120 relative">
               {currentZoneId ? (
                 <>
                   <MapCanvas
@@ -624,7 +950,7 @@ export default function OfficeMap() {
                     onDeleteItem={handleDeleteItem}
                     scale={scale}
                     isReadOnly
-                    onItemClick={setSelectedStationForTicket}
+                    onItemClick={handleDeskClick}
                   />
 
                   <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
@@ -660,16 +986,21 @@ export default function OfficeMap() {
           </div>
         </div>
 
-        {selectedStationForTicket && user && (
+        {deskStatusDialog}
+        {deskTicketDetailsDialog}
+        {showDeskTicketForm && selectedDeskForTicket && user?.id && (
           <TicketForm
-            onClose={() => setSelectedStationForTicket(null)}
+            onClose={() => {
+              setShowDeskTicketForm(false);
+              setSelectedDeskForTicket(null);
+            }}
             userId={String(user.id)}
-            userName={user.name}
-            presetLocationId={selectedViewLocationId}
-            presetLocationName={selectedViewLocation?.location_name}
-            presetFloorId={selectedViewFloorId}
-            presetFloorName={selectedViewFloor?.floor_name}
-            presetStationId={selectedStationForTicket}
+            userName={user.name || ''}
+            presetLocationId={selectedViewLocationId || undefined}
+            presetLocationName={selectedViewLocationName || undefined}
+            presetFloorId={selectedViewFloorId || undefined}
+            presetFloorName={selectedViewFloorName || undefined}
+            presetStationId={selectedDeskForTicket}
             hideStationSelectors
           />
         )}
@@ -680,7 +1011,7 @@ export default function OfficeMap() {
   // Si el modo es 'view', mostrar solo el canvas sin sidebars
   if (activeMode === 'view') {
     return (
-      <div className="p-6 bg-gray-50 h-screen select-none flex flex-col gap-4 overflow-hidden"
+      <div className="p-6 bg-gray-50 min-h-screen select-none flex flex-col gap-4"
            onMouseUp={handleMouseUp}>
 
         {/* Header simple */}
@@ -764,7 +1095,7 @@ export default function OfficeMap() {
         </div>
 
         {/* Canvas a pantalla completa */}
-        <div className="flex-1 min-h-0 flex gap-6 relative">
+        <div className="h-120 flex gap-6 relative">
           <MapCanvas
             items={items}
             bgLayers={bgLayers}
@@ -778,6 +1109,7 @@ export default function OfficeMap() {
             onDeleteItem={handleDeleteItem}
             scale={scale}
             isReadOnly
+            onItemClick={handleDeskClick}
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
@@ -802,6 +1134,22 @@ export default function OfficeMap() {
             </button>
           </div>
         </div>
+
+        {deskStatusDialog}
+        {deskTicketDetailsDialog}
+
+        {showDeskTicketForm && selectedDeskForTicket && user?.id && (
+          <TicketForm
+            onClose={() => {
+              setShowDeskTicketForm(false);
+              setSelectedDeskForTicket(null);
+            }}
+            userId={String(user.id)}
+            userName={user.name || ''}
+            presetStationId={selectedDeskForTicket}
+            hideStationSelectors
+          />
+        )}
       </div>
     );
   }

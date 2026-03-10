@@ -44,8 +44,6 @@ def get_comment(comment_id: int, db: Session = Depends(get_db)):
 @router.get("/ticket/{ticket_id}", response_model=list[CommentOut])
 def list_comments_by_ticket(ticket_id: int, db: Session = Depends(get_db)):
     comments = db.query(Comment).filter(Comment.id_ticket == ticket_id).all()
-    if not comments:
-        raise HTTPException(status_code=404, detail="No comments for this ticket")
     return comments
 
 

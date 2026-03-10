@@ -122,6 +122,46 @@ export interface UpdateTicketRequest {
   category_detail?: string;
 }
 
+export interface CreateCommentRequest {
+  id_ticket: number;
+  id_user: number;
+  content: string;
+  internal_note?: boolean;
+  evidence_url?: string;
+}
+
+export interface CommentDto {
+  id_comment: number;
+  id_ticket: number;
+  id_user: number;
+  content: string;
+  internal_note: boolean;
+  evidence_url: string | null;
+  created_at: string;
+}
+
+export interface ChangeHistoryDto {
+  id_change: number;
+  id_ticket: number;
+  action_user: number;
+  change_description: string | null;
+  created_at: string;
+  ticket_title: string | null;
+  ticket_description: string | null;
+  ticket_priority: string | null;
+  ticket_status: string | null;
+  ticket_station: string | null;
+  ticket_created_at: string | null;
+  ticket_resolved_at: string | null;
+  reported_by: number | null;
+  internal_notes: Array<{
+    id_comment: number;
+    id_user: number;
+    content: string;
+    created_at: string;
+  }>;
+}
+
 export interface MapDecorationDto {
   id_decoration: number;
   id_zone: number;
@@ -292,11 +332,34 @@ class ApiService {
     return this.request<TicketResponseDto[]>('/tickets/');
   }
 
+  async getTicket(ticketId: number | string): Promise<TicketResponseDto> {
+    return this.request<TicketResponseDto>(`/tickets/${ticketId}`);
+  }
+
   async updateTicket(ticketId: number | string, payload: UpdateTicketRequest): Promise<TicketResponseDto> {
     return this.request<TicketResponseDto>(`/tickets/${ticketId}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
+  }
+
+  async createComment(payload: CreateCommentRequest): Promise<CommentDto> {
+    return this.request<CommentDto>('/comments/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getCommentsByTicket(ticketId: number | string): Promise<CommentDto[]> {
+    return this.request<CommentDto[]>(`/comments/ticket/${ticketId}`);
+  }
+
+  async getChangesByTicket(ticketId: number | string): Promise<ChangeHistoryDto[]> {
+    return this.request<ChangeHistoryDto[]>(`/changes/ticket/${ticketId}`);
+  }
+
+  async getChangesByStation(stationId: string): Promise<ChangeHistoryDto[]> {
+    return this.request<ChangeHistoryDto[]>(`/changes/station/${stationId}`);
   }
 
   async getMapByZone(idZone: number): Promise<MapZoneResponseDto> {
