@@ -5,6 +5,7 @@ import { DeskLayoutProvider } from "./app/context/DeskLayoutContext";
 import Login from "./app/pages/Login";
 import Register from "./app/pages/Register";
 import AdminDashboard from "./app/pages/AdminDashboard";
+import EmployeeDashboard from "./app/pages/EmployeeDashboard";
 import OfficeMap from "./app/pages/OfficeMap";
 import { Toaster } from "sonner"; 
 
@@ -24,6 +25,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/employee" element={<EmployeeDashboard />} />
               <Route path="/OfficeMap" element={<OfficeMap />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
             </Routes>

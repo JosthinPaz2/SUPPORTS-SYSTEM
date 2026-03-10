@@ -16,7 +16,7 @@ type ModalState = 'forgot' | 'verify' | 'reset';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, requestPasswordRecovery, verifyCode, resetPassword } = useAuth();
+  const { login, requestPasswordRecovery, verifyCode, resetPassword, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -56,9 +56,11 @@ export default function Login() {
     }
 
     try {
-      await login(email, password);
+      const loggedInUser = await login(email, password);
       toast.success('Login successful!', { duration: 5000 });
-      navigate('/admin'); // Navigate to admin dashboard after successful login
+      // Redirect based on user role - IT users go to admin, others go to employee dashboard
+      const destination = loggedInUser?.role?.toLowerCase() === 'admin' ? '/admin' : '/employee';
+      navigate(destination);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Login failed';
       setError(msg);

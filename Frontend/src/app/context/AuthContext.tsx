@@ -4,7 +4,7 @@ import { apiService } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User | null>;
   register: (fullName: string, email: string, password: string, campaign: string) => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     try {
       const response = await apiService.login({ institutional_email: email, password });
 
@@ -57,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user_data', JSON.stringify(userData));
+      
+      return userData;
     } catch (error) {
       throw error;
     }
