@@ -185,7 +185,7 @@ Para aplicar todas las migraciones pendientes y crear las tablas en la base de d
 
 alembic init migraciones
 
-```bash
+
 # Con el entorno virtual activado
 alembic init migraciones
 alembic revision --autogenerate -m "subo tablas"
