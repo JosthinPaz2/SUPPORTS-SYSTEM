@@ -266,6 +266,10 @@ class ApiService {
         throw new Error(errorData.detail || `Error HTTP: ${response.status}`);
       }
 
+      if (response.status === 204 || response.status === 205) {
+        return undefined as T;
+      }
+
       return response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
