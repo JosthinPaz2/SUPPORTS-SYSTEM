@@ -1,40 +1,99 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, Trash2, X } from "lucide-react";
+import { Bell, Trash2, X, Wifi } from "lucide-react";
+import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 export interface Notification {
   id: number;
   title: string;
   time: string;
+  ticket_id?: number;
+  previous_status?: string;
+  new_status?: string;
 }
+
+// Variable para mantener la instancia del socket
+let socket: Socket | null = null;
 
 export default function NotificationsButton() {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: "Nuevo ticket asignado: Mouse dañado",
-      time: "Hace 5 minutos",
-    },
-    {
-      id: 2,
-      title: "Ticket resuelto: Configuración de email",
-      time: "Hace 2 horas",
-    },
-    {
-      id: 3,
-      title: "Bienvenido al Sistema de Soporte",
-      time: "Hace 1 día",
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
 
   const ref = useRef<HTMLDivElement>(null);
 
+  // Cerrar notificaciones al hacer clic fuera
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  // Inicializar conexión Socket.io
+  useEffect(() => {
+    // Usar la misma URL del backend que api.ts
+    // NOTA: Socket.io automáticamente agrega /socket.io a la URL
+    const API_URL = 
+      (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+      'https://margery-highfalutin-unambiguously.ngrok-free.dev';
+    
+    console.log("🔌 Inicializando Socket.io con URL:", API_URL);
+    
+    if (!socket) {
+      socket = io(API_URL, {
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        autoConnect: true,
+      });
+
+      socket.on("connect", () => {
+        console.log("Socket.io conectado exitosamente!");
+        console.log("   Socket ID:", socket?.id);
+        setIsConnected(true);
+      });
+
+      socket.on("disconnect", () => {
+        console.log(" Socket.io desconectado");
+        setIsConnected(false);
+      });
+
+      socket.on("connect_error", (error) => {
+        console.error(" Error de conexión Socket.io:", error.message);
+        setIsConnected(false);
+      });
+    }
+
+    return () => {
+      // No desconectar el socket al desmontar para mantener la conexión
+    };
+  }, []);
+
+  // Escuchar notificaciones del backend
+  useEffect(() => {
+    if (socket) {
+      socket.on("ticket-status-changed", (data: Notification) => {
+        console.log("Notificación recibida:", data);
+        
+        // Agregar a la lista de notificaciones
+        setNotifications((prev) => [data, ...prev]);
+        
+        // Mostrar toast de notificación
+        toast.success("Nueva notificación", {
+          description: data.title,
+          duration: 5000,
+        });
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("ticket-status-changed");
+      }
+    };
   }, []);
 
   function handleDelete(id: number) {
@@ -61,6 +120,13 @@ export default function NotificationsButton() {
             {notifications.length}
           </span>
         )}
+        {/* Indicador de conexión */}
+        <span 
+          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
+            isConnected ? 'bg-green-500' : 'bg-gray-400'
+          }`}
+          title={isConnected ? "Conectado" : "Desconectado"}
+        />
       </button>
 
       {open && (
