@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Navigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -16,7 +16,13 @@ type ModalState = 'forgot' | 'verify' | 'reset';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, requestPasswordRecovery, verifyCode, resetPassword} = useAuth();
+  const { user, login, requestPasswordRecovery, verifyCode, resetPassword} = useAuth();
+
+  // Already logged in → redirect to their dashboard
+  if (user) {
+    const destination = user.role === 'admin' ? '/admin' : '/employee';
+    return <Navigate to={destination} replace />;
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

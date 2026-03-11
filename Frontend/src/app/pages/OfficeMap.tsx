@@ -146,6 +146,13 @@ export default function OfficeMap() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'csv' && ext !== 'txt') {
+      toast.error('Solo se permiten archivos .csv o .txt');
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;

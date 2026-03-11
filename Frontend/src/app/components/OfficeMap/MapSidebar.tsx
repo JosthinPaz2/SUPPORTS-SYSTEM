@@ -214,6 +214,7 @@ export default function MapSidebar({
           type="file"
           ref={fileInputRef}
           onChange={onFileUpload}
+          accept=".csv,.txt"
           title="Import CSV file"
           aria-label="Import CSV file"
           className="hidden"
