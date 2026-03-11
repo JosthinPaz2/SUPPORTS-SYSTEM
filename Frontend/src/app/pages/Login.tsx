@@ -16,7 +16,7 @@ type ModalState = 'forgot' | 'verify' | 'reset';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, requestPasswordRecovery, verifyCode, resetPassword, user } = useAuth();
+  const { login, requestPasswordRecovery, verifyCode, resetPassword} = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
