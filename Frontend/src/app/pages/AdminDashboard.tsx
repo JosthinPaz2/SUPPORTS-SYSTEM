@@ -11,6 +11,7 @@ import OfficeMap from './OfficeMap';
 import NotificationsButton from '../components/NotificationsButton';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import { Ticket } from '../types/ticket';
+import DownloadButtons from '../components/DownloadButtons';
 
 type AdminTab = 'kanban' | 'reports' | 'map';
 
@@ -71,7 +72,7 @@ export default function AdminDashboard() {
             
             <div className="flex items-center gap-3">
               <NotificationsButton />
-              
+               <DownloadButtons tickets={tickets} />
               {/* BOTÓN CON TEXTO DESPLEGABLE */}
               <Button 
                 variant="outline" 
