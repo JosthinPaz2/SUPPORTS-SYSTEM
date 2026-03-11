@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'; // Añadimos useMemo para optimizar
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
@@ -14,10 +14,11 @@ type FilterStatus = 'all' | 'in-progress' | 'resolved' | 'pending';
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useAuth();
   const { tickets } = useTickets();
   const [showForm, setShowForm] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [manualSelectedTicket, setManualSelectedTicket] = useState<Ticket | null>(null);
   
  
   const [filter, setFilter] = useState<FilterStatus>('all');
@@ -31,8 +32,28 @@ export default function EmployeeDashboard() {
     return myTicketsBase.filter(t => t.status === filter);
   }, [myTicketsBase, filter]);
 
+  const querySelectedTicket = useMemo(() => {
+    const ticketId = searchParams.get('ticketId');
+    if (!ticketId) {
+      return null;
+    }
+
+    return myTicketsBase.find((ticket) => String(ticket.id) === String(ticketId)) ?? null;
+  }, [searchParams, myTicketsBase]);
+
+  const selectedTicket = manualSelectedTicket ?? querySelectedTicket;
+
   const handleCloseForm = () => {
     setShowForm(false);
+  };
+
+  const handleCloseTicketModal = () => {
+    setManualSelectedTicket(null);
+    if (searchParams.has('ticketId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('ticketId');
+      setSearchParams(nextParams, { replace: true });
+    }
   };
 
   const expandibleClass = "group flex items-center overflow-hidden transition-all duration-300 ease-in-out";
@@ -88,7 +109,7 @@ export default function EmployeeDashboard() {
           {/* Botón Total */}
           <button 
             onClick={() => setFilter('all')}
-            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'all' ? 'ring-0 ring' : ''}`}
+            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'all' ? '' : ''}`}
           >
             <Card className={filter === 'all' ? 'bg-white' : 'bg-white'}>
               <CardHeader className="pb-3 text-gray-600">
@@ -105,7 +126,7 @@ export default function EmployeeDashboard() {
           {/* Botón In Progress */}
           <button 
             onClick={() => setFilter('in-progress')}
-            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'in-progress' ? 'ring-0 ring' : ''}`}
+            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'in-progress' ? '' : ''}`}
           >
             <Card className={filter === 'in-progress' ? 'bg-blue-50 border-blue-200' : 'bg-white'}>
               <CardHeader className="pb-3 text-blue-600">
@@ -124,7 +145,7 @@ export default function EmployeeDashboard() {
           {/* Botón Resolved */}
           <button 
             onClick={() => setFilter('resolved')}
-            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'resolved' ? 'ring-0 ring' : ''}`}
+            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'resolved' ? '' : ''}`}
           >
             <Card className={filter === 'resolved' ? 'bg-green-50 border-green-200' : 'bg-white'}>
               <CardHeader className="pb-3 text-green-600">
@@ -184,7 +205,7 @@ export default function EmployeeDashboard() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            onClick={() => setSelectedTicket(ticket)}
+                            onClick={() => setManualSelectedTicket(ticket)}
                           >
                             View Details
                           </Button>
@@ -211,7 +232,7 @@ export default function EmployeeDashboard() {
       {selectedTicket && (
         <TicketDetailsModal
           ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
+          onClose={handleCloseTicketModal}
           isAdmin={false}
         />
       )}

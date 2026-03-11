@@ -403,6 +403,8 @@ export default function OfficeMap() {
     const toCanvasX = (value: number) => (value / 100) * BASE_CANVAS_WIDTH;
     const toCanvasY = (value: number) => (value / 100) * BASE_CANVAS_HEIGHT;
 
+    let cancelled = false;
+
     const loadSelectedMap = async () => {
       try {
         setLoadingMap(true);
@@ -423,9 +425,11 @@ export default function OfficeMap() {
           };
         });
 
-        setInitialPlacedDeskIds(
-          mappedStations.filter((station) => station.placed).map((station) => station.id),
-        );
+        if (!cancelled) {
+          setInitialPlacedDeskIds(
+            mappedStations.filter((station) => station.placed).map((station) => station.id),
+          );
+        }
 
         const mappedDecorations = mapData.decorations.map((decoration) => {
           const normalizedType = String(decoration.decoration_type || '').toLowerCase();
@@ -441,15 +445,35 @@ export default function OfficeMap() {
           };
         });
 
-        setDesks([...defaultObjects, ...mappedStations, ...mappedDecorations]);
+        if (!cancelled) {
+          setDesks([...defaultObjects, ...mappedStations, ...mappedDecorations]);
+        }
       } catch (error) {
-        toast.error((error as Error).message || 'Could not load the selected map');
+        if (!cancelled) {
+          toast.error((error as Error).message || 'Could not load the selected map');
+        }
       } finally {
-        setLoadingMap(false);
+        if (!cancelled) {
+          setLoadingMap(false);
+        }
       }
     };
 
     loadSelectedMap();
+
+    const shouldAutoRefresh = isViewOnly || activeMode === 'view';
+    const intervalId = shouldAutoRefresh
+      ? window.setInterval(() => {
+          loadSelectedMap();
+        }, 5000)
+      : null;
+
+    return () => {
+      cancelled = true;
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
   }, [activeMode, currentZoneId, isViewOnly]);
 
   const handleSaveMap = async () => {

@@ -125,7 +125,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Fail-safe to avoid crashing the UI during transient render/HMR edge cases.
+    const stored = localStorage.getItem('user_data');
+    let fallbackUser: User | null = null;
+    if (stored) {
+      try {
+        fallbackUser = JSON.parse(stored) as User;
+      } catch {
+        fallbackUser = null;
+      }
+    }
+    return {
+      user: fallbackUser,
+      login: async () => null,
+      register: async () => {},
+      logout: () => {},
+      isAdmin: fallbackUser?.id_role === 1,
+      isLoading: false,
+      requestPasswordRecovery: async () => {},
+      verifyCode: async () => {},
+      resetPassword: async () => {},
+    };
   }
   return context;
 }

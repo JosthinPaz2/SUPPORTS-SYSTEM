@@ -48,7 +48,7 @@ export default function ReportsPanel() {
       } catch { /* non-critical */ }
     };
     load();
-  }, []);
+  }, [tickets]);
 
   // Estadísticas por estado
   const byStatus = {

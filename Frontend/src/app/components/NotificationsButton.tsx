@@ -1,24 +1,92 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, Trash2, X, Wifi } from "lucide-react";
-import { io, Socket } from "socket.io-client";
+import { Bell, Trash2, X } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { apiService } from "../utils/api";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export interface Notification {
   id: number;
   title: string;
   time: string;
-  ticket_id?: number;
-  previous_status?: string;
-  new_status?: string;
+  read: boolean;
+  actionType?: string;
+  severity?: string;
+  ticketId?: number;
+  stationId?: string;
 }
 
-// Variable para mantener la instancia del socket
-let socket: Socket | null = null;
+function NotificationListItem({
+  notification,
+  onOpen,
+  onDelete,
+}: {
+  notification: Notification;
+  onOpen: (notification: Notification) => void;
+  onDelete: (id: number) => void;
+}) {
+  const unreadClasses = notification.read
+    ? "bg-white hover:bg-gray-50"
+    : notification.severity === "critical"
+      ? "bg-red-50 hover:bg-red-100 border-l-4 border-red-500"
+      : "bg-amber-50 hover:bg-amber-100 border-l-4 border-amber-400";
+
+  return (
+    <li
+      key={notification.id}
+      onClick={() => onOpen(notification)}
+      className={`flex items-start gap-3 px-4 py-3 transition ${notification.ticketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
+    >
+      <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+        notification.severity === "critical"
+          ? "bg-red-100"
+          : notification.read
+            ? "bg-gray-100"
+            : "bg-amber-100"
+      }`}>
+        <Bell
+          className={`w-4 h-4 ${
+            notification.severity === "critical"
+              ? "text-red-600"
+              : notification.read
+                ? "text-gray-500"
+                : "text-amber-600"
+          }`}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={`text-sm ${notification.read ? "text-gray-700" : "font-semibold text-gray-900"}`}>
+            {notification.title}
+          </p>
+          {!notification.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+        {notification.ticketId && (
+          <p className="text-[11px] mt-1 text-gray-500">Open the related ticket.</p>
+        )}
+      </div>
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete(notification.id);
+        }}
+        aria-label={`Delete notification ${notification.id}`}
+        className="ml-2 p-1.5 rounded-md hover:bg-red-50 transition flex items-center justify-center shrink-0"
+        title="Delete"
+      >
+        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+      </button>
+    </li>
+  );
+}
 
 export default function NotificationsButton() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,78 +99,151 @@ export default function NotificationsButton() {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
 
-  // Inicializar conexión Socket.io
   useEffect(() => {
-    // Usar la misma URL del backend que api.ts
-    // NOTA: Socket.io automáticamente agrega /socket.io a la URL
-    const API_URL = 
-      (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-      'https://margery-highfalutin-unambiguously.ngrok-free.dev';
-    
-    console.log("🔌 Inicializando Socket.io con URL:", API_URL);
-    
-    if (!socket) {
-      socket = io(API_URL, {
-        transports: ["websocket", "polling"],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        autoConnect: true,
-      });
-
-      socket.on("connect", () => {
-        console.log("Socket.io conectado exitosamente!");
-        console.log("   Socket ID:", socket?.id);
-        setIsConnected(true);
-      });
-
-      socket.on("disconnect", () => {
-        console.log(" Socket.io desconectado");
-        setIsConnected(false);
-      });
-
-      socket.on("connect_error", (error) => {
-        console.error(" Error de conexión Socket.io:", error.message);
-        setIsConnected(false);
-      });
+    if (!user?.id) {
+      setNotifications([]);
+      return;
     }
 
-    return () => {
-      // No desconectar el socket al desmontar para mantener la conexión
-    };
-  }, []);
+    let cancelled = false;
+    const seenIds = new Set<number>();
 
-  // Escuchar notificaciones del backend
-  useEffect(() => {
-    if (socket) {
-      socket.on("ticket-status-changed", (data: Notification) => {
-        console.log("Notificación recibida:", data);
-        
-        // Agregar a la lista de notificaciones
-        setNotifications((prev) => [data, ...prev]);
-        
-        // Mostrar toast de notificación
-        toast.success("Nueva notificación", {
-          description: data.title,
-          duration: 5000,
-        });
-      });
-    }
+    const loadNotifications = async (showErrorToast: boolean) => {
+      try {
+        setIsSyncing(true);
+        const rows = await apiService.getNotificationsByUser(user.id);
+        if (cancelled) return;
 
-    return () => {
-      if (socket) {
-        socket.off("ticket-status-changed");
+        const mapped = rows
+          .slice()
+          .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+          .map((row) => ({
+            id: row.id_notification,
+            title: row.message,
+            time: new Date(row.sent_at).toLocaleString(),
+            read: row.read,
+            actionType: row.action_type ?? undefined,
+            severity: row.severity ?? undefined,
+            ticketId: row.id_ticket ?? undefined,
+            stationId: row.id_station ?? undefined,
+          }));
+
+        for (const item of mapped) {
+          if (!item.read && !seenIds.has(item.id)) {
+            const openTarget = () => {
+              if (!item.ticketId) {
+                return;
+              }
+
+              const destination = user?.id_role === 1 ? "/admin" : "/employee";
+              navigate(`${destination}?ticketId=${item.ticketId}`);
+              setOpen(false);
+            };
+
+            if (item.severity === "critical") {
+              toast.error("Critical alert", {
+                description: item.title,
+                duration: 7000,
+                action: item.ticketId ? {
+                  label: "Open ticket",
+                  onClick: openTarget,
+                } : undefined,
+              });
+            } else {
+              toast.success("New notification", {
+                description: item.title,
+                duration: 4000,
+              });
+            }
+          }
+          seenIds.add(item.id);
+        }
+
+        setNotifications(mapped);
+      } catch (error) {
+        if (showErrorToast) {
+          toast.error((error as Error).message || "Could not load notifications");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSyncing(false);
+        }
       }
     };
-  }, []);
 
-  function handleDelete(id: number) {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    loadNotifications(false);
+    const intervalId = window.setInterval(() => {
+      loadNotifications(false);
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [user?.id]);
+
+  async function markNotificationAsRead(id: number) {
+    try {
+      await apiService.updateNotification(id, { read: true });
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === id ? { ...notification, read: true } : notification,
+        ),
+      );
+    } catch (error) {
+      toast.error((error as Error).message || "Could not update the notification");
+    }
   }
 
-  function handleClearAll() {
-    setNotifications([]);
+  async function handleDelete(id: number) {
+    try {
+      await apiService.deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (error) {
+      toast.error((error as Error).message || "Could not delete notification");
+    }
   }
+
+  async function handleClearAll() {
+    try {
+      await Promise.all(notifications.map((n) => apiService.deleteNotification(n.id)));
+      setNotifications([]);
+    } catch (error) {
+      toast.error((error as Error).message || "Could not delete notifications");
+    }
+  }
+
+  async function handleMarkAllAsRead() {
+    const unreadNotifications = notifications.filter((notification) => !notification.read);
+    if (unreadNotifications.length === 0) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        unreadNotifications.map((notification) =>
+          apiService.updateNotification(notification.id, { read: true }),
+        ),
+      );
+      setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })));
+    } catch (error) {
+      toast.error((error as Error).message || "Could not mark notifications as read");
+    }
+  }
+
+  async function handleOpenNotification(notification: Notification) {
+    if (!notification.read) {
+      await markNotificationAsRead(notification.id);
+    }
+
+    if (notification.ticketId) {
+      const destination = user?.id_role === 1 ? "/admin" : "/employee";
+      navigate(`${destination}?ticketId=${notification.ticketId}`);
+      setOpen(false);
+    }
+  }
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="relative" ref={ref}>
@@ -111,21 +252,20 @@ export default function NotificationsButton() {
         onClick={() => setOpen((s) => !s)}
         className="p-2 rounded-md bg-gray-50 hover:bg-gray-100 transition relative"
         aria-haspopup="true"
-        aria-expanded={open ? "true" : "false"}
-        aria-label="Notificaciones"
+        aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-gray-600" />
-        {notifications.length > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-            {notifications.length}
+            {unreadCount}
           </span>
         )}
-        {/* Indicador de conexión */}
+
         <span 
           className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-            isConnected ? 'bg-green-500' : 'bg-gray-400'
+            isSyncing ? 'bg-yellow-500' : 'bg-green-500'
           }`}
-          title={isConnected ? "Conectado" : "Desconectado"}
+          title={isSyncing ? "Syncing" : "Synced"}
         />
       </button>
 
@@ -136,11 +276,11 @@ export default function NotificationsButton() {
             <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
               <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
                 <h3 className="text-sm font-semibold text-gray-800">
-                  Notificaciones
+                  Notifications
                 </h3>
                 <button
                   onClick={() => setOpen(false)}
-                  aria-label="Cerrar notificaciones"
+                  aria-label="Close notifications"
                   className="p-1 rounded-full hover:bg-gray-200 transition"
                 >
                   <X className="w-4 h-4 text-gray-600" />
@@ -150,35 +290,32 @@ export default function NotificationsButton() {
               <ul className="max-h-64 overflow-auto divide-y">
                 {notifications.length === 0 ? (
                   <li className="p-4 text-sm text-gray-500 text-center">
-                    No hay notificaciones
+                    No notifications
                   </li>
                 ) : (
                   notifications.map((n) => (
-                    <li
+                    <NotificationListItem
                       key={n.id}
-                      className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
-                        <Bell className="w-4 h-4 text-teal-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-800">{n.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{n.time}</p>
-                      </div>
-                      <button
-                        onClick={() => handleDelete(n.id)}
-                        aria-label={`Eliminar notificación ${n.id}`}
-                        className="ml-2 p-1.5 rounded-md hover:bg-red-50 transition flex items-center justify-center shrink-0"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
-                      </button>
-                    </li>
+                      notification={n}
+                      onOpen={handleOpenNotification}
+                      onDelete={handleDelete}
+                    />
                   ))
                 )}
               </ul>
 
-              <div className="p-4 flex justify-center border-t">
+              <div className="p-4 flex items-center justify-center gap-3 border-t">
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                    unreadCount === 0
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                  }`}
+                  disabled={unreadCount === 0}
+                >
+                  Mark all as read
+                </button>
                 <button
                   onClick={handleClearAll}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition ${
@@ -188,7 +325,7 @@ export default function NotificationsButton() {
                   }`}
                   disabled={notifications.length === 0}
                 >
-                  Borrar todo
+                  Clear all
                 </button>
               </div>
             </div>
@@ -199,11 +336,11 @@ export default function NotificationsButton() {
             <div className="bg-white w-full max-w-sm rounded-xl shadow-lg overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
                 <h3 className="text-sm font-semibold text-gray-800">
-                  Notificaciones
+                  Notifications
                 </h3>
                 <button
                   onClick={() => setOpen(false)}
-                  aria-label="Cerrar notificaciones"
+                  aria-label="Close notifications"
                   className="p-1 rounded-full hover:bg-gray-200 transition"
                 >
                   <X className="w-4 h-4 text-gray-600" />
@@ -213,35 +350,32 @@ export default function NotificationsButton() {
               <ul className="max-h-80 overflow-auto divide-y">
                 {notifications.length === 0 ? (
                   <li className="p-4 text-sm text-gray-500 text-center">
-                    No hay notificaciones
+                    No notifications
                   </li>
                 ) : (
                   notifications.map((n) => (
-                    <li
+                    <NotificationListItem
                       key={n.id}
-                      className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
-                        <Bell className="w-4 h-4 text-teal-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-800">{n.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{n.time}</p>
-                      </div>
-                      <button
-                        onClick={() => handleDelete(n.id)}
-                        aria-label={`Eliminar notificación ${n.id}`}
-                        className="ml-2 p-1.5 rounded-md hover:bg-red-50 transition flex items-center justify-center shrink-0"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
-                      </button>
-                    </li>
+                      notification={n}
+                      onOpen={handleOpenNotification}
+                      onDelete={handleDelete}
+                    />
                   ))
                 )}
               </ul>
 
-              <div className="p-4 flex justify-center border-t">
+              <div className="p-4 flex items-center justify-center gap-3 border-t">
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                    unreadCount === 0
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                  }`}
+                  disabled={unreadCount === 0}
+                >
+                  Mark all as read
+                </button>
                 <button
                   onClick={handleClearAll}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition ${
@@ -251,7 +385,7 @@ export default function NotificationsButton() {
                   }`}
                   disabled={notifications.length === 0}
                 >
-                  Borrar todo
+                  Clear all
                 </button>
               </div>
             </div>

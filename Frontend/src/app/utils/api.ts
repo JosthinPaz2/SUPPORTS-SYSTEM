@@ -114,8 +114,8 @@ export interface UpdateTicketRequest {
   status?: string;
   priority?: string;
   id_category?: number;
-  primary_technician?: number;
-  secondary_technician?: number;
+  primary_technician?: number | null;
+  secondary_technician?: number | null;
   id_station?: string;
   resolved_at?: string;
   moved_by?: number;
@@ -160,6 +160,23 @@ export interface ChangeHistoryDto {
     content: string;
     created_at: string;
   }>;
+}
+
+export interface NotificationResponseDto {
+  id_notification: number;
+  id_user: number;
+  message: string;
+  action_type?: string | null;
+  severity?: string | null;
+  id_ticket?: number | null;
+  id_station?: string | null;
+  read: boolean;
+  sent_at: string;
+}
+
+export interface UpdateNotificationRequest {
+  message?: string;
+  read?: boolean;
 }
 
 export interface MapDecorationDto {
@@ -241,7 +258,7 @@ class ApiService {
       // Check if response is HTML instead of JSON
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('text/html')) {
-        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que el backend esté corriendo correctamente.');
+        throw new Error('The server returned HTML instead of JSON. Verify that the backend is running correctly.');
       }
 
       if (!response.ok) {
@@ -249,10 +266,14 @@ class ApiService {
         throw new Error(errorData.detail || `Error HTTP: ${response.status}`);
       }
 
+      if (response.status === 204 || response.status === 205) {
+        return undefined as T;
+      }
+
       return response.json();
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error('No se puede conectar al servidor. Verifica que el backend esté activo.');
+        throw new Error('Cannot connect to the server. Verify that the backend is running.');
       }
       throw error;
     }
@@ -360,6 +381,26 @@ class ApiService {
 
   async getChangesByStation(stationId: string): Promise<ChangeHistoryDto[]> {
     return this.request<ChangeHistoryDto[]>(`/changes/station/${stationId}`);
+  }
+
+  async getNotificationsByUser(userId: number | string): Promise<NotificationResponseDto[]> {
+    return this.request<NotificationResponseDto[]>(`/notifications/user/${userId}`);
+  }
+
+  async updateNotification(
+    notificationId: number | string,
+    payload: UpdateNotificationRequest,
+  ): Promise<NotificationResponseDto> {
+    return this.request<NotificationResponseDto>(`/notifications/${notificationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteNotification(notificationId: number | string): Promise<void> {
+    await this.request(`/notifications/${notificationId}`, {
+      method: 'DELETE',
+    });
   }
 
   async getMapByZone(idZone: number): Promise<MapZoneResponseDto> {

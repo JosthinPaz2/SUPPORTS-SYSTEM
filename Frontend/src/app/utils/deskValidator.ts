@@ -11,7 +11,7 @@ export function validateDesks(desks: Desk[]): ValidationResult {
   const warnings: string[] = [];
 
   if (desks.length === 0) {
-    errors.push('Debe haber al menos un escritorio');
+    errors.push('There must be at least one desk');
     return { isValid: false, errors, warnings };
   }
 
@@ -21,7 +21,7 @@ export function validateDesks(desks: Desk[]): ValidationResult {
   desks.forEach((desk, index) => {
  
     if (!desk.id || desk.id.trim() === '') {
-      errors.push(`Escritorio en posición ${index + 1}: ID vacío`);
+      errors.push(`Desk at position ${index + 1}: Empty ID`);
     }
 
     if (ids.has(desk.id)) {
@@ -31,30 +31,30 @@ export function validateDesks(desks: Desk[]): ValidationResult {
 
 
     if (desk.x < 0 || desk.y < 0) {
-      errors.push(`Escritorio ${desk.id}: Las coordenadas no pueden ser negativas`);
+      errors.push(`Desk ${desk.id}: Coordinates cannot be negative`);
     }
 
     if (desk.width <= 0 || desk.height <= 0) {
-      errors.push(`Escritorio ${desk.id}: Las dimensiones deben ser positivas`);
+      errors.push(`Desk ${desk.id}: Dimensions must be positive`);
     }
 
 
     if (desk.x > 2000 || desk.y > 2000) {
-      warnings.push(`Escritorio ${desk.id}: Coordenadas muy grandes (x: ${desk.x}, y: ${desk.y})`);
+      warnings.push(`Desk ${desk.id}: Coordinates are very large (x: ${desk.x}, y: ${desk.y})`);
     }
 
     if (desk.width > 200 || desk.height > 200) {
-      warnings.push(`Escritorio ${desk.id}: Dimensiones muy grandes (${desk.width}x${desk.height})`);
+      warnings.push(`Desk ${desk.id}: Dimensions are very large (${desk.width}x${desk.height})`);
     }
 
     if (desk.width < 10 || desk.height < 10) {
-      warnings.push(`Escritorio ${desk.id}: Dimensiones muy pequeñas (${desk.width}x${desk.height})`);
+      warnings.push(`Desk ${desk.id}: Dimensions are very small (${desk.width}x${desk.height})`);
     }
   });
 
 
   if (duplicateIds.size > 0) {
-    errors.push(`IDs duplicados encontrados: ${Array.from(duplicateIds).join(', ')}`);
+    errors.push(`Duplicate IDs found: ${Array.from(duplicateIds).join(', ')}`);
   }
 
   const overlaps = findOverlaps(desks);

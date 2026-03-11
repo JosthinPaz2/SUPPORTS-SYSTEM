@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { Ticket, Comment, TicketCategory, TicketPriority, TicketStatus } from '../types/ticket';
 import { apiService } from '../utils/api';
 import { toast } from 'sonner';
@@ -15,92 +15,115 @@ interface TicketContextType {
   updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
   addComment: (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => void;
   deleteTicket: (id: string) => void;
+  refreshTickets: () => Promise<void>;
 }
 
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
 
+const normalizeCategory = (categoryName: string): TicketCategory => {
+  const normalized = categoryName.trim().toLowerCase();
+  if (normalized === 'hardware') return 'hardware';
+  if (normalized === 'software') return 'software';
+  return 'other';
+};
+
+const normalizeStatus = (status: string): TicketStatus => {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === 'in progress' || normalized === 'in-progress') return 'in-progress';
+  if (normalized === 'resolved') return 'resolved';
+  return 'pending';
+};
+
+const normalizePriority = (priority: string): TicketPriority => {
+  const normalized = priority.trim().toLowerCase();
+  if (normalized === 'medium') return 'medium';
+  if (normalized === 'high' || normalized === 'urgent') return 'high';
+  return 'low';
+};
+
 export function TicketProvider({ children }: { children: ReactNode }) {
-  // Inicializamos el estado como un arreglo vacío []
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const AUTO_REFRESH_MS = Number(import.meta.env.VITE_TICKETS_REFRESH_MS || 5000);
+
+  const fetchMappedTickets = useCallback(async (): Promise<Ticket[]> => {
+    const [ticketRows, categories, users] = await Promise.all([
+      apiService.getTickets(),
+      apiService.getCategories(),
+      apiService.getUsers(),
+    ]);
+
+    const categoryById = new Map(
+      categories.map((category) => [category.id_category, category.category_name]),
+    );
+
+    const usersById = new Map(
+      users.map((user) => [String(user.id_user), user.full_name]),
+    );
+
+    return ticketRows.map((ticket) => ({
+      id: String(ticket.id_ticket),
+      title: ticket.title,
+      description: ticket.description,
+      category: normalizeCategory(categoryById.get(ticket.id_category) || 'other'),
+      status: normalizeStatus(ticket.status),
+      priority: normalizePriority(ticket.priority),
+      createdBy: String(ticket.created_by),
+      createdByName: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
+      reportedBy: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
+      location: ticket.id_station || undefined,
+      assignedTo: ticket.primary_technician != null ? String(ticket.primary_technician) : undefined,
+      assignedToName:
+        ticket.primary_technician != null
+          ? (usersById.get(String(ticket.primary_technician)) || `User ${ticket.primary_technician}`)
+          : undefined,
+      secondaryTechnicianId:
+        ticket.secondary_technician != null ? String(ticket.secondary_technician) : undefined,
+      secondaryTechnicianName:
+        ticket.secondary_technician != null
+          ? (usersById.get(String(ticket.secondary_technician)) || `User ${ticket.secondary_technician}`)
+          : undefined,
+      movedBy: ticket.moved_by != null ? String(ticket.moved_by) : undefined,
+      movedByName:
+        ticket.moved_by != null
+          ? (usersById.get(String(ticket.moved_by)) || `User ${ticket.moved_by}`)
+          : undefined,
+      createdAt: new Date(ticket.created_at),
+      updatedAt: new Date(ticket.created_at),
+      comments: [],
+    }));
+  }, []);
+
+  const refreshTickets = useCallback(async () => {
+    const mapped = await fetchMappedTickets();
+    setTickets(mapped);
+  }, [fetchMappedTickets]);
 
   useEffect(() => {
-    const normalizeCategory = (categoryName: string): TicketCategory => {
-      const normalized = categoryName.trim().toLowerCase();
-      if (normalized === 'hardware') return 'hardware';
-      if (normalized === 'software') return 'software';
-      return 'other';
-    };
+    let cancelled = false;
 
-    const normalizeStatus = (status: string): TicketStatus => {
-      const normalized = status.trim().toLowerCase();
-      if (normalized === 'in progress' || normalized === 'in-progress') return 'in-progress';
-      if (normalized === 'resolved') return 'resolved';
-      return 'pending';
-    };
-
-    const normalizePriority = (priority: string): TicketPriority => {
-      const normalized = priority.trim().toLowerCase();
-      if (normalized === 'medium') return 'medium';
-      if (normalized === 'high' || normalized === 'urgent') return 'high';
-      return 'low';
-    };
-
-    const loadTickets = async () => {
+    const loadTickets = async (showErrorToast = true) => {
       try {
-        const [ticketRows, categories, users] = await Promise.all([
-          apiService.getTickets(),
-          apiService.getCategories(),
-          apiService.getUsers(),
-        ]);
-
-        const categoryById = new Map(
-          categories.map((category) => [category.id_category, category.category_name]),
-        );
-
-        const usersById = new Map(
-          users.map((user) => [String(user.id_user), user.full_name]),
-        );
-
-        const mappedTickets: Ticket[] = ticketRows.map((ticket) => ({
-          id: String(ticket.id_ticket),
-          title: ticket.title,
-          description: ticket.description,
-          category: normalizeCategory(categoryById.get(ticket.id_category) || 'other'),
-          status: normalizeStatus(ticket.status),
-          priority: normalizePriority(ticket.priority),
-          createdBy: String(ticket.created_by),
-          createdByName: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
-          reportedBy: usersById.get(String(ticket.created_by)) || `User ${ticket.created_by}`,
-          location: ticket.id_station || undefined,
-          assignedTo: ticket.primary_technician != null ? String(ticket.primary_technician) : undefined,
-          assignedToName:
-            ticket.primary_technician != null
-              ? (usersById.get(String(ticket.primary_technician)) || `User ${ticket.primary_technician}`)
-              : undefined,
-          secondaryTechnicianId:
-            ticket.secondary_technician != null ? String(ticket.secondary_technician) : undefined,
-          secondaryTechnicianName:
-            ticket.secondary_technician != null
-              ? (usersById.get(String(ticket.secondary_technician)) || `User ${ticket.secondary_technician}`)
-              : undefined,
-          movedBy: ticket.moved_by != null ? String(ticket.moved_by) : undefined,
-          movedByName:
-            ticket.moved_by != null
-              ? (usersById.get(String(ticket.moved_by)) || `User ${ticket.moved_by}`)
-              : undefined,
-          createdAt: new Date(ticket.created_at),
-          updatedAt: new Date(ticket.created_at),
-          comments: [],
-        }));
-
-        setTickets(mappedTickets);
+        const mappedTickets = await fetchMappedTickets();
+        if (!cancelled) {
+          setTickets(mappedTickets);
+        }
       } catch (error) {
-        toast.error((error as Error).message || 'Could not load tickets');
+        if (showErrorToast && !cancelled) {
+          toast.error((error as Error).message || 'Could not load tickets');
+        }
       }
     };
 
     loadTickets();
-  }, []);
+    const intervalId = window.setInterval(() => {
+      loadTickets(false);
+    }, AUTO_REFRESH_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [AUTO_REFRESH_MS, fetchMappedTickets]);
 
   const addTicket = (
     ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'> & {
@@ -158,13 +181,15 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         ...basePayload,
         moved_by: updates.movedBy ? Number(updates.movedBy) : undefined,
       });
+      await refreshTickets();
     } catch (error) {
       // Compatibility fallback: if backend is not migrated yet for moved_by,
       // retry status update without moved_by so board movement still persists.
       if (updates.movedBy) {
         try {
           await apiService.updateTicket(numericTicketId, basePayload);
-          toast.warning('Estado actualizado, pero no se pudo guardar quién movió el ticket.');
+          await refreshTickets();
+          toast.warning('Status updated, but the user who moved the ticket could not be saved.');
           return;
         } catch {
           // Continue to rollback below if fallback also fails.
@@ -209,7 +234,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
 
   return (
     <TicketContext.Provider
-      value={{ tickets, addTicket, updateTicket, addComment, deleteTicket }}
+      value={{ tickets, addTicket, updateTicket, addComment, deleteTicket, refreshTickets }}
     >
       {children}
     </TicketContext.Provider>

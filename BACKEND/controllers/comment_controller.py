@@ -5,6 +5,9 @@ import logging
 from db.session import SessionLocal
 from dtos.comment_dto import CommentCreate, CommentOut, CommentUpdate
 from models.comment import Comment
+from models.ticket import Ticket
+from models.notification import Notification
+from models.user import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/comments", tags=["comments"])
@@ -18,10 +21,76 @@ def get_db():
         db.close()
 
 
+def _get_role_one_user_ids(db: Session) -> set[int]:
+    rows = db.query(User.id_user).filter(User.id_role == 1).all()
+    return {int(row[0]) for row in rows}
+
+
+def _create_notifications(
+    db: Session,
+    user_ids: set[int],
+    message: str,
+    *,
+    exclude_user_id: int | None = None,
+    action_type: str | None = None,
+    severity: str | None = None,
+    id_ticket: int | None = None,
+    id_station: str | None = None,
+):
+    for user_id in user_ids:
+        if exclude_user_id is not None and user_id == exclude_user_id:
+            continue
+        db.add(Notification(
+            id_user=user_id,
+            message=message,
+            action_type=action_type,
+            severity=severity,
+            id_ticket=id_ticket,
+            id_station=id_station,
+            read=False,
+        ))
+
+
 @router.post("/", response_model=CommentOut, status_code=status.HTTP_201_CREATED)
 def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
+    db_ticket = db.query(Ticket).filter(Ticket.id_ticket == comment.id_ticket).first()
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
     db_comment = Comment(**comment.dict())
     db.add(db_comment)
+    db.flush()
+
+    role_one_user_ids = _get_role_one_user_ids(db)
+    assigned_techs = {
+        tech_id for tech_id in [db_ticket.primary_technician, db_ticket.secondary_technician] if tech_id
+    }
+
+    if bool(comment.internal_note):
+        recipients = set(role_one_user_ids).union(assigned_techs)
+        _create_notifications(
+            db,
+            recipients,
+            f"Internal note added on ticket #{db_ticket.id_ticket}: {db_ticket.title}",
+            exclude_user_id=comment.id_user,
+            action_type="internal-note",
+            severity="info",
+            id_ticket=db_ticket.id_ticket,
+            id_station=db_ticket.id_station,
+        )
+    else:
+        recipients = {db_ticket.created_by}.union(role_one_user_ids).union(assigned_techs)
+        _create_notifications(
+            db,
+            recipients,
+            f"New comment on ticket #{db_ticket.id_ticket}: {db_ticket.title}",
+            exclude_user_id=comment.id_user,
+            action_type="comment",
+            severity="info",
+            id_ticket=db_ticket.id_ticket,
+            id_station=db_ticket.id_station,
+        )
+
     db.commit()
     db.refresh(db_comment)
     logger.info(f"created comment {db_comment.id_comment} for ticket {db_comment.id_ticket}")

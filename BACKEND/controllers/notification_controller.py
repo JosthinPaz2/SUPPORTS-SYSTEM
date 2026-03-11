@@ -43,9 +43,12 @@ def get_notification(notification_id: int, db: Session = Depends(get_db)):
 
 @router.get("/user/{user_id}", response_model=list[NotificationOut])
 def list_notifications_by_user(user_id: int, db: Session = Depends(get_db)):
-    notifications = db.query(Notification).filter(Notification.id_user == user_id).all()
-    if not notifications:
-        raise HTTPException(status_code=404, detail="No notifications for this user")
+    notifications = (
+        db.query(Notification)
+        .filter(Notification.id_user == user_id)
+        .order_by(Notification.sent_at.desc(), Notification.id_notification.desc())
+        .all()
+    )
     return notifications
 
 

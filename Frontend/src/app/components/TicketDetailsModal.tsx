@@ -148,8 +148,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     setSavingTechs(true);
     try {
       await apiService.updateTicket(Number(ticket.id), {
-        primary_technician: primaryTechId && primaryTechId !== 'none' ? Number(primaryTechId) : undefined,
-        secondary_technician: secondaryTechId && secondaryTechId !== 'none' ? Number(secondaryTechId) : undefined,
+        primary_technician: primaryTechId && primaryTechId !== 'none' ? Number(primaryTechId) : null,
+        secondary_technician: secondaryTechId && secondaryTechId !== 'none' ? Number(secondaryTechId) : null,
+        moved_by: user?.id ? Number(user.id) : undefined,
       });
       toast.success('Technicians saved successfully');
     } catch (error) {

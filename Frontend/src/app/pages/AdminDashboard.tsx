@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { LogOut, LayoutDashboard, BarChart3, Map } from 'lucide-react';
@@ -7,13 +9,38 @@ import KanbanBoard from '../components/KanbanBoard';
 import ReportsPanel from '../components/ReportsPanel';
 import OfficeMap from './OfficeMap';
 import NotificationsButton from '../components/NotificationsButton';
+import TicketDetailsModal from '../components/TicketDetailsModal';
+import { Ticket } from '../types/ticket';
 
 type AdminTab = 'kanban' | 'reports' | 'map';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
+  const { tickets } = useTickets();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<AdminTab>('kanban');
+  const [manualSelectedTicket, setManualSelectedTicket] = useState<Ticket | null>(null);
   const isIT = user?.id_role === 1;
+
+  const querySelectedTicket = useMemo(() => {
+    const ticketId = searchParams.get('ticketId');
+    if (!ticketId) {
+      return null;
+    }
+
+    return tickets.find((ticket) => String(ticket.id) === String(ticketId)) ?? null;
+  }, [searchParams, tickets]);
+
+  const selectedTicket = manualSelectedTicket ?? querySelectedTicket;
+
+  const handleCloseTicketModal = () => {
+    setManualSelectedTicket(null);
+    if (searchParams.has('ticketId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('ticketId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   const tabs = [
     { id: 'kanban' as const, label: 'Kanban Board', icon: LayoutDashboard },
@@ -85,6 +112,14 @@ export default function AdminDashboard() {
           <CardContent className="p-6">{renderContent()}</CardContent>
         </Card>
       </div>
+
+      {selectedTicket && (
+        <TicketDetailsModal
+          ticket={selectedTicket}
+          onClose={handleCloseTicketModal}
+          isAdmin
+        />
+      )}
     </div>
   );
 }

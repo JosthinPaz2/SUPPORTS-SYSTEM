@@ -29,7 +29,7 @@ export function parseCSVToDesks(csvContent: string): Desk[] {
   const lines = csvContent.trim().split('\n');
   
   if (lines.length < 2) {
-    throw new Error('El archivo CSV está vacío o no tiene datos');
+    throw new Error('The CSV file is empty or has no data');
   }
 
   // Verificar headers
@@ -38,7 +38,7 @@ export function parseCSVToDesks(csvContent: string): Desk[] {
   
   const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
   if (missingHeaders.length > 0) {
-    throw new Error(`Faltan columnas requeridas: ${missingHeaders.join(', ')}`);
+    throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
   }
 
   // Parsear datos
@@ -51,7 +51,7 @@ export function parseCSVToDesks(csvContent: string): Desk[] {
     const values = line.split(',').map(v => v.trim());
     
     if (values.length < 5) {
-      throw new Error(`Línea ${i + 1}: Datos incompletos`);
+      throw new Error(`Line ${i + 1}: Incomplete data`);
     }
 
     const [id, xStr, yStr, widthStr, heightStr, typeStr] = values;
@@ -62,7 +62,7 @@ export function parseCSVToDesks(csvContent: string): Desk[] {
     const height = parseFloat(heightStr);
 
     if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
-      throw new Error(`Línea ${i + 1}: Las coordenadas deben ser números válidos`);
+      throw new Error(`Line ${i + 1}: Coordinates must be valid numbers`);
     }
 
     const desk: Desk = {
@@ -116,12 +116,12 @@ export function readFileAsText(file: File): Promise<string> {
       if (event.target?.result) {
         resolve(event.target.result as string);
       } else {
-        reject(new Error('No se pudo leer el archivo'));
+        reject(new Error('Could not read the file'));
       }
     };
     
     reader.onerror = () => {
-      reject(new Error('Error al leer el archivo'));
+      reject(new Error('Error reading the file'));
     };
     
     reader.readAsText(file);
