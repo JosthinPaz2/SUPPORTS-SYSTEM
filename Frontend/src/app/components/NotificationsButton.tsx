@@ -16,6 +16,16 @@ export interface Notification {
   stationId?: string;
 }
 
+function extractTicketIdFromMessage(message: string): number | undefined {
+  const match = message.match(/ticket\s*#(\d+)/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function NotificationListItem({
   notification,
   onOpen,
@@ -25,6 +35,7 @@ function NotificationListItem({
   onOpen: (notification: Notification) => void;
   onDelete: (id: number) => void;
 }) {
+  const linkedTicketId = notification.ticketId ?? extractTicketIdFromMessage(notification.title);
   const unreadClasses = notification.read
     ? "bg-white hover:bg-gray-50"
     : notification.severity === "critical"
@@ -35,7 +46,7 @@ function NotificationListItem({
     <li
       key={notification.id}
       onClick={() => onOpen(notification)}
-      className={`flex items-start gap-3 px-4 py-3 transition ${notification.ticketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
+      className={`flex items-start gap-3 px-4 py-3 transition ${linkedTicketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
     >
       <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
         notification.severity === "critical"
@@ -62,7 +73,7 @@ function NotificationListItem({
           {!notification.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
         </div>
         <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-        {notification.ticketId && (
+        {linkedTicketId && (
           <p className="text-[11px] mt-1 text-gray-500">Open the related ticket.</p>
         )}
       </div>
@@ -117,16 +128,20 @@ export default function NotificationsButton() {
         const mapped = rows
           .slice()
           .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
-          .map((row) => ({
-            id: row.id_notification,
-            title: row.message,
-            time: new Date(row.sent_at).toLocaleString(),
-            read: row.read,
-            actionType: row.action_type ?? undefined,
-            severity: row.severity ?? undefined,
-            ticketId: row.id_ticket ?? undefined,
-            stationId: row.id_station ?? undefined,
-          }));
+          .map((row) => {
+            const fallbackTicketId = extractTicketIdFromMessage(row.message);
+
+            return {
+              id: row.id_notification,
+              title: row.message,
+              time: new Date(row.sent_at).toLocaleString(),
+              read: row.read,
+              actionType: row.action_type ?? undefined,
+              severity: row.severity ?? undefined,
+              ticketId: row.id_ticket ?? fallbackTicketId ?? undefined,
+              stationId: row.id_station ?? undefined,
+            };
+          });
 
         for (const item of mapped) {
           if (!item.read && !seenIds.has(item.id)) {
@@ -232,13 +247,15 @@ export default function NotificationsButton() {
   }
 
   async function handleOpenNotification(notification: Notification) {
+    const ticketId = notification.ticketId ?? extractTicketIdFromMessage(notification.title);
+
     if (!notification.read) {
       await markNotificationAsRead(notification.id);
     }
 
-    if (notification.ticketId) {
+    if (ticketId) {
       const destination = user?.id_role === 1 ? "/admin" : "/employee";
-      navigate(`${destination}?ticketId=${notification.ticketId}`);
+      navigate(`${destination}?ticketId=${ticketId}`);
       setOpen(false);
     }
   }

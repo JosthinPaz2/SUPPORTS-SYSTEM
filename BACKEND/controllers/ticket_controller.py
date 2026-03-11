@@ -113,15 +113,17 @@ def _create_notifications(
     for user_id in user_ids:
         if exclude_user_id is not None and user_id == exclude_user_id:
             continue
-        db.add(Notification(
-            id_user=user_id,
-            message=message,
-            action_type=action_type,
-            severity=severity,
-            id_ticket=id_ticket,
-            id_station=id_station,
-            read=False,
-        ))
+        db.add(
+            Notification(
+                id_user=user_id,
+                message=message,
+                read=False,
+                action_type=action_type,
+                severity=severity,
+                id_ticket=id_ticket,
+                id_station=id_station,
+            )
+        )
 
 
 def _get_user_display_name(db: Session, user_id: Optional[int]) -> str:
@@ -169,29 +171,11 @@ def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
         role_one_user_ids,
         f"New ticket #{db_ticket.id_ticket} created: {db_ticket.title}",
         exclude_user_id=db_ticket.created_by,
-        action_type="ticket-created",
+        action_type="open_ticket",
         severity="info",
         id_ticket=db_ticket.id_ticket,
         id_station=db_ticket.id_station,
     )
-
-    if db_ticket.id_station:
-        active_reports_after_create = db.query(Ticket).filter(
-            Ticket.id_station == db_ticket.id_station,
-            Ticket.status != EstadoTicket.RESOLVED,
-        ).count()
-
-        if active_reports_after_create == 3:
-            _create_notifications(
-                db,
-                role_one_user_ids,
-                f"URGENT: Station {db_ticket.id_station} has reached 3 active reports. Open ticket #{db_ticket.id_ticket}: {db_ticket.title}",
-                exclude_user_id=db_ticket.created_by,
-                action_type="station-threshold",
-                severity="critical",
-                id_ticket=db_ticket.id_ticket,
-                id_station=db_ticket.id_station,
-            )
 
     _refresh_open_ticket_priorities(db)
 
@@ -261,8 +245,8 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
             status_recipients,
             f"Ticket #{db_ticket.id_ticket} changed to {normalized_status.title()}",
             exclude_user_id=actor_user,
-            action_type="status-change",
-            severity="info",
+            action_type="open_ticket",
+            severity="critical" if normalized_status == "pending" else "info",
             id_ticket=db_ticket.id_ticket,
             id_station=db_ticket.id_station,
         )
@@ -279,7 +263,7 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
                 db,
                 {db_ticket.primary_technician},
                 assignment_message,
-                action_type="assignment",
+                action_type="open_ticket",
                 severity="info",
                 id_ticket=db_ticket.id_ticket,
                 id_station=db_ticket.id_station,
@@ -290,7 +274,7 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
                 db,
                 {db_ticket.secondary_technician},
                 assignment_message,
-                action_type="assignment",
+                action_type="open_ticket",
                 severity="info",
                 id_ticket=db_ticket.id_ticket,
                 id_station=db_ticket.id_station,
@@ -302,7 +286,7 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
             assignment_audit_recipients,
             f"Ticket #{db_ticket.id_ticket} technician assignment was updated",
             exclude_user_id=assignment_actor_user,
-            action_type="assignment-audit",
+            action_type="open_ticket",
             severity="info",
             id_ticket=db_ticket.id_ticket,
             id_station=db_ticket.id_station,

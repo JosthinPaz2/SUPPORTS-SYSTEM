@@ -166,12 +166,12 @@ export interface NotificationResponseDto {
   id_notification: number;
   id_user: number;
   message: string;
+  read: boolean;
+  sent_at: string;
   action_type?: string | null;
   severity?: string | null;
   id_ticket?: number | null;
   id_station?: string | null;
-  read: boolean;
-  sent_at: string;
 }
 
 export interface UpdateNotificationRequest {
@@ -264,10 +264,6 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `Error HTTP: ${response.status}`);
-      }
-
-      if (response.status === 204 || response.status === 205) {
-        return undefined as T;
       }
 
       return response.json();

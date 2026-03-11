@@ -40,15 +40,17 @@ def _create_notifications(
     for user_id in user_ids:
         if exclude_user_id is not None and user_id == exclude_user_id:
             continue
-        db.add(Notification(
-            id_user=user_id,
-            message=message,
-            action_type=action_type,
-            severity=severity,
-            id_ticket=id_ticket,
-            id_station=id_station,
-            read=False,
-        ))
+        db.add(
+            Notification(
+                id_user=user_id,
+                message=message,
+                read=False,
+                action_type=action_type,
+                severity=severity,
+                id_ticket=id_ticket,
+                id_station=id_station,
+            )
+        )
 
 
 @router.post("/", response_model=CommentOut, status_code=status.HTTP_201_CREATED)
@@ -73,7 +75,7 @@ def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
             recipients,
             f"Internal note added on ticket #{db_ticket.id_ticket}: {db_ticket.title}",
             exclude_user_id=comment.id_user,
-            action_type="internal-note",
+            action_type="open_ticket",
             severity="info",
             id_ticket=db_ticket.id_ticket,
             id_station=db_ticket.id_station,
@@ -85,7 +87,7 @@ def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
             recipients,
             f"New comment on ticket #{db_ticket.id_ticket}: {db_ticket.title}",
             exclude_user_id=comment.id_user,
-            action_type="comment",
+            action_type="open_ticket",
             severity="info",
             id_ticket=db_ticket.id_ticket,
             id_station=db_ticket.id_station,
