@@ -155,16 +155,7 @@ export default function KanbanBoard() {
             >
               {/* Padding interno para no romper la animación de la altura del contenedor padre */}
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  {hasFiltersActive && (
-                    <button 
-                      onClick={resetFilters}
-                      className="group text-xs flex items-center gap-1.5 text-blue-600 hover:text-red-600 transition-all font-semibold"
-                    >
-                      <XCircle className="w-4 h-4 text-red-400 group-hover:text-red-600" /> 
-                      Reset Filters
-                    </button>
-                  )}
+                <div className="flex items-center justify-between mb-[-25px]">
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -231,6 +222,15 @@ export default function KanbanBoard() {
                       </SelectContent>
                     </Select>
                   </div>
+                    {hasFiltersActive && (
+                    <button 
+                      onClick={resetFilters}
+                      className="group text-xs flex items-center gap-1.5 text-blue-600 hover:text-red-600 transition-all font-semibold"
+                    >
+                      <XCircle className="w-4 h-4 text-red-400 group-hover:text-red-600" /> 
+                      Reset Filters
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
