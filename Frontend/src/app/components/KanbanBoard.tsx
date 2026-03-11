@@ -81,6 +81,10 @@ export default function KanbanBoard() {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [dateFilter, setDateFilter] = useState('');
 
+  // Lógica para mantener abierto el panel si hay filtros activos
+  const hasFiltersActive = searchTerm !== '' || categoryFilter !== 'all' || priorityFilter !== 'all' || dateFilter !== '';
+  const isExpanded = isHovered || hasFiltersActive;
+
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
     if (isIT) {
       updateTicket(ticketId, {
@@ -140,18 +144,19 @@ export default function KanbanBoard() {
             <div className="bg-gray-600 p-2 text-white text-[10px] uppercase tracking-widest text-center font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors hover:bg-gray-700">
               <ShieldCheck className="w-3.5 h-3.5" />
               Admin Control Panel
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isHovered ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
             </div>
             
-            {/* Contenedor Animado */}
+            {/* CONTENEDOR ANIMADO CORREGIDO */}
             <div 
-              className={`transition-all duration-500 ease-in-out ${
-                isHovered ? 'max-h-[500px] opacity-100 py-6' : 'max-h-0 opacity-0 py-0'
+              className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
               }`}
             >
-              <CardContent className="px-4">
-                <div className="flex items-center justify-between mb-[-30px]">
-                  {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all' || dateFilter) && (
+              {/* Padding interno para no romper la animación de la altura del contenedor padre */}
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  {hasFiltersActive && (
                     <button 
                       onClick={resetFilters}
                       className="group text-xs flex items-center gap-1.5 text-blue-600 hover:text-red-600 transition-all font-semibold"
@@ -227,7 +232,7 @@ export default function KanbanBoard() {
                     </Select>
                   </div>
                 </div>
-              </CardContent>
+              </div>
             </div>
           </Card>
         )}
