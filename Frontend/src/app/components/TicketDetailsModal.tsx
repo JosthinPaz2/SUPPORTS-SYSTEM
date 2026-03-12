@@ -11,7 +11,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
 import { Ticket, TicketStatus, TicketCategory, Comment } from '../types/ticket';
-import { Clock, User, Tag, AlertCircle, MessageSquare, MapPin, Reply, X, History, CheckCircle2, CalendarClock, CalendarPlus } from 'lucide-react';
+import { Clock, User, Tag, AlertCircle, MessageSquare, MapPin, Reply, X, History, CalendarClock, Laptop } from 'lucide-react';
 
 interface TicketDetailsModalProps {
   ticket: Ticket;
@@ -49,8 +49,6 @@ const priorityLabels = {
   high: 'High',
 };
 
-
-
 export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketDetailsModalProps) {
   const { user } = useAuth();
   const { updateTicket } = useTickets();
@@ -74,6 +72,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
   const [viewerPrimaryTechName, setViewerPrimaryTechName] = useState<string | undefined>(ticket.assignedToName);
   const [viewerSecondaryTechName, setViewerSecondaryTechName] = useState<string | undefined>(ticket.secondaryTechnicianName);
 
+  const [hardwareComponent, setHardwareComponent] = useState<string>('');
+  const [assetStatus, setAssetStatus] = useState<string>('');
+
   useEffect(() => {
     if (!isAdmin) return;
     const loadTechs = async () => {
@@ -87,7 +88,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
         setPrimaryTechId(fresh.primary_technician ? String(fresh.primary_technician) : '');
         setSecondaryTechId(fresh.secondary_technician ? String(fresh.secondary_technician) : '');
       } catch {
-        // non-critical
+      
       } finally {
         setLoadingTechs(false);
       }
@@ -117,7 +118,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           }))
         );
 
-        // For employee view, refresh technician names from latest ticket data.
         if (!isAdmin) {
           const fresh = await apiService.getTicket(ticket.id);
           setViewerPrimaryTechName(
@@ -132,7 +132,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           );
         }
       } catch {
-        // non-critical — show empty list on error
       } finally {
         setLoadingComments(false);
       }
@@ -152,7 +151,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
         secondary_technician: secondaryTechId && secondaryTechId !== 'none' ? Number(secondaryTechId) : null,
         moved_by: user?.id ? Number(user.id) : undefined,
       });
-      toast.success('Technicians saved successfully');
+      toast.success('Assignments saved successfully');
     } catch (error) {
       toast.error((error as Error).message || 'Could not save assignments');
     } finally {
@@ -195,7 +194,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     if (changeHistory.length > 0) return;
     setLoadingHistory(true);
     try {
-      // Prefer station-level history so you see ALL past resolutions for this desk
       const history = ticket.location
         ? await apiService.getChangesByStation(ticket.location)
         : await apiService.getChangesByTicket(ticket.id);
@@ -280,7 +278,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
           </div>
 
-          {/* Location */}
           {ticket.location && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -291,7 +288,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
           )}
 
-          {/* Description */}
           <div>
             <h3 className="font-semibold mb-2">Description</h3>
             <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
@@ -299,7 +295,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </p>
           </div>
 
-          {/* Employee view: show technicians attending */}
+          {/* Employee view: Technicians */}
           {!isAdmin && (viewerPrimaryTechName || viewerSecondaryTechName) && (
             <>
               <Separator />
@@ -323,6 +319,49 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </>
           )}
 
+          {/* --- HARDWARE DETAILS SECTION --- */}
+          {ticket.category === 'hardware' && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Laptop className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-semibold text-emerald-900">Hardware Information</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-emerald-700">Device Type</Label>
+                    <Select value={hardwareComponent} onValueChange={setHardwareComponent} disabled={!isAdmin}>
+                      <SelectTrigger className="bg-emerald-50 border-emerald-200">
+                        <SelectValue placeholder="Select component..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monitor">Monitor</SelectItem>
+                        <SelectItem value="pc">PC / Desktop</SelectItem>
+                        <SelectItem value="peripheral">Keyboard / Mouse</SelectItem>
+                        <SelectItem value="printer">Printer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-teal-700">Asset Condition</Label>
+                    <Select value={assetStatus} onValueChange={setAssetStatus} disabled={!isAdmin}>
+                      <SelectTrigger className="bg-teal-50 border-teal-200">
+                        <SelectValue placeholder="Current status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="repair">Needs Repair</SelectItem>
+                        <SelectItem value="replace">Needs Replacement</SelectItem>
+                        <SelectItem value="tested">Operational</SelectItem>
+                        <SelectItem value="maintenance">Missing</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Admin Controls */}
           {isAdmin && (
             <>
@@ -332,9 +371,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   <div className="space-y-2">
                     <Label>Change Status</Label>
                     <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in-progress">In Progress</SelectItem>
@@ -342,7 +379,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-2">
                     <Label>Primary Technician</Label>
                     <Select value={primaryTechId} onValueChange={setPrimaryTechId} disabled={loadingTechs}>
@@ -360,7 +396,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     </Select>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-[1fr_auto] items-end gap-4">
                   <div className="space-y-2">
                     <Label>Secondary Technician</Label>
@@ -388,41 +423,29 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
           <Separator />
 
-          {/* Comments */}
+          {/* Comments Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <MessageSquare className="w-5 h-5 text-gray-600" />
               <h3 className="font-semibold">Comments</h3>
             </div>
-
-            {/* Tab nav */}
             <div className="flex border-b mb-4">
               <button
                 onClick={() => setActiveTab('comments')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'comments'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  activeTab === 'comments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
                 }`}
               >
-                Public
-                <span className="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">
-                  {publicComments.length}
-                </span>
+                Public <span className="ml-1.5 bg-gray-100 px-1.5 py-0.5 rounded-full">{publicComments.length}</span>
               </button>
               {isAdmin && (
                 <button
                   onClick={() => setActiveTab('internal')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'internal'
-                      ? 'border-amber-500 text-amber-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    activeTab === 'internal' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500'
                   }`}
                 >
-                  Internal Notes
-                  <span className="ml-1.5 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full">
-                    {internalComments.length}
-                  </span>
+                  Internal Notes <span className="ml-1.5 bg-amber-100 px-1.5 py-0.5 rounded-full">{internalComments.length}</span>
                 </button>
               )}
             </div>
@@ -431,37 +454,19 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               {loadingComments ? (
                 <p className="text-gray-500 text-center py-4">Loading comments…</p>
               ) : tabComments.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  No {activeTab === 'internal' ? 'internal notes' : 'comments'} yet
-                </p>
+                <p className="text-gray-500 text-center py-4">No comments yet</p>
               ) : (
                 tabComments.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`p-4 rounded-lg ${
-                      c.isInternal
-                        ? 'bg-amber-50 border border-amber-200'
-                        : 'bg-gray-50 border border-gray-200'
-                    }`}
-                  >
+                  <div key={c.id} className={`p-4 rounded-lg ${c.isInternal ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{c.userName}</span>
-                        {c.isInternal && (
-                          <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">
-                            Internal note
-                          </Badge>
-                        )}
+                        {c.isInternal && <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Internal note</Badge>}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-400">{formatDateTime(c.createdAt)}</span>
-                        <button
-                          onClick={() => handleReply(c)}
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 transition-colors"
-                          title="Reply"
-                        >
-                          <Reply className="w-3.5 h-3.5" />
-                          Reply
+                        <button onClick={() => handleReply(c)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500">
+                          <Reply className="w-3.5 h-3.5" /> Reply
                         </button>
                       </div>
                     </div>
@@ -471,17 +476,11 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               )}
             </div>
 
-            {/* Add Comment */}
             <div className="space-y-3 border-t pt-4">
               {replyingTo && (
                 <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md px-3 py-2 text-sm">
-                  <span className="text-blue-700">
-                    <span className="font-medium">Replying to {replyingTo.userName}:</span>{' '}
-                    <span className="text-blue-500 line-clamp-1">{replyingTo.content}</span>
-                  </span>
-                  <button onClick={() => setReplyingTo(null)} title="Cancel reply" className="ml-2 text-blue-400 hover:text-blue-600 shrink-0">
-                    <X className="w-4 h-4" />
-                  </button>
+                  <span className="text-blue-700"><span className="font-medium">Replying to {replyingTo.userName}:</span> {replyingTo.content}</span>
+                  <button onClick={() => setReplyingTo(null)} className="text-blue-400"><X className="w-4 h-4" /></button>
                 </div>
               )}
               <Label>Add {isAdmin && isInternalNote ? 'Internal Note' : 'Comment'}</Label>
@@ -489,24 +488,18 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 ref={textareaRef}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder={replyingTo ? `Reply to ${replyingTo.userName}…` : 'Write your comment...'}
+                placeholder="Write your comment..."
                 rows={3}
               />
               <div className="flex items-center justify-between">
-                {isAdmin && (
+                {isAdmin ? (
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isInternalNote}
-                      onChange={(e) => setIsInternalNote(e.target.checked)}
-                      className="rounded"
-                    />
-                    <span>Internal note (visible only to admins)</span>
+                    <input type="checkbox" checked={isInternalNote} onChange={(e) => setIsInternalNote(e.target.checked)} className="rounded" />
+                    <span>Internal note</span>
                   </label>
-                )}
-                {!isAdmin && <span />}
+                ) : <span />}
                 <Button onClick={handleAddComment} disabled={!comment.trim() || submittingComment}>
-                  {submittingComment ? 'Saving…' : replyingTo ? 'Post Reply' : 'Add Comment'}
+                  {submittingComment ? 'Saving…' : 'Add Comment'}
                 </Button>
               </div>
             </div>
@@ -514,135 +507,43 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
           <Separator />
 
-          {/* Change History Panel */}
+          {/* History Panel */}
           {isAdmin && showHistory && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b">
                 <div className="flex items-center gap-2 font-semibold text-sm">
                   <History className="w-4 h-4 text-gray-600" />
-                  {ticket.location
-                    ? `Change History — Desk ${ticket.location}`
-                    : 'Change History'}
+                  History - Desk {ticket.location || 'N/A'}
                 </div>
-                <button
-                  title="Close history"
-                  onClick={() => setShowHistory(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <button onClick={() => setShowHistory(false)} className="text-gray-400"><X className="w-4 h-4" /></button>
               </div>
               <div className="divide-y max-h-80 overflow-y-auto">
-                {loadingHistory ? (
-                  <p className="text-gray-500 text-center py-6 text-sm">Loading history…</p>
-                ) : changeHistory.length === 0 ? (
-                  <p className="text-gray-500 text-center py-6 text-sm">No changes recorded for this ticket.</p>
-                ) : (
-                  changeHistory.map((h) => {
-                    const priorityColor: Record<string, string> = {
-                      low: 'bg-gray-100 text-gray-700',
-                      medium: 'bg-orange-100 text-orange-700',
-                      high: 'bg-red-100 text-red-700',
-                      urgent: 'bg-purple-100 text-purple-700',
-                    };
-                    const rawPriority = (h.ticket_priority ?? '').toLowerCase();
-                    const rawStatus = (h.ticket_status ?? '').toLowerCase();
-                    const statusColor: Record<string, string> = {
-                      pending: 'bg-yellow-100 text-yellow-700',
-                      'in progress': 'bg-blue-100 text-blue-700',
-                      resolved: 'bg-green-100 text-green-700',
-                    };
-                    return (
-                      <div key={h.id_change} className="px-4 py-4 space-y-2">
-                        {/* Row 1: title + badges */}
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold text-sm text-gray-800 flex-1">
-                            {h.ticket_title ?? `Ticket #${h.id_ticket}`}
-                          </span>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {h.ticket_priority && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityColor[rawPriority] ?? 'bg-gray-100 text-gray-700'}`}>
-                                {h.ticket_priority}
-                              </span>
-                            )}
-                            {h.ticket_status && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[rawStatus] ?? 'bg-gray-100 text-gray-700'}`}>
-                                {h.ticket_status}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {/* Row 2: description */}
-                        {h.ticket_description && (
-                          <p className="text-xs text-gray-600 line-clamp-2">{h.ticket_description}</p>
-                        )}
-                        {/* Row 3: change note */}
-                        <p className="text-xs text-gray-700 italic">{h.change_description ?? '—'}</p>
-                        {/* Row 3.1: internal notes from the case */}
-                        {h.internal_notes && h.internal_notes.length > 0 && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-md p-2 space-y-1">
-                            <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">
-                              Internal Notes ({h.internal_notes.length})
-                            </p>
-                            {h.internal_notes.slice(0, 3).map((note) => (
-                              <div key={note.id_comment} className="text-xs text-amber-900">
-                                <span className="font-medium">
-                                  {usersById.get(note.id_user) ?? `User #${note.id_user}`}:
-                                </span>{' '}
-                                <span>{note.content}</span>
-                              </div>
-                            ))}
-                            {h.internal_notes.length > 3 && (
-                              <p className="text-[11px] text-amber-700">
-                                +{h.internal_notes.length - 3} more internal notes
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        {/* Row 4: meta */}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
-                          {h.ticket_station && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> Desk {h.ticket_station}
-                            </span>
-                          )}
-                          {h.reported_by !== null && (
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3" /> Reported by {usersById.get(h.reported_by ?? -1) ?? `User #${h.reported_by}`}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-green-500" /> Resolved by {usersById.get(h.action_user) ?? `User #${h.action_user}`}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <CalendarClock className="w-3 h-3" /> {formatDateTime(new Date(h.created_at))}
-                          </span>
-                          {h.ticket_created_at && (
-                            <span className="flex items-center gap-1">
-                              <CalendarPlus className="w-3 h-3" /> Opened {formatDateTime(new Date(h.ticket_created_at))}
-                            </span>
-                          )}
-                        </div>
+                {loadingHistory ? <p className="text-center py-6 text-sm">Loading...</p> : 
+                  changeHistory.map((h) => (
+                    <div key={h.id_change} className="px-4 py-4 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="font-semibold text-sm">{h.ticket_title}</span>
+                        <Badge variant="outline">{h.ticket_status}</Badge>
                       </div>
-                    );
-                  })
-                )}
+                      <p className="text-xs text-gray-600">{h.change_description}</p>
+                      <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                        <span className="flex items-center gap-1"><User className="w-3 h-3"/> {usersById.get(h.action_user)}</span>
+                        <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3"/> {formatDateTime(new Date(h.created_at))}</span>
+                      </div>
+                    </div>
+                  ))
+                }
               </div>
             </div>
           )}
 
           <div className="flex justify-between items-center">
             {isAdmin ? (
-              <Button variant="outline" onClick={handleOpenHistory} className="flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Change History
+              <Button variant="outline" onClick={handleOpenHistory} className="gap-2">
+                <History className="w-4 h-4" /> Change History
               </Button>
-            ) : (
-              <span />
-            )}
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
+            ) : <span />}
+            <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
         </div>
       </DialogContent>
