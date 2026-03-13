@@ -13,20 +13,20 @@ interface ProtectedLinkProps {
 }
 
 /**
- * ProtectedLink Component
- * 
- * A navigation element that only allows navigation to routes
- * the user has permission to access.
- * 
- * If user doesn't have permission:
- * - Button becomes disabled
- * - Shows tooltip with message
- * - Prevents navigation
- * 
- * @example
- * <ProtectedLink to="/admin" requiredRole="admin">
- *   Go to Admin Dashboard
- * </ProtectedLink>
+ ProtectedLink Component
+ 
+ A navigation element that only allows navigation to routes
+ the user has permission to access.
+ 
+ If user doesn't have permission:
+ - Button becomes disabled
+ - Shows tooltip with message
+ - Prevents navigation
+ 
+ @example
+ <ProtectedLink to="/admin" requiredRole="admin">
+   Go to Admin Dashboard
+ </ProtectedLink>
  */
 export function ProtectedLink({
   to,

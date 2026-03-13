@@ -8,20 +8,20 @@ interface RoleBasedProps {
 }
 
 /**
- * RoleBasedRender Component
- * 
- * Conditionally renders children based on user's role.
- * Useful for showing/hiding buttons, links, or entire sections.
- * 
- * @example
- * <RoleBasedRender requiredRole="admin">
- *   <button>Admin Only</button>
- * </RoleBasedRender>
- * 
- * @example
- * <RoleBasedRender requiredRole={['admin', 'employee']}>
- *   <div>Both can see this</div>
- * </RoleBasedRender>
+ RoleBasedRender Component
+ 
+ Conditionally renders children based on user's role.
+ Useful for showing/hiding buttons, links, or entire sections.
+ 
+ @example
+ <RoleBasedRender requiredRole="admin">
+   <button>Admin Only</button>
+ </RoleBasedRender>
+ 
+ @example
+ <RoleBasedRender requiredRole={['admin', 'employee']}>
+   <div>Both can see this</div>
+ </RoleBasedRender>
  */
 export function RoleBasedRender({ children, requiredRole, fallback }: RoleBasedProps) {
   const { user, isLoading } = useAuth();

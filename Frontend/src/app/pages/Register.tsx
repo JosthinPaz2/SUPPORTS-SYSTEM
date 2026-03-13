@@ -92,6 +92,17 @@ export default function Register() {
 
 return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      {/* OTD Support Logo - Top Left Corner */}
+      <div className="absolute top-8 left-8 z-20">
+        <div className="flex items-center space-x-2">
+          <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-400 font-bold leading-tight">
+            OTD
+          </span>
+          <span className="text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-bold leading-tight">
+            Support
+          </span>
+        </div>
+      </div>
       <BackgroundCircles />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">

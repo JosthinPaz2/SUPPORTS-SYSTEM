@@ -2,26 +2,39 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import type { User, UserRole } from '../types/auth';
 import { apiService } from '../utils/api';
 
+/* ==========================================
+  Definición del tipo de contexto de autenticación
+========================================== */
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<User | null>;
-  register: (fullName: string, email: string, password: string, campaign: string) => Promise<void>;
-  logout: () => void;
-  isAdmin: boolean;
-  isLoading: boolean;
-  requestPasswordRecovery: (email: string) => Promise<void>;
-  verifyCode: (email: string, code: string) => Promise<void>;
-  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  user: User | null; // Usuario actualmente logueado
+  login: (email: string, password: string) => Promise<User | null>; // Función para iniciar sesión
+  register: (fullName: string, email: string, password: string, campaign: string) => Promise<void>; // Registrar usuario
+  logout: () => void; // Cerrar sesión
+  isAdmin: boolean; // Indica si el usuario es admin
+  isLoading: boolean; // Indica si se está cargando el estado de autenticación
+  requestPasswordRecovery: (email: string) => Promise<void>; // Solicitar recuperación de contraseña
+  verifyCode: (email: string, code: string) => Promise<void>; // Verificar código enviado al email
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>; // Cambiar contraseña
 }
 
+/* ==========================================
+  Crear el contexto de autenticación
+========================================== */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/* ==========================================
+  Provider que envuelve la aplicación
+  y maneja la lógica de autenticación
+========================================== */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  /* ------------------------------------------
+    useEffect para revisar si hay un usuario
+    logueado en localStorage al iniciar la app
+  ------------------------------------------ */
   useEffect(() => {
-    // Check if user is logged in on app start
     const token = localStorage.getItem('access_token');
     const userData = localStorage.getItem('user_data');
 
@@ -35,14 +48,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('user_data');
       }
     }
-    setIsLoading(false);
+    setIsLoading(false); // Fin de la carga inicial
   }, []);
 
+  /* ------------------------------------------
+    Función para iniciar sesión
+    - Llama al API
+    - Almacena token y datos en localStorage
+  ------------------------------------------ */
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
       const response = await apiService.login({ institutional_email: email, password });
 
-      // Map role based on id_role: 1 = admin, 2+ = employee
       const role: UserRole = response.id_role === 1 ? 'admin' : 'employee';
 
       const userData: User = {
@@ -58,15 +75,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user_data', JSON.stringify(userData));
-      
+
       return userData;
     } catch (error) {
-      throw error;
+      throw error; // Re-lanza el error para manejarlo en el UI
     }
   };
 
+  /* ------------------------------------------
+    Función para registrar un nuevo usuario
+    - No inicia sesión automáticamente
+  ------------------------------------------ */
   const register = async (fullName: string, email: string, password: string, campaign: string) => {
-    // simply call API and return, do not log in automatically
     try {
       await apiService.register({ full_name: fullName, institutional_email: email, password, campaign });
     } catch (error) {
@@ -74,19 +94,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /* ------------------------------------------
+    Función para cerrar sesión
+    - Limpia localStorage
+    - Redirige al login
+  ------------------------------------------ */
   const logout = () => {
     setUser(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
-    // Redirect to login so credentials are cleared and user can sign in again
+
     try {
       window.location.href = '/login';
     } catch (error) {
-      // fallback: do nothing if navigation isn't possible
       console.warn('Could not redirect after logout', error);
     }
   };
 
+  /* ------------------------------------------
+    Funciones de recuperación de contraseña
+  ------------------------------------------ */
   const requestPasswordRecovery = async (email: string) => {
     await apiService.requestPasswordRecovery({ institutional_email: email });
   };
@@ -103,8 +130,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  /* ------------------------------------------
+    Determina si el usuario es administrador
+  ------------------------------------------ */
   const isAdmin = user?.id_role === 1;
 
+  /* ------------------------------------------
+    Provee el contexto a todos los hijos
+  ------------------------------------------ */
   return (
     <AuthContext.Provider value={{
       user,
@@ -122,10 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* ==========================================
+  Hook para usar el contexto de autenticación
+  - Incluye fallback seguro si no hay Provider
+========================================== */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    // Fail-safe to avoid crashing the UI during transient render/HMR edge cases.
+    // Fallback: intenta recuperar datos desde localStorage
     const stored = localStorage.getItem('user_data');
     let fallbackUser: User | null = null;
     if (stored) {
@@ -135,6 +172,8 @@ export function useAuth() {
         fallbackUser = null;
       }
     }
+
+    // Devuelve un objeto con funciones vacías y el usuario recuperado
     return {
       user: fallbackUser,
       login: async () => null,

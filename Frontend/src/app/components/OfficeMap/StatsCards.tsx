@@ -1,52 +1,49 @@
 /**
- * Componente: StatsCards
- * 
- * Descripción:
- * Este componente muestra las estadísticas principales del mapa de oficinas en forma
- * de tres tarjetas visuales. Cada tarjeta presenta un indicador diferente:
- * - Total de escritorios
- * - Escritorios con reportes activos
- * - Escritorios sin problemas
- * 
- * Funcionalidades:
- * - Visualización de 3 métricas clave en tarjetas separadas
- * - Diseño responsive (1 columna en móvil, 3 columnas en escritorio)
- * - Colores diferenciados para cada tipo de estadística
- * - Uso de componentes Card de la librería UI
- * 
- * Props:
- * - totalDesks: Número total de escritorios en la oficina
- * - reports: Número de escritorios con reportes activos (se muestra en rojo)
- * - noIssues: Número de escritorios sin problemas (se muestra en verde)
- * 
- * Dependencias:
- * - ../ui/card: Componentes Card, CardHeader, CardContent, CardTitle
+ Componente: StatsCards
+ 
+ Descripción:
+ Este componente muestra las estadísticas principales del mapa de oficinas en forma
+ de tres tarjetas visuales. Cada tarjeta presenta un indicador diferente:
+ - Total de escritorios
+ - Escritorios con reportes activos
+ - Escritorios sin problemas
+ 
+ Funcionalidades:
+ - Visualización de 3 métricas clave en tarjetas separadas
+ - Diseño responsive (1 columna en móvil, 3 columnas en escritorio)
+ - Colores diferenciados para cada tipo de estadística
+ - Uso de componentes Card de la librería UI
+ 
+ Props:
+ - totalDesks: Número total de escritorios en la oficina
+ - reports: Número de escritorios con reportes activos (se muestra en rojo)
+ - noIssues: Número de escritorios sin problemas (se muestra en verde)
+ 
+ Dependencias:
+ - ../ui/card: Componentes Card, CardHeader, CardContent, CardTitle
  */
 
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/card';
 
 /**
- * Interfaz de props para el componente StatsCards
- * Define los parámetros requeridos para renderizar las estadísticas
+ Interfaz de props para el componente StatsCards
+ Define los parámetros requeridos para renderizar las estadísticas
  */
 interface StatsCardsProps {
-  /** Número total de escritorios registrados en el sistema */
-  totalDesks: number;
-  /** Número de escritorios que tienen reportes/informes activos */
-  reports: number;
-  /** Número de escritorios que no tienen ningún problema reportado */
-  noIssues: number;
+  totalDesks: number; /** Número total de escritorios registrados en el sistema */
+  reports: number;  /** Número de escritorios que tienen reportes/informes activos */
+  noIssues: number; /** Número de escritorios que no tienen ningún problema reportado */
 }
 
 /**
- * Componente funcional que renderiza las tarjetas de estadísticas
- * Muestra 3 métricas importantes del mapa de oficinas:
- * 1. Total de escritorios (color gris/negro)
- * 2. Escritorios con reportes activos (color rojo)
- * 3. Escritorios sin problemas (color verde)
- * 
- * @param props - Propiedades del componente conteniendo los conteos estadísticos
- * @returns JSX.Element - Grid de 3 tarjetas con estadísticas
+ Componente funcional que renderiza las tarjetas de estadísticas
+ Muestra 3 métricas importantes del mapa de oficinas:
+ 1. Total de escritorios (color gris/negro)
+ 2. Escritorios con reportes activos (color rojo)
+ 3. Escritorios sin problemas (color verde)
+ 
+ @param props - Propiedades del componente conteniendo los conteos estadísticos
+ @returns JSX.Element - Grid de 3 tarjetas con estadísticas
  */
 export default function StatsCards({ totalDesks, reports, noIssues }: StatsCardsProps) {
   return (

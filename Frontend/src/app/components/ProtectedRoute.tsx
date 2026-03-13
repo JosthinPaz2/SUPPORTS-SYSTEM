@@ -8,15 +8,15 @@ interface ProtectedRouteProps {
 }
 
 /**
- * ProtectedRoute Component
- *
- * Protects routes by checking:
- * 1. If user is authenticated → otherwise redirect to /login
- * 2. If user has the required role → otherwise redirect to their own home
- *
- * Smart redirect on role mismatch:
- *   admin trying /employee → goes to /admin
- *   employee trying /admin → goes to /employee
+ ProtectedRoute Component
+
+ Protects routes by checking:
+ 1. If user is authenticated → otherwise redirect to /login
+ 2. If user has the required role → otherwise redirect to their own home
+
+ Smart redirect on role mismatch:
+   admin trying /employee → goes to /admin
+   employee trying /admin → goes to /employee
  */
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();

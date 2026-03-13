@@ -39,7 +39,7 @@
  * - ../ui/badge: Componente Badge para indicadores
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 
@@ -89,18 +89,47 @@ interface MapCanvasProps {
   onDrop: (e: React.DragEvent) => void;
   /** Callback ejecutado cuando el mouse se mueve sobre el canvas */
   onMouseMove: (e: React.MouseEvent) => void;
-  /** Callback ejecutado cuando se hace clic en un elemento del mapa */
-  onMouseDown: (id: string) => void;
-  /** Callback ejecutado cuando se inicia el redimensionamiento */
-  onResizeStart?: (id: string) => void;
-  /** Callback ejecutado cuando se elimina un elemento */
+  /**
+   * Callback ejecutado cuando se hace clic en un elemento del mapa.
+   * Recibe además el offset del cursor respecto a la esquina superior izquierda
+   * del elemento (se calcula con base en la posición dentro del canvas SVG).
+   */
+  onMouseDown: (
+    id: string,
+    offsetX: number,
+    offsetY: number
+  ) => void;
+  /**
+   * Callback ejecutado cuando se inicia el redimensionamiento. Se pasa también
+   * la posición del cursor dentro del canvas para que el padre pueda calcular
+   * el ancho/alto nuevo correctamente.
+   */
+  onResizeStart?: (
+    id: string,
+    mouseX: number,
+    mouseY: number
+  ) => void;
+  /** Se dispara al hacer clic sobre el fondo (área sin elementos). */
+  onCanvasClick?: () => void;
+  /** Se dispara al hacer click derecho sobre un elemento. */
+  onContextMenu?: (
+    id: string,
+    e: React.MouseEvent<SVGElement, MouseEvent>
+  ) => void;
+  /** Identificador del item que actualmente está activo (arrastrando, seleccionado, etc.). */
+  activeItemId?: string;
+  /** Callback para eliminar un item */
   onDeleteItem?: (id: string) => void;
-  /** Escala de zoom del canvas */
+  /** Escala actual del canvas (para zoom) */
   scale?: number;
-  /** Modo solo visualizacion: desactiva mover/eliminar/redimensionar/drop */
+  /** Indica si el canvas está en modo solo lectura */
   isReadOnly?: boolean;
-  /** Callback opcional para abrir detalles o acciones al hacer click en un escritorio */
+  /** Callback cuando se hace clic en un item */
   onItemClick?: (id: string) => void;
+  /** Callback cuando se selecciona un item */
+  onSelect?: (id: string) => void;
+  /** ID del item seleccionado */
+  selectedId?: string | null;
 }
 
 /**
@@ -152,9 +181,19 @@ export default function MapCanvas({
   scale = 1,
   isReadOnly = false,
   onItemClick,
+  onCanvasClick,
+  onContextMenu,
+  activeItemId,
+  onSelect,
+  selectedId,
 }: MapCanvasProps) {
   // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
+  // Referencia al div contenedor para pan
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Estado para panning
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   return (
     // Contenedor principal: Card que ocupa el espacio restante (flex-1)
@@ -174,44 +213,89 @@ export default function MapCanvas({
 
       {/* Área del canvas: manejo de drop y mouse */}
       <div
-        className="w-full h-full overflow-auto"
+        ref={containerRef}
+        className={`w-full h-full overflow-auto ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onDrop={isReadOnly ? undefined : onDrop}
         onDragOver={isReadOnly ? undefined : (e) => e.preventDefault()} // Necesario para permitir drop
-        onMouseMove={onMouseMove}
+        onMouseMove={(e) => {
+          if (isPanning && containerRef.current) {
+            const deltaX = panStart.x - e.clientX;
+            const deltaY = panStart.y - e.clientY;
+            containerRef.current.scrollLeft += deltaX;
+            containerRef.current.scrollTop += deltaY;
+            setPanStart({ x: e.clientX, y: e.clientY });
+          }
+          onMouseMove(e);
+        }}
+        onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+          if (e.button === 2) {
+            e.preventDefault(); // Previene comportamientos raros del navegador
+            setIsPanning(true);
+            setPanStart({ x: e.clientX, y: e.clientY }); // Corregido: ya no usa variables inexistentes
+            onCanvasClick?.();
+          }
+        }}
+        onMouseUp={() => setIsPanning(false)}
+        onMouseLeave={() => setIsPanning(false)}
       >
         {/* Elemento SVG principal del canvas */}
         <svg 
           ref={svgRef} 
           width={CANVAS_WIDTH * scale}
           height={CANVAS_HEIGHT * scale}
-          viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+          onContextMenu={(e) => e.preventDefault()}
         >
-          
-          {/* Definiciones SVG: patrones y filtros */}
-          <defs>
-            {/* Patrón de cuadrícula de puntos */}
-            <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="#64748B" />
-            </pattern>
-          </defs>
-          
-          {/* Rectángulo de fondo con patrón de cuadrícula */}
-          <rect width="100%" height="100%" fill="url(#dotGrid)" />
+          {/* Envolvemos todo en un grupo (g) que aplica el zoom visualmente */}
+          <g transform={`scale(${scale})`}>
+            {/* Definiciones SVG: patrones y filtros */}
+            <defs>
+              {/* Patrón de cuadrícula de puntos */}
+              <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1.5" fill="#64748B" />
+              </pattern>
+            </defs>
+            
+            {/* Rectángulo de fondo con patrón de cuadrícula - Usamos dimensiones absolutas */}
+            <rect width={CANVAS_WIDTH} height={CANVAS_HEIGHT} fill="url(#dotGrid)" />
 
           {/* Renderizado de capas de fondo (zonas, marcos) - SE RENDERIZAN PRIMERO */}
           {bgLayers.map(layer => (
             // Grupo SVG para cada capa de fondo
             <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
               {/* Rectángulo de la capa de fondo con color según tipo */}
-              <rect
-                width={layer.width}
-                height={layer.height}
-                fill={getFillColor(layer)}
-                rx={6} // Bordes más redondeados para zonas
-                strokeWidth={2}
-                onMouseDown={isReadOnly ? undefined : () => onMouseDown(layer.id)} // Iniciar arrastre
-                className={isReadOnly ? '' : 'cursor-move'} // Cursor de movimiento
-              />
+              {(() => {
+                const isActive = activeItemId === layer.id;
+                return (
+                  <rect
+                    width={layer.width}
+                    height={layer.height}
+                    fill={getFillColor(layer)}
+                    rx={6} // Bordes más redondeados para zonas
+                    stroke={isActive ? '#0284c7' : undefined}
+                    strokeWidth={isActive ? 3 : 2}
+                    onMouseDown={isReadOnly ? undefined : (e) => {
+                      e.stopPropagation();
+                      if (e.button === 2) return;
+
+                      if (!svgRef.current) return;
+                      const container = svgRef.current.parentElement;
+                      if (!container) return;
+
+                      const rect = container.getBoundingClientRect();
+                      const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                      const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                      
+                      const offsetX = mouseX - layer.x;
+                      const offsetY = mouseY - layer.y;
+                      
+                      onSelect?.(layer.id);
+                      onMouseDown(layer.id, offsetX, offsetY);
+                    }} // Iniciar arrastre
+                    className={isReadOnly ? '' : 'cursor-move'} // Cursor de movimiento
+                    onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(layer.id, e); }}
+                  />
+                );
+              })()}
               {/* Texto con el ID del elemento centrado tambien sentencias de que los tres objetos tienen nombre y 2 sin */}
               {layer.type !== "zone" && layer.type !== "frame" && (
               <text
@@ -267,7 +351,16 @@ export default function MapCanvas({
                   className="cursor-se-resize"
                   onMouseDown={(e) => {
                     e.stopPropagation();
-                    onResizeStart?.(layer.id);
+                    if (!svgRef.current) return;
+                    const container = svgRef.current.parentElement;
+                    if (!container) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                    const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                    
+                    // Fíjate que quitamos la "e" de aquí adentro
+                    onResizeStart?.(layer.id, mouseX, mouseY);
                   }}
                 />
               )}
@@ -279,15 +372,43 @@ export default function MapCanvas({
             // Grupo SVG para cada elemento
             <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
               {/* Rectángulo del elemento: verde si OK, rojo si tiene reportes */}
-              <rect
-                width={item.width}
-                height={item.height}
-                fill={getFillColor(item)}
-                rx={8} // Bordes redondeados
-                onMouseDown={isReadOnly ? undefined : () => onMouseDown(item.id)} // Iniciar arrastre
-                onClick={isReadOnly ? () => onItemClick?.(item.id) : undefined}
-                className={isReadOnly ? 'cursor-pointer' : 'cursor-move'} // Cursor de movimiento
-              />
+              {(() => {
+                const isActive = activeItemId === item.id;
+                return (
+                  <rect
+                    width={item.width}
+                    height={item.height}
+                    fill={getFillColor(item)}
+                    rx={8} // Bordes redondeados
+                    stroke={selectedId === item.id ? "#3B82F6" : "none"}
+                    strokeWidth={selectedId === item.id ? 2 : 0}
+                    onMouseDown={isReadOnly ? undefined : (e) => {
+                      e.stopPropagation();
+                      if (e.button === 2) return;
+                      
+                      if (!svgRef.current) return;
+                      const container = svgRef.current.parentElement;
+                      if (!container) return;
+
+                      const rect = container.getBoundingClientRect();
+                      const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                      const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                      
+                      const offsetX = mouseX - item.x;
+                      const offsetY = mouseY - item.y;
+                      
+                      // Seleccionamos el objeto y luego iniciamos el arrastre
+                      onSelect?.(item.id); 
+                      onMouseDown(item.id, offsetX, offsetY);
+                    
+
+                    }} // Iniciar arrastre
+                    onClick={isReadOnly ? () => onItemClick?.(item.id) : undefined}
+                    className={isReadOnly ? 'cursor-pointer' : 'cursor-move'} // Cursor de movimiento
+                    onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(item.id, e); }}
+                  />
+                );
+              })()}
               {/* Texto con el ID del elemento centrado */}
               <text
                 x={item.width / 2}
@@ -328,7 +449,7 @@ export default function MapCanvas({
               )}
 
               {/* Handle de redimensionamiento (esquina inferior derecha) */}
-              {!isReadOnly && (
+              {!isReadOnly && item.type !== 'desk' && (
                 <rect
                   x={item.width - 8}
                   y={item.height - 8}
@@ -341,12 +462,22 @@ export default function MapCanvas({
                   className="cursor-se-resize hover:fill-blue-600 transition"
                   onMouseDown={(e) => {
                     e.stopPropagation();
-                    onResizeStart?.(item.id);
+                    if (!svgRef.current) return;
+                    const container = svgRef.current.parentElement;
+                    if (!container) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                    const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                    
+                    // Fíjate que también quitamos la "e" de aquí
+                    onResizeStart?.(item.id, mouseX, mouseY);
                   }}
                 />
               )}
             </g>
           ))}
+          </g>
         </svg>
       </div>
     </Card>

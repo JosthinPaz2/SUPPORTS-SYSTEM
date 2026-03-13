@@ -12,6 +12,7 @@ import NotificationsButton from '../components/NotificationsButton';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import { Ticket } from '../types/ticket';
 import DownloadButtons from '../components/DownloadButtons';
+import TipBox from '../components/OfficeMap/TipBox';
 
 type AdminTab = 'kanban' | 'reports' | 'map';
 
@@ -121,6 +122,7 @@ export default function AdminDashboard() {
           isAdmin
         />
       )}
+      <TipBox />
     </div>
   );
 }
