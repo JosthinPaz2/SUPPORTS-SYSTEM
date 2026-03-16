@@ -2,7 +2,6 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import type { User, UserRole } from '../types/auth';
 import { apiService } from '../utils/api';
 
-<<<<<<< HEAD
 const isTokenExpired = (token: string): boolean => {
   try {
     const parts = token.split('.');
@@ -18,9 +17,6 @@ const isTokenExpired = (token: string): boolean => {
     return true;
   }
 };
-
-=======
->>>>>>> 0ef37526ae7fff49ed830b9b9272b2020d5b1ba2
 /* ==========================================
   Definición del tipo de contexto de autenticación
 ========================================== */
@@ -49,15 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-<<<<<<< HEAD
   const clearSession = () => {
     setUser(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_data');
   };
-
-=======
->>>>>>> 0ef37526ae7fff49ed830b9b9272b2020d5b1ba2
   /* ------------------------------------------
     useEffect para revisar si hay un usuario
     logueado en localStorage al iniciar la app
@@ -84,7 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false); // Fin de la carga inicial
   }, []);
 
-<<<<<<< HEAD
   useEffect(() => {
     const handleUnauthorized = () => {
       clearSession();
@@ -98,9 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
   }, []);
-
-=======
->>>>>>> 0ef37526ae7fff49ed830b9b9272b2020d5b1ba2
   /* ------------------------------------------
     Función para iniciar sesión
     - Llama al API
@@ -150,13 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     - Redirige al login
   ------------------------------------------ */
   const logout = () => {
-<<<<<<< HEAD
     clearSession();
-=======
-    setUser(null);
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_data');
->>>>>>> 0ef37526ae7fff49ed830b9b9272b2020d5b1ba2
 
     try {
       window.location.href = '/login';

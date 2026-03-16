@@ -373,10 +373,6 @@ export default function MapCanvas({
             <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
               {/* Rectángulo del elemento: verde si OK, rojo si tiene reportes */}
               {(() => {
-<<<<<<< HEAD
-=======
-                const isActive = activeItemId === item.id;
->>>>>>> 0ef37526ae7fff49ed830b9b9272b2020d5b1ba2
                 return (
                   <rect
                     width={item.width}
