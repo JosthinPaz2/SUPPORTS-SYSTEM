@@ -143,6 +143,13 @@ export default function OfficeMap() {
   const [adminSelectedFloorId, setAdminSelectedFloorId] = useState('');
   const [loadingAdminMetadata, setLoadingAdminMetadata] = useState(false);
   
+  useEffect(() => {
+    if (activeMode === 'view') {
+      setSelectedId(null); // Quitamos la selección al entrar en modo vista
+      setDraggingId(null); // Por seguridad, detenemos cualquier arrastre
+    }
+  }, [activeMode]);
+
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
   const isViewOnly = searchParams.get('viewOnly') === 'true';
@@ -346,35 +353,43 @@ export default function OfficeMap() {
   // Handler para iniciar drag desde el canvas.
   // Recibe un desplazamiento precomputado (offsetX/offsetY) proporcionado
   // por MapCanvas para que el elemento no "salte" al arrastrarse.
-  const handleCanvasMouseDown = (
-    id: string,
-    offsetX: number,
-    offsetY: number,
-  ) => {
-    closeContextMenu();
-    setSelectedId(id);
+  const handleCanvasMouseDown = (id: string, offsetX: number, offsetY: number) => {
+  // BLOQUEO DE SEGURIDAD: Si es solo lectura o modo vista, no hacemos nada
+  if (isViewOnly || activeMode === 'view') return; 
+
+  closeContextMenu();
+  setSelectedId(id);
+
+  // Lógica "Traer al frente": Reordenamos el array para que el seleccionado sea el último
+  setDesks(prev => {
+    const itemIndex = prev.findIndex(d => d.id === id);
+    if (itemIndex === -1) return prev;
+    const newArray = [...prev];
+    const [item] = newArray.splice(itemIndex, 1);
+    newArray.push(item); // Al ser el último del array, el SVG lo dibuja "encima" de todo
+    return newArray;
+  });
     setDragOffset({ x: offsetX, y: offsetY });
     setDraggingId(id);
   };
 
   // Handler para iniciar el redimensionamiento
-  const handleResizeStart = (
-    id: string,
-    mouseX: number,
-    mouseY: number,
-  ) => {
-    setSelectedId(id);
-    const desk = desks.find(d => d.id === id);
-    if (desk) {
-      setResizeStartData({
-        id,
-        startX: desk.x,
-        startY: desk.y,
-        startWidth: desk.width,
-        startHeight: desk.height,
-        mouseX,
-        mouseY,
-      });
+  const handleResizeStart = (id: string, mouseX: number, mouseY: number) => {
+  // BLOQUEO DE SEGURIDAD: No permitir redimensionar en modo vista
+  if (isViewOnly || activeMode === 'view') return;
+
+  setSelectedId(id);
+  const desk = desks.find(d => d.id === id);
+  if (desk) {
+    setResizeStartData({
+      id,
+      startX: desk.x,
+      startY: desk.y,
+      startWidth: desk.width,
+      startHeight: desk.height,
+      mouseX,
+      mouseY,
+    });
       setResizingId(id);
     }
   };
@@ -1154,7 +1169,7 @@ export default function OfficeMap() {
                     onSelect={setSelectedId} // Añade esta línea
                     selectedId={selectedId}   // Añade esta para poder darle un borde visual
                     scale={scale}
-                    isReadOnly={false}
+                    isReadOnly={true}
                     activeItemId={(draggingId || resizingId || selectedId) || undefined}
                     onItemClick={handleDeskClick}
                   />
@@ -1328,7 +1343,7 @@ export default function OfficeMap() {
             onContextMenu={handleItemContextMenu}
             onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
             scale={scale}
-            isReadOnly={false}
+            isReadOnly={true}
             activeItemId={(draggingId || resizingId || selectedId) || undefined}
             onItemClick={handleDeskClick}
           />
