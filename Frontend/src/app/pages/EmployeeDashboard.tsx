@@ -19,8 +19,6 @@ export default function EmployeeDashboard() {
   const { tickets } = useTickets();
   const [showForm, setShowForm] = useState(false);
   const [manualSelectedTicket, setManualSelectedTicket] = useState<Ticket | null>(null);
-  
- 
   const [filter, setFilter] = useState<FilterStatus>('all');
 
   const myTicketsBase = tickets.filter((ticket) => 
@@ -34,18 +32,13 @@ export default function EmployeeDashboard() {
 
   const querySelectedTicket = useMemo(() => {
     const ticketId = searchParams.get('ticketId');
-    if (!ticketId) {
-      return null;
-    }
-
+    if (!ticketId) return null;
     return myTicketsBase.find((ticket) => String(ticket.id) === String(ticketId)) ?? null;
   }, [searchParams, myTicketsBase]);
 
   const selectedTicket = manualSelectedTicket ?? querySelectedTicket;
 
-  const handleCloseForm = () => {
-    setShowForm(false);
-  };
+  const handleCloseForm = () => setShowForm(false);
 
   const handleCloseTicketModal = () => {
     setManualSelectedTicket(null);
@@ -60,16 +53,18 @@ export default function EmployeeDashboard() {
   const textClass = "max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-2";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+    /* 1. Cambio a w-full para ocupar todo el ancho del computador */
+    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
+      <header className="bg-white border-b w-full">
+        {/* 2. Eliminado max-w-7xl para diseño fluido */}
+        <div className="w-full px-4 md:px-8 py-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Welcome, {user?.name}</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Welcome, {user?.name}</h1>
               <p className="text-sm text-gray-600">My Tickets</p>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <Button
                 variant="outline"
                 onClick={() => navigate('/OfficeMap?viewOnly=true')}
@@ -102,40 +97,35 @@ export default function EmployeeDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 3. Main al 100% del ancho */}
+      <main className="w-full flex-grow p-4 md:p-8">
         
-        {/* STATS / FILTER BUTTONS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* STATS: Ajustadas para que nunca se amontonen */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
           {/* Botón Total */}
-          <button 
-            onClick={() => setFilter('all')}
-            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'all' ? '' : ''}`}
-          >
-            <Card className={filter === 'all' ? 'bg-white' : 'bg-white'}>
-              <CardHeader className="pb-3 text-gray-600">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <button onClick={() => setFilter('all')} className="text-left transition-transform active:scale-95">
+            <Card className={`h-full ${filter === 'all' ? 'ring-2 ring-black' : ''}`}>
+              <CardHeader className="pb-2 text-gray-600">
+                <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" /> Total Tickets
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{myTicketsBase.length}</div>
+                <div className="text-2xl md:text-3xl font-bold">{myTicketsBase.length}</div>
               </CardContent>
             </Card>
           </button>
 
           {/* Botón In Progress */}
-          <button 
-            onClick={() => setFilter('in-progress')}
-            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'in-progress' ? '' : ''}`}
-          >
-            <Card className={filter === 'in-progress' ? 'bg-blue-50 border-blue-200' : 'bg-white'}>
-              <CardHeader className="pb-3 text-blue-600">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <button onClick={() => setFilter('in-progress')} className="text-left transition-transform active:scale-95">
+            <Card className={`h-full ${filter === 'in-progress' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500' : ''}`}>
+              <CardHeader className="pb-2 text-blue-600">
+                <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-2">
                   <Clock className="w-4 h-4" /> In Progress
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
+                <div className="text-2xl md:text-3xl font-bold">
                   {myTicketsBase.filter((t) => t.status === 'in-progress').length}
                 </div>
               </CardContent>
@@ -143,18 +133,15 @@ export default function EmployeeDashboard() {
           </button>
 
           {/* Botón Resolved */}
-          <button 
-            onClick={() => setFilter('resolved')}
-            className={`text-left transition-all transform hover:scale-[1.02] active:scale-95 ${filter === 'resolved' ? '' : ''}`}
-          >
-            <Card className={filter === 'resolved' ? 'bg-green-50 border-green-200' : 'bg-white'}>
-              <CardHeader className="pb-3 text-green-600">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <button onClick={() => setFilter('resolved')} className="text-left transition-transform active:scale-95">
+            <Card className={`h-full ${filter === 'resolved' ? 'bg-green-50 border-green-200 ring-2 ring-green-500' : ''}`}>
+              <CardHeader className="pb-2 text-green-600">
+                <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Resolved
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
+                <div className="text-2xl md:text-3xl font-bold">
                   {myTicketsBase.filter((t) => t.status === 'resolved').length}
                 </div>
               </CardContent>
@@ -162,22 +149,21 @@ export default function EmployeeDashboard() {
           </button>
         </div>
 
-        {/* LISTA DE TICKETS */}
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b bg-white flex flex-row items-center justify-between">
+        {/* LISTA DE TICKETS FLUIDA */}
+        <Card className="w-full overflow-hidden shadow-sm">
+          <CardHeader className="border-b bg-white">
             <CardTitle className="text-lg">
               {filter === 'all' ? 'Recent Tickets' : `Tickets: ${filter.replace('-', ' ')}`}
             </CardTitle>
-           
           </CardHeader>
           <CardContent className="p-0">
-            {filteredTickets.length === 0 ? (
-              <div className="p-12 text-center">
-                <p className="text-gray-500 italic">No tickets found with this status.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+            <div className="w-full overflow-x-auto">
+              {filteredTickets.length === 0 ? (
+                <div className="p-12 text-center text-gray-500 italic">
+                  No tickets found with this status.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead>
                     <tr className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
                       <th className="px-6 py-3 border-b">Title</th>
@@ -214,13 +200,13 @@ export default function EmployeeDashboard() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
       </main>
 
-      {/* Modales se mantienen igual */}
+      {/* Modales */}
       {showForm && (
         <TicketForm
           onClose={handleCloseForm}

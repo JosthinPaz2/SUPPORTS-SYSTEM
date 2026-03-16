@@ -584,32 +584,56 @@ export default function MapCanvas({
                 </>
               )}
 
-              {/* Handle de redimensionamiento (esquina inferior derecha) */}
-              {!isReadOnly && item.type !== 'desk' && (
-                <rect
-                  x={item.width - 8}
-                  y={item.height - 8}
-                  width={12}
-                  height={12}
-                  rx={2}
-                  fill="#3B82F6"
-                  stroke="white"
-                  strokeWidth={1}
-                  className="cursor-se-resize hover:fill-blue-600 transition"
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    if (!svgRef.current) return;
-                    const container = svgRef.current.parentElement;
-                    if (!container) return;
-                    
-                    const rect = container.getBoundingClientRect();
-                    const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
-                    const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
-                    
-                    // Fíjate que también quitamos la "e" de aquí
-                    onResizeStart?.(item.id, mouseX, mouseY);
-                  }}
-                />
+              {/* Solo mostramos herramientas de edición si NO estamos en modo lectura */}
+              {selectedId === item.id && !isReadOnly && (
+                <>
+                  {/* Botón de eliminar (X) */}
+                  <circle
+                    cx={item.width - 6}
+                    cy={6}
+                    r={8}
+                    fill="#EF4444"
+                    className="cursor-pointer hover:fill-red-600 transition"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Evita seleccionar el fondo
+                      onDeleteItem?.(item.id);
+                    }}
+                  />
+                  <text
+                    x={item.width - 6}
+                    y={6}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    className="text-xs font-bold pointer-events-none select-none"
+                  >
+                    ×
+                  </text>
+
+                  {/* Handle de redimensionamiento (esquina inferior derecha) */}
+                  {item.type !== 'desk' && (
+                    <rect
+                      x={item.width - 8}
+                      y={item.height - 8}
+                      width={12}
+                      height={12}
+                      rx={2}
+                      fill="#3B82F6"
+                      stroke="white"
+                      className="cursor-se-resize"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        if (!svgRef.current) return;
+                        const container = svgRef.current.parentElement;
+                        if (!container) return;
+                        const rect = container.getBoundingClientRect();
+                        const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                        const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                        onResizeStart?.(item.id, mouseX, mouseY);
+                      }}
+                    />
+                  )}
+                </>
               )}
             </g>
           ))}
