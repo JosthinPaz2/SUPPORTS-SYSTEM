@@ -749,7 +749,6 @@ export default function OfficeMap() {
   // Handler para iniciar drag desde el canvas.
   // Recibe un desplazamiento precomputado (offsetX/offsetY) proporcionado
   // por MapCanvas para que el elemento no "salte" al arrastrarse.
-<<<<<<< HEAD
   const handleCanvasMouseDown = (
     id: string,
     offsetX: number,
@@ -758,6 +757,8 @@ export default function OfficeMap() {
     mouseY: number,
     appendToSelection = false,
   ) => {
+    if (isViewOnly || activeMode === 'view') return;
+
     closeContextMenu();
 
     const nextSelectedIds = appendToSelection
@@ -803,36 +804,17 @@ export default function OfficeMap() {
       setGroupDragStart(null);
       setDragOffset({ x: offsetX, y: offsetY });
     }
-
-=======
-  const handleCanvasMouseDown = (id: string, offsetX: number, offsetY: number) => {
-  // BLOQUEO DE SEGURIDAD: Si es solo lectura o modo vista, no hacemos nada
-  if (isViewOnly || activeMode === 'view') return; 
-
-  closeContextMenu();
-  setSelectedId(id);
-
-  // Lógica "Traer al frente": Reordenamos el array para que el seleccionado sea el último
-  setDesks(prev => {
-    const itemIndex = prev.findIndex(d => d.id === id);
-    if (itemIndex === -1) return prev;
-    const newArray = [...prev];
-    const [item] = newArray.splice(itemIndex, 1);
-    newArray.push(item); // Al ser el último del array, el SVG lo dibuja "encima" de todo
-    return newArray;
-  });
-    setDragOffset({ x: offsetX, y: offsetY });
->>>>>>> 2b2eef5d93a6858b5d0e8ea96b8731e4992838f1
     setDraggingId(id);
   };
 
   // Handler para iniciar el redimensionamiento
-<<<<<<< HEAD
   const handleResizeStart = (
     id: string,
     mouseX: number,
     mouseY: number,
   ) => {
+    if (isViewOnly || activeMode === 'view') return;
+
     pushHistorySnapshot();
     setSelectedId(id);
     setSelectedIds([id]);
@@ -847,24 +829,6 @@ export default function OfficeMap() {
         mouseX,
         mouseY,
       });
-=======
-  const handleResizeStart = (id: string, mouseX: number, mouseY: number) => {
-  // BLOQUEO DE SEGURIDAD: No permitir redimensionar en modo vista
-  if (isViewOnly || activeMode === 'view') return;
-
-  setSelectedId(id);
-  const desk = desks.find(d => d.id === id);
-  if (desk) {
-    setResizeStartData({
-      id,
-      startX: desk.x,
-      startY: desk.y,
-      startWidth: desk.width,
-      startHeight: desk.height,
-      mouseX,
-      mouseY,
-    });
->>>>>>> 2b2eef5d93a6858b5d0e8ea96b8731e4992838f1
       setResizingId(id);
     }
   };
