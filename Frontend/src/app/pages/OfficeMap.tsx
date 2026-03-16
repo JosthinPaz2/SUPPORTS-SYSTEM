@@ -47,7 +47,7 @@
  - ../components/OfficeMap: Subcomponentes del mapa de oficinas
  */
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { CheckCircle2, AlertCircle, User } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -91,6 +91,227 @@ const defaultObjects = [
   { id: 'ENTRANCE', type: 'entrance', width: 150, height: 60, placed: false, isDefault: true },
 ];
 
+type RectBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+};
+
+type SmartGuideLine = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  kind: 'alignment' | 'distance';
+};
+
+type SmartGuideLabel = {
+  x: number;
+  y: number;
+  text: string;
+};
+
+type SmartGuides = {
+  lines: SmartGuideLine[];
+  labels: SmartGuideLabel[];
+};
+
+const EMPTY_SMART_GUIDES: SmartGuides = {
+  lines: [],
+  labels: [],
+};
+
+const GUIDE_THRESHOLD = 8;
+
+const toBounds = (x: number, y: number, width: number, height: number): RectBounds => ({
+  left: x,
+  top: y,
+  right: x + width,
+  bottom: y + height,
+  width,
+  height,
+  centerX: x + width / 2,
+  centerY: y + height / 2,
+});
+
+const overlapLength = (aStart: number, aEnd: number, bStart: number, bEnd: number): number => {
+  return Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
+};
+
+const buildSmartGuides = (
+  moving: RectBounds,
+  movingIds: string[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  desks: any[],
+  canvasWidth: number,
+  canvasHeight: number,
+): SmartGuides => {
+  const lines: SmartGuideLine[] = [];
+  const labels: SmartGuideLabel[] = [];
+
+  const stationary = desks
+    .filter((d) => d.placed && d.x != null && d.y != null && !movingIds.includes(d.id))
+    .map((d) => ({
+      id: d.id as string,
+      bounds: toBounds(d.x as number, d.y as number, d.width as number, d.height as number),
+    }));
+
+  const verticalCandidates: Array<{ diff: number; x: number; y1: number; y2: number }> = [];
+  const horizontalCandidates: Array<{ diff: number; y: number; x1: number; x2: number }> = [];
+
+  const considerVertical = (fromX: number, toX: number, y1: number, y2: number) => {
+    const diff = Math.abs(fromX - toX);
+    if (diff <= GUIDE_THRESHOLD) {
+      verticalCandidates.push({ diff, x: toX, y1, y2 });
+    }
+  };
+
+  const considerHorizontal = (fromY: number, toY: number, x1: number, x2: number) => {
+    const diff = Math.abs(fromY - toY);
+    if (diff <= GUIDE_THRESHOLD) {
+      horizontalCandidates.push({ diff, y: toY, x1, x2 });
+    }
+  };
+
+  stationary.forEach(({ bounds }) => {
+    const y1 = Math.min(moving.top, bounds.top) - 20;
+    const y2 = Math.max(moving.bottom, bounds.bottom) + 20;
+    const x1 = Math.min(moving.left, bounds.left) - 20;
+    const x2 = Math.max(moving.right, bounds.right) + 20;
+
+    considerVertical(moving.left, bounds.left, y1, y2);
+    considerVertical(moving.centerX, bounds.centerX, y1, y2);
+    considerVertical(moving.right, bounds.right, y1, y2);
+
+    considerHorizontal(moving.top, bounds.top, x1, x2);
+    considerHorizontal(moving.centerY, bounds.centerY, x1, x2);
+    considerHorizontal(moving.bottom, bounds.bottom, x1, x2);
+  });
+
+  considerVertical(moving.centerX, canvasWidth / 2, 0, canvasHeight);
+  considerHorizontal(moving.centerY, canvasHeight / 2, 0, canvasWidth);
+
+  const bestVertical = verticalCandidates.reduce<{ diff: number; x: number; y1: number; y2: number } | null>(
+    (best, candidate) => (best === null || candidate.diff < best.diff ? candidate : best),
+    null,
+  );
+
+  const bestHorizontal = horizontalCandidates.reduce<{ diff: number; y: number; x1: number; x2: number } | null>(
+    (best, candidate) => (best === null || candidate.diff < best.diff ? candidate : best),
+    null,
+  );
+
+  const verticalGuide = bestVertical;
+  if (verticalGuide !== null) {
+    lines.push({
+      x1: verticalGuide.x,
+      y1: verticalGuide.y1,
+      x2: verticalGuide.x,
+      y2: verticalGuide.y2,
+      kind: 'alignment',
+    });
+  }
+
+  const horizontalGuide = bestHorizontal;
+  if (horizontalGuide !== null) {
+    lines.push({
+      x1: horizontalGuide.x1,
+      y1: horizontalGuide.y,
+      x2: horizontalGuide.x2,
+      y2: horizontalGuide.y,
+      kind: 'alignment',
+    });
+  }
+
+  const horizontalDistanceCandidates: Array<{ gap: number; x1: number; y1: number; x2: number; y2: number }> = [];
+  const verticalDistanceCandidates: Array<{ gap: number; x1: number; y1: number; x2: number; y2: number }> = [];
+
+  stationary.forEach(({ bounds }) => {
+    const verticalOverlap = overlapLength(moving.top, moving.bottom, bounds.top, bounds.bottom);
+    if (verticalOverlap > 0) {
+      const overlapTop = Math.max(moving.top, bounds.top);
+      const overlapBottom = Math.min(moving.bottom, bounds.bottom);
+      const yMid = overlapTop + (overlapBottom - overlapTop) / 2;
+
+      if (bounds.right <= moving.left) {
+        const gap = moving.left - bounds.right;
+        horizontalDistanceCandidates.push({ gap, x1: bounds.right, y1: yMid, x2: moving.left, y2: yMid });
+      }
+
+      if (bounds.left >= moving.right) {
+        const gap = bounds.left - moving.right;
+        horizontalDistanceCandidates.push({ gap, x1: moving.right, y1: yMid, x2: bounds.left, y2: yMid });
+      }
+    }
+
+    const horizontalOverlap = overlapLength(moving.left, moving.right, bounds.left, bounds.right);
+    if (horizontalOverlap > 0) {
+      const overlapLeft = Math.max(moving.left, bounds.left);
+      const overlapRight = Math.min(moving.right, bounds.right);
+      const xMid = overlapLeft + (overlapRight - overlapLeft) / 2;
+
+      if (bounds.bottom <= moving.top) {
+        const gap = moving.top - bounds.bottom;
+        verticalDistanceCandidates.push({ gap, x1: xMid, y1: bounds.bottom, x2: xMid, y2: moving.top });
+      }
+
+      if (bounds.top >= moving.bottom) {
+        const gap = bounds.top - moving.bottom;
+        verticalDistanceCandidates.push({ gap, x1: xMid, y1: moving.bottom, x2: xMid, y2: bounds.top });
+      }
+    }
+  });
+
+  const bestHorizontalDistance = horizontalDistanceCandidates.reduce<{ gap: number; x1: number; y1: number; x2: number; y2: number } | null>(
+    (best, candidate) => (best === null || candidate.gap < best.gap ? candidate : best),
+    null,
+  );
+
+  const bestVerticalDistance = verticalDistanceCandidates.reduce<{ gap: number; x1: number; y1: number; x2: number; y2: number } | null>(
+    (best, candidate) => (best === null || candidate.gap < best.gap ? candidate : best),
+    null,
+  );
+
+  const horizontalDistance = bestHorizontalDistance;
+  if (horizontalDistance !== null) {
+    lines.push({
+      x1: horizontalDistance.x1,
+      y1: horizontalDistance.y1,
+      x2: horizontalDistance.x2,
+      y2: horizontalDistance.y2,
+      kind: 'distance',
+    });
+    labels.push({
+      x: (horizontalDistance.x1 + horizontalDistance.x2) / 2,
+      y: horizontalDistance.y1 - 8,
+      text: `${Math.round(horizontalDistance.gap)} px`,
+    });
+  }
+
+  const verticalDistance = bestVerticalDistance;
+  if (verticalDistance !== null) {
+    lines.push({
+      x1: verticalDistance.x1,
+      y1: verticalDistance.y1,
+      x2: verticalDistance.x2,
+      y2: verticalDistance.y2,
+      kind: 'distance',
+    });
+    labels.push({
+      x: verticalDistance.x1 + 8,
+      y: (verticalDistance.y1 + verticalDistance.y2) / 2,
+      text: `${Math.round(verticalDistance.gap)} px`,
+    });
+  }
+
+  return { lines, labels };
+};
+
 export default function OfficeMap() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -105,9 +326,15 @@ export default function OfficeMap() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [resizingId, setResizingId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{clientX:number;clientY:number;id:string} | null>(null);
   // offset between cursor and element top-left when starting drag
   const [dragOffset, setDragOffset] = useState<{x:number,y:number} | null>(null);
+  const [groupDragStart, setGroupDragStart] = useState<{
+    mouseX: number;
+    mouseY: number;
+    initialPositions: Record<string, { x: number; y: number }>;
+  } | null>(null);
   // data for active resize operation
   const [resizeStartData, setResizeStartData] = useState<{
     id: string;
@@ -142,6 +369,9 @@ export default function OfficeMap() {
   const [adminSelectedLocationId, setAdminSelectedLocationId] = useState('');
   const [adminSelectedFloorId, setAdminSelectedFloorId] = useState('');
   const [loadingAdminMetadata, setLoadingAdminMetadata] = useState(false);
+  const [smartGuides, setSmartGuides] = useState<SmartGuides>(EMPTY_SMART_GUIDES);
+  const historyRef = useRef<any[][]>([]);
+  const redoRef = useRef<any[][]>([]);
   
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
@@ -150,6 +380,59 @@ export default function OfficeMap() {
 
   const BASE_CANVAS_WIDTH = 2400;
   const BASE_CANVAS_HEIGHT = 5000;
+
+  const cloneDesksSnapshot = useCallback((snapshot: any[]) => {
+    return snapshot.map((desk) => ({ ...desk }));
+  }, []);
+
+  const canUseHistory = useCallback(() => {
+    return !isViewOnly && (activeMode === 'add' || activeMode === 'edit');
+  }, [activeMode, isViewOnly]);
+
+  const resetHistory = useCallback(() => {
+    historyRef.current = [];
+    redoRef.current = [];
+  }, []);
+
+  const pushHistorySnapshot = useCallback((snapshot?: any[]) => {
+    if (!canUseHistory()) return;
+    const source = snapshot ?? desks;
+    historyRef.current.push(cloneDesksSnapshot(source));
+    if (historyRef.current.length > 80) {
+      historyRef.current.shift();
+    }
+    redoRef.current = [];
+  }, [canUseHistory, cloneDesksSnapshot, desks]);
+
+  const handleUndo = useCallback(() => {
+    if (!canUseHistory() || historyRef.current.length === 0) return;
+
+    const previous = historyRef.current.pop();
+    if (!previous) return;
+
+    redoRef.current.push(cloneDesksSnapshot(desks));
+    setDesks(cloneDesksSnapshot(previous));
+    setSmartGuides(EMPTY_SMART_GUIDES);
+    setDraggingId(null);
+    setResizingId(null);
+    setDragOffset(null);
+    setGroupDragStart(null);
+  }, [canUseHistory, cloneDesksSnapshot, desks]);
+
+  const handleRedo = useCallback(() => {
+    if (!canUseHistory() || redoRef.current.length === 0) return;
+
+    const next = redoRef.current.pop();
+    if (!next) return;
+
+    historyRef.current.push(cloneDesksSnapshot(desks));
+    setDesks(cloneDesksSnapshot(next));
+    setSmartGuides(EMPTY_SMART_GUIDES);
+    setDraggingId(null);
+    setResizingId(null);
+    setDragOffset(null);
+    setGroupDragStart(null);
+  }, [canUseHistory, cloneDesksSnapshot, desks]);
 
   // 📊 Stats
   const totalDesks = desks.filter(d => d.type === 'desk').length;
@@ -204,6 +487,7 @@ export default function OfficeMap() {
         };
       });
 
+      pushHistorySnapshot();
       setDesks(prev => [...prev, ...parsed]);
       
       // Notificación de éxito al importar CSV
@@ -219,6 +503,7 @@ export default function OfficeMap() {
 
   // Función para rotar un elemento (intercambia width por height)
   const rotateItem = (id: string) => {
+    pushHistorySnapshot();
     setDesks(prev => 
       prev.map(d => d.id === id ? { ...d, width: d.height, height: d.width } : d)
     );
@@ -246,6 +531,7 @@ export default function OfficeMap() {
 
 
     if (data.isDefault) {
+      pushHistorySnapshot();
       // Es un objeto por defecto: crear nueva instancia
       const newObj = {
         ...data,
@@ -261,6 +547,7 @@ export default function OfficeMap() {
         duration: 3000,
       });
     } else {
+      pushHistorySnapshot();
       setDesks(prev =>
         prev.map(d =>
           d.id === data.id
@@ -279,7 +566,65 @@ export default function OfficeMap() {
     let mouseX = (e.clientX - rect.left + target.scrollLeft) / scale;
     let mouseY = (e.clientY - rect.top + target.scrollTop) / scale;
 
-    if (draggingId && dragOffset) {
+    let guidesToRender: SmartGuides | null = null;
+
+    if (draggingId && groupDragStart && selectedIds.length > 1) {
+      const dx = mouseX - groupDragStart.mouseX;
+      const dy = mouseY - groupDragStart.mouseY;
+
+      const movingPositions = selectedIds.reduce<Record<string, { x: number; y: number; width: number; height: number }>>((acc, selectedDeskId) => {
+        const sourceDesk = desks.find((d) => d.id === selectedDeskId && d.placed && d.x != null && d.y != null);
+        const initial = groupDragStart.initialPositions[selectedDeskId];
+        if (!sourceDesk || !initial) return acc;
+        acc[selectedDeskId] = {
+          x: initial.x + dx,
+          y: initial.y + dy,
+          width: sourceDesk.width,
+          height: sourceDesk.height,
+        };
+        return acc;
+      }, {});
+
+      const movingValues = Object.values(movingPositions);
+      if (movingValues.length > 0) {
+        const left = Math.min(...movingValues.map((item) => item.x));
+        const top = Math.min(...movingValues.map((item) => item.y));
+        const right = Math.max(...movingValues.map((item) => item.x + item.width));
+        const bottom = Math.max(...movingValues.map((item) => item.y + item.height));
+        guidesToRender = buildSmartGuides(
+          toBounds(left, top, right - left, bottom - top),
+          selectedIds,
+          desks,
+          BASE_CANVAS_WIDTH,
+          BASE_CANVAS_HEIGHT,
+        );
+      }
+
+      setDesks(prev =>
+        prev.map(d => {
+          const initial = groupDragStart.initialPositions[d.id];
+          if (!initial) return d;
+          return {
+            ...d,
+            x: initial.x + dx,
+            y: initial.y + dy,
+          };
+        })
+      );
+    } else if (draggingId && dragOffset) {
+      const movingDesk = desks.find((d) => d.id === draggingId && d.placed && d.x != null && d.y != null);
+      if (movingDesk) {
+        const nextX = mouseX - dragOffset.x;
+        const nextY = mouseY - dragOffset.y;
+        guidesToRender = buildSmartGuides(
+          toBounds(nextX, nextY, movingDesk.width, movingDesk.height),
+          [draggingId],
+          desks,
+          BASE_CANVAS_WIDTH,
+          BASE_CANVAS_HEIGHT,
+        );
+      }
+
       setDesks(prev =>
         prev.map(d =>
           d.id === draggingId
@@ -287,6 +632,12 @@ export default function OfficeMap() {
             : d
         )
       );
+    }
+
+    if (guidesToRender) {
+      setSmartGuides(guidesToRender);
+    } else {
+      setSmartGuides((prev) => (prev.lines.length || prev.labels.length ? EMPTY_SMART_GUIDES : prev));
     }
 
     if (resizingId && resizeStartData && resizeStartData.id === resizingId) {
@@ -339,8 +690,53 @@ export default function OfficeMap() {
   const handleMouseUp = () => {
     setDraggingId(null);
     setDragOffset(null);
+    setGroupDragStart(null);
     setResizingId(null);
     setResizeStartData(null);
+    setSmartGuides(EMPTY_SMART_GUIDES);
+  };
+
+  const handleSelectItem = (id: string, appendToSelection = false) => {
+    closeContextMenu();
+
+    if (appendToSelection) {
+      const nextSelectedIds = selectedIds.includes(id)
+        ? selectedIds.filter((selected) => selected !== id)
+        : [...selectedIds, id];
+
+      setSelectedIds(nextSelectedIds);
+      setSelectedId(nextSelectedIds.length > 0 ? nextSelectedIds[nextSelectedIds.length - 1] : null);
+      return;
+    }
+
+    setSelectedIds([id]);
+    setSelectedId(id);
+  };
+
+  const handleSelectAllPlaced = () => {
+    const placedIds = desks.filter((d) => d.placed).map((d) => d.id);
+    setSelectedIds(placedIds);
+    setSelectedId(placedIds.length > 0 ? placedIds[placedIds.length - 1] : null);
+    closeContextMenu();
+  };
+
+  const handleMarqueeSelection = (ids: string[]) => {
+    closeContextMenu();
+    setSelectedIds(ids);
+    setSelectedId(ids.length > 0 ? ids[ids.length - 1] : null);
+  };
+
+  const handleDeleteSelected = () => {
+    const idsToDelete = selectedIds.length > 0
+      ? selectedIds
+      : selectedId
+        ? [selectedId]
+        : [];
+
+    if (idsToDelete.length === 0) return;
+
+    pushHistorySnapshot();
+    idsToDelete.forEach((id) => handleDeleteItem(id, false));
   };
 
   // Handler para iniciar drag desde el canvas.
@@ -350,10 +746,56 @@ export default function OfficeMap() {
     id: string,
     offsetX: number,
     offsetY: number,
+    mouseX: number,
+    mouseY: number,
+    appendToSelection = false,
   ) => {
     closeContextMenu();
-    setSelectedId(id);
-    setDragOffset({ x: offsetX, y: offsetY });
+
+    const nextSelectedIds = appendToSelection
+      ? (selectedIds.includes(id)
+          ? selectedIds.filter((selected) => selected !== id)
+          : [...selectedIds, id])
+      : (
+          // Keep the current multi-selection when clicking one of the selected items.
+          selectedIds.length > 1 && selectedIds.includes(id)
+            ? selectedIds
+            : (selectedIds.includes(id) && selectedIds.length === 1 ? selectedIds : [id])
+        );
+
+    setSelectedIds(nextSelectedIds);
+    setSelectedId(nextSelectedIds.length > 0 ? nextSelectedIds[nextSelectedIds.length - 1] : null);
+
+    if (!nextSelectedIds.includes(id)) {
+      setDraggingId(null);
+      setDragOffset(null);
+      setGroupDragStart(null);
+      return;
+    }
+
+    pushHistorySnapshot();
+
+    if (nextSelectedIds.length > 1) {
+      const initialPositions = nextSelectedIds.reduce<Record<string, { x: number; y: number }>>((acc, selectedDeskId) => {
+        const desk = desks.find((d) => d.id === selectedDeskId && d.placed && d.x != null && d.y != null);
+        if (desk) {
+          acc[selectedDeskId] = { x: desk.x, y: desk.y };
+        }
+        return acc;
+      }, {});
+
+      if (Object.keys(initialPositions).length > 1) {
+        setGroupDragStart({ mouseX, mouseY, initialPositions });
+        setDragOffset(null);
+      } else {
+        setGroupDragStart(null);
+        setDragOffset({ x: offsetX, y: offsetY });
+      }
+    } else {
+      setGroupDragStart(null);
+      setDragOffset({ x: offsetX, y: offsetY });
+    }
+
     setDraggingId(id);
   };
 
@@ -363,7 +805,9 @@ export default function OfficeMap() {
     mouseX: number,
     mouseY: number,
   ) => {
+    pushHistorySnapshot();
     setSelectedId(id);
+    setSelectedIds([id]);
     const desk = desks.find(d => d.id === id);
     if (desk) {
       setResizeStartData({
@@ -384,6 +828,7 @@ export default function OfficeMap() {
     e.preventDefault();
     e.stopPropagation();
     setSelectedId(id);
+    setSelectedIds([id]);
     setContextMenu({ clientX: e.clientX, clientY: e.clientY, id });
   };
 
@@ -394,6 +839,7 @@ export default function OfficeMap() {
     closeContextMenu();
   };
   const moveToFront = (id: string) => {
+    pushHistorySnapshot();
     setDesks(prev => {
       const idx = prev.findIndex(d => d.id === id);
       if (idx < 0) return prev;
@@ -404,6 +850,7 @@ export default function OfficeMap() {
     closeContextMenu();
   };
   const moveToBack = (id: string) => {
+    pushHistorySnapshot();
     setDesks(prev => {
       const idx = prev.findIndex(d => d.id === id);
       if (idx < 0) return prev;
@@ -414,6 +861,7 @@ export default function OfficeMap() {
     closeContextMenu();
   };
   const moveForward = (id: string) => {
+    pushHistorySnapshot();
     setDesks(prev => {
       const idx = prev.findIndex(d => d.id === id);
       if (idx < 0 || idx === prev.length - 1) return prev;
@@ -424,6 +872,7 @@ export default function OfficeMap() {
     closeContextMenu();
   };
   const moveBackward = (id: string) => {
+    pushHistorySnapshot();
     setDesks(prev => {
       const idx = prev.findIndex(d => d.id === id);
       if (idx <= 0) return prev;
@@ -438,14 +887,32 @@ export default function OfficeMap() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-        handleDeleteItem(selectedId);
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        handleSelectAllPlaced();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        handleDeleteSelected();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, desks]); // Importante que dependa de desks
+  }, [selectedId, selectedIds, desks, handleRedo, handleUndo]);
 
   // close context menu when clicking anywhere else
   useEffect(() => {
@@ -464,23 +931,11 @@ export default function OfficeMap() {
   useEffect(() => {
     closeContextMenu();
     setSelectedId(null);
+    setSelectedIds([]);
     setDraggingId(null);
     setResizingId(null);
+    resetHistory();
   }, [activeMode, isViewOnly]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // No borrar si estamos escribiendo en un buscador o input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-        handleDeleteItem(selectedId);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, desks, bgLayers]);
 
   useEffect(() => {
     if (!isViewOnly) return;
@@ -537,20 +992,6 @@ export default function OfficeMap() {
     setAdminSelectedLocationId(String(selectedFloor.id_location));
   }, [isViewOnly, currentZoneId, adminFloors]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Si el usuario está escribiendo en un input, no borramos nada
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-        // Llamamos a la función de borrar que ya tienes o crearemos
-        handleDeleteItem(selectedId);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, desks, bgLayers]); // Se actualiza cuando cambia la selección
 
   useEffect(() => {
     if (!isViewOnly) return;
@@ -613,6 +1054,7 @@ export default function OfficeMap() {
         });
 
         if (!cancelled) {
+          resetHistory();
           setDesks([...defaultObjects, ...mappedStations, ...mappedDecorations]);
         }
       } catch (error) {
@@ -729,7 +1171,10 @@ export default function OfficeMap() {
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.1, MIN_SCALE));
 
   // Handler para eliminar un elemento placed y devolverlo al inventory
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = (id: string, recordHistory = true) => {
+    if (recordHistory) {
+      pushHistorySnapshot();
+    }
     setDesks(prev => {
       const item = prev.find(d => d.id === id);
       if (!item) return prev;
@@ -746,7 +1191,9 @@ export default function OfficeMap() {
     });
     
     setSelectedId(null);
+    setSelectedIds([]);
     setDraggingId(null);
+    setGroupDragStart(null);
   };
 
   const normalizeTicketStatus = (status: string): 'pending' | 'in-progress' | 'resolved' => {
@@ -1150,9 +1597,12 @@ export default function OfficeMap() {
                     onResizeStart={handleResizeStart}
                     onDeleteItem={handleDeleteItem}
                     onContextMenu={handleItemContextMenu}
-                    onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
-                    onSelect={setSelectedId} // Añade esta línea
-                    selectedId={selectedId}   // Añade esta para poder darle un borde visual
+                    onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
+                    onSelect={handleSelectItem}
+                    onMarqueeSelection={handleMarqueeSelection}
+                    selectedId={selectedId}
+                    selectedIds={selectedIds}
+                    smartGuides={EMPTY_SMART_GUIDES}
                     scale={scale}
                     isReadOnly={false}
                     activeItemId={(draggingId || resizingId || selectedId) || undefined}
@@ -1326,7 +1776,12 @@ export default function OfficeMap() {
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
             onContextMenu={handleItemContextMenu}
-            onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
+            onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
+            onSelect={handleSelectItem}
+            onMarqueeSelection={handleMarqueeSelection}
+            selectedId={selectedId}
+            selectedIds={selectedIds}
+            smartGuides={EMPTY_SMART_GUIDES}
             scale={scale}
             isReadOnly={false}
             activeItemId={(draggingId || resizingId || selectedId) || undefined}
@@ -1413,6 +1868,26 @@ export default function OfficeMap() {
         />
 
         <div className="flex items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSelectAllPlaced}
+            disabled={items.length + bgLayers.length === 0}
+          >
+            Select all
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setSelectedId(null);
+              setSelectedIds([]);
+              setGroupDragStart(null);
+            }}
+            disabled={selectedIds.length === 0 && !selectedId}
+          >
+            Clear selection
+          </Button>
           {loadingMap && <span className="text-sm text-slate-500">Loading map...</span>}
           <Button onClick={handleSaveMap} disabled={savingMap}>
             {savingMap ? 'Saving...' : 'Save'}
@@ -1447,7 +1922,12 @@ export default function OfficeMap() {
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
             onContextMenu={handleItemContextMenu}
-            onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
+            onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
+            onSelect={handleSelectItem}
+            onMarqueeSelection={handleMarqueeSelection}
+            selectedId={selectedId}
+            selectedIds={selectedIds}
+            smartGuides={smartGuides}
             scale={scale}
             isReadOnly={false}
             activeItemId={(draggingId || resizingId || selectedId) || undefined}

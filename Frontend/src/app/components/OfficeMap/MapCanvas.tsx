@@ -43,6 +43,35 @@ import { useRef, useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface SmartGuideLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  kind: 'alignment' | 'distance';
+}
+
+interface SmartGuideLabel {
+  x: number;
+  y: number;
+  text: string;
+}
+
+interface SmartGuides {
+  lines: SmartGuideLine[];
+  labels: SmartGuideLabel[];
+}
+
+const EMPTY_SMART_GUIDES: SmartGuides = {
+  lines: [],
+  labels: [],
+};
+
 /**
  * Interfaz que define la estructura de un elemento (escritorio u objeto)
  * Representa cada item que puede ser放置 (colocado) en el mapa
@@ -97,7 +126,10 @@ interface MapCanvasProps {
   onMouseDown: (
     id: string,
     offsetX: number,
-    offsetY: number
+    offsetY: number,
+    mouseX: number,
+    mouseY: number,
+    appendToSelection?: boolean
   ) => void;
   /**
    * Callback ejecutado cuando se inicia el redimensionamiento. Se pasa también
@@ -127,10 +159,23 @@ interface MapCanvasProps {
   /** Callback cuando se hace clic en un item */
   onItemClick?: (id: string) => void;
   /** Callback cuando se selecciona un item */
-  onSelect?: (id: string) => void;
+  onSelect?: (id: string, appendToSelection?: boolean) => void;
   /** ID del item seleccionado */
   selectedId?: string | null;
+  /** IDs seleccionados para selección múltiple */
+  selectedIds?: string[];
+  /** Callback para selección tipo marquee (arrastrar para seleccionar varios). */
+  onMarqueeSelection?: (ids: string[]) => void;
+  /** Guías inteligentes para alineación y espaciado durante drag. */
+  smartGuides?: SmartGuides;
 }
+
+const intersects = (
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): boolean => {
+  return !(a.x + a.width < b.x || b.x + b.width < a.x || a.y + a.height < b.y || b.y + b.height < a.y);
+};
 
 /**
  * Función para obtener el color de relleno según el tipo de elemento
@@ -186,6 +231,9 @@ export default function MapCanvas({
   activeItemId,
   onSelect,
   selectedId,
+  selectedIds = [],
+  onMarqueeSelection,
+  smartGuides = EMPTY_SMART_GUIDES,
 }: MapCanvasProps) {
   // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
@@ -194,6 +242,63 @@ export default function MapCanvas({
   // Estado para panning
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState<Point | null>(null);
+  const [selectionCurrent, setSelectionCurrent] = useState<Point | null>(null);
+
+  const getMousePosition = (e: React.MouseEvent): Point | null => {
+    if (!svgRef.current) return null;
+    const container = svgRef.current.parentElement;
+    if (!container) return null;
+
+    const rect = container.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left + container.scrollLeft) / scale,
+      y: (e.clientY - rect.top + container.scrollTop) / scale,
+    };
+  };
+
+  const getSelectionRect = () => {
+    if (!selectionStart || !selectionCurrent) return null;
+    const x = Math.min(selectionStart.x, selectionCurrent.x);
+    const y = Math.min(selectionStart.y, selectionCurrent.y);
+    const width = Math.abs(selectionCurrent.x - selectionStart.x);
+    const height = Math.abs(selectionCurrent.y - selectionStart.y);
+    return { x, y, width, height };
+  };
+
+  const getPlacedElements = (): DeskItem[] => [...bgLayers, ...items].filter((el) => el.placed && el.x != null && el.y != null);
+
+  const updateMarqueeSelection = (rect: { x: number; y: number; width: number; height: number }) => {
+    const selected = getPlacedElements()
+      .filter((el) => intersects(
+        { x: el.x, y: el.y, width: el.width, height: el.height },
+        rect,
+      ))
+      .map((el) => el.id);
+
+    onMarqueeSelection?.(selected);
+  };
+
+  const finishMarqueeSelection = () => {
+    const rect = getSelectionRect();
+    if (!rect) {
+      setIsSelecting(false);
+      setSelectionStart(null);
+      setSelectionCurrent(null);
+      return;
+    }
+
+    if (rect.width < 4 && rect.height < 4) {
+      onCanvasClick?.();
+    } else {
+      updateMarqueeSelection(rect);
+    }
+
+    setIsSelecting(false);
+    setSelectionStart(null);
+    setSelectionCurrent(null);
+  };
 
   return (
     // Contenedor principal: Card que ocupa el espacio restante (flex-1)
@@ -225,6 +330,21 @@ export default function MapCanvas({
             containerRef.current.scrollTop += deltaY;
             setPanStart({ x: e.clientX, y: e.clientY });
           }
+
+          if (isSelecting) {
+            const point = getMousePosition(e);
+            if (point && selectionStart) {
+              setSelectionCurrent(point);
+              const rect = {
+                x: Math.min(selectionStart.x, point.x),
+                y: Math.min(selectionStart.y, point.y),
+                width: Math.abs(point.x - selectionStart.x),
+                height: Math.abs(point.y - selectionStart.y),
+              };
+              updateMarqueeSelection(rect);
+            }
+          }
+
           onMouseMove(e);
         }}
         onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
@@ -235,8 +355,14 @@ export default function MapCanvas({
             onCanvasClick?.();
           }
         }}
-        onMouseUp={() => setIsPanning(false)}
-        onMouseLeave={() => setIsPanning(false)}
+        onMouseUp={() => {
+          setIsPanning(false);
+          if (isSelecting) finishMarqueeSelection();
+        }}
+        onMouseLeave={() => {
+          setIsPanning(false);
+          if (isSelecting) finishMarqueeSelection();
+        }}
       >
         {/* Elemento SVG principal del canvas */}
         <svg 
@@ -244,6 +370,14 @@ export default function MapCanvas({
           width={CANVAS_WIDTH * scale}
           height={CANVAS_HEIGHT * scale}
           onContextMenu={(e) => e.preventDefault()}
+          onMouseDown={isReadOnly ? undefined : (e) => {
+            if (e.button !== 0) return;
+            const point = getMousePosition(e);
+            if (!point) return;
+            setIsSelecting(true);
+            setSelectionStart(point);
+            setSelectionCurrent(point);
+          }}
         >
           {/* Envolvemos todo en un grupo (g) que aplica el zoom visualmente */}
           <g transform={`scale(${scale})`}>
@@ -265,13 +399,14 @@ export default function MapCanvas({
               {/* Rectángulo de la capa de fondo con color según tipo */}
               {(() => {
                 const isActive = activeItemId === layer.id;
+                const isSelected = selectedIds.includes(layer.id) || selectedId === layer.id;
                 return (
                   <rect
                     width={layer.width}
                     height={layer.height}
                     fill={getFillColor(layer)}
                     rx={6} // Bordes más redondeados para zonas
-                    stroke={isActive ? '#0284c7' : undefined}
+                    stroke={isActive ? '#0284c7' : isSelected ? '#3B82F6' : undefined}
                     strokeWidth={isActive ? 3 : 2}
                     onMouseDown={isReadOnly ? undefined : (e) => {
                       e.stopPropagation();
@@ -287,9 +422,10 @@ export default function MapCanvas({
                       
                       const offsetX = mouseX - layer.x;
                       const offsetY = mouseY - layer.y;
+                      const appendToSelection = e.ctrlKey || e.metaKey || e.shiftKey;
                       
-                      onSelect?.(layer.id);
-                      onMouseDown(layer.id, offsetX, offsetY);
+                      onSelect?.(layer.id, appendToSelection);
+                      onMouseDown(layer.id, offsetX, offsetY, mouseX, mouseY, appendToSelection);
                     }} // Iniciar arrastre
                     className={isReadOnly ? '' : 'cursor-move'} // Cursor de movimiento
                     onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(layer.id, e); }}
@@ -379,8 +515,8 @@ export default function MapCanvas({
                     height={item.height}
                     fill={getFillColor(item)}
                     rx={8} // Bordes redondeados
-                    stroke={selectedId === item.id ? "#3B82F6" : "none"}
-                    strokeWidth={selectedId === item.id ? 2 : 0}
+                    stroke={selectedIds.includes(item.id) || selectedId === item.id ? "#3B82F6" : "none"}
+                    strokeWidth={selectedIds.includes(item.id) || selectedId === item.id ? 2 : 0}
                     onMouseDown={isReadOnly ? undefined : (e) => {
                       e.stopPropagation();
                       if (e.button === 2) return;
@@ -395,10 +531,11 @@ export default function MapCanvas({
                       
                       const offsetX = mouseX - item.x;
                       const offsetY = mouseY - item.y;
+                      const appendToSelection = e.ctrlKey || e.metaKey || e.shiftKey;
                       
                       // Seleccionamos el objeto y luego iniciamos el arrastre
-                      onSelect?.(item.id); 
-                      onMouseDown(item.id, offsetX, offsetY);
+                      onSelect?.(item.id, appendToSelection); 
+                      onMouseDown(item.id, offsetX, offsetY, mouseX, mouseY, appendToSelection);
                     
 
                     }} // Iniciar arrastre
@@ -476,6 +613,66 @@ export default function MapCanvas({
               )}
             </g>
           ))}
+
+          {smartGuides.lines.map((line, index) => (
+            <line
+              key={`smart-guide-line-${index}`}
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              stroke="#9333EA"
+              strokeWidth={line.kind === 'alignment' ? 1.75 : 1.25}
+              strokeDasharray={line.kind === 'alignment' ? undefined : '5 4'}
+              pointerEvents="none"
+            />
+          ))}
+
+          {smartGuides.labels.map((label, index) => {
+            const boxWidth = Math.max(40, label.text.length * 7 + 12);
+            return (
+              <g key={`smart-guide-label-${index}`} pointerEvents="none">
+                <rect
+                  x={label.x - boxWidth / 2}
+                  y={label.y - 11}
+                  width={boxWidth}
+                  height={18}
+                  rx={6}
+                  fill="#F3E8FF"
+                  stroke="#C084FC"
+                  strokeWidth={1}
+                />
+                <text
+                  x={label.x}
+                  y={label.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#6B21A8"
+                  style={{ fontSize: 10, fontWeight: 700 }}
+                >
+                  {label.text}
+                </text>
+              </g>
+            );
+          })}
+
+          {(() => {
+            const rect = getSelectionRect();
+            if (!rect || !isSelecting) return null;
+            return (
+              <rect
+                x={rect.x}
+                y={rect.y}
+                width={rect.width}
+                height={rect.height}
+                fill="rgba(59, 130, 246, 0.12)"
+                stroke="#2563EB"
+                strokeWidth={1.5}
+                strokeDasharray="6 4"
+                pointerEvents="none"
+              />
+            );
+          })()}
           </g>
         </svg>
       </div>
