@@ -4,7 +4,8 @@ import { apiService, UserListItemDto } from '../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-const COLORS = {
+// Colores para los gráficos
+const COLORS = { 
   pending: '#fbbf24',
   'in-progress': '#3b82f6',
   resolved: '#10b981',

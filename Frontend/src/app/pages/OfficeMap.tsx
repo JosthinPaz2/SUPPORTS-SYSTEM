@@ -1,50 +1,50 @@
 /**
- * Página: OfficeMap
- * 
- * Descripción:
- * Este es el componente principal de la página del mapa de oficinas (Office Map).
- * Actúa como contenedor que orquesta todos los subcomponentes y gestiona el estado
- * global de la aplicación de mapas de escritorios.
- * 
- * Esta página permite:
- * - Visualizar un mapa interactivo de la oficina con escritorios
- * - Arrastrar y soltar (drag-and-drop) escritorios desde el sidebar al mapa
- * - Importar datos de escritorios desde archivos CSV
- * - Buscar y filtrar elementos en el inventario
- * - Rotar y posicionar elementos en el canvas
- * - Ver estadísticas en tiempo real sobre los escritorios
- * 
- * Estructura de componentes:
- * 1. OfficeMapHeader - Encabezado con título y navegación
- * 2. StatsCards - Tarjetas de estadísticas (total, con reportes, sin problemas)
- * 3. MapLegend - Leyenda de colores del mapa
- * 4. MapSidebar - Panel lateral con inventario y herramientas
- * 5. MapCanvas - Área principal del mapa con elementos SVG
- * 6. TipBox - Caja de consejos para el usuario
- * 
- * Estados (State Management):
- * - search: Valor del campo de búsqueda
- * - desks: Array de todos los escritorios/objetos
- * - activeTab: Pestaña activa en el sidebar (inventory/objects)
- * - draggingId: ID del elemento actualmente siendo arrastrado
- * - resizingId: ID del elemento actualmente siendo redimensionado
- * 
- * Handlers:
- * - handleFileUpload: Procesa archivos CSV subidos por el usuario
- * - rotateItem: Rota un elemento intercambiando width y height
- * - handleSvgDrop: Maneja el evento de soltar un elemento en el canvas
- * - handleMouseMove: Maneja el movimiento del mouse para arrastrar/redimensionar
- * - handleMouseUp: Finaliza las operaciones de arrastre/redimensionado
- * - handleCanvasMouseDown: Inicia el arrastre de un elemento en el mapa
- * 
- * Constantes:
- * - CANVAS_WIDTH: Ancho del área del mapa (2400px)
- * - CANVAS_HEIGHT: Alto del área del mapa (5000px)
- * - defaultObjects: Objetos por defecto disponibles para agregar al mapa
- * 
- * Dependencias:
- * - react: use_state, useRef para gestión de estado
- * - ../components/OfficeMap: Subcomponentes del mapa de oficinas
+ Página: OfficeMap
+ 
+ Descripción:
+ Este es el componente principal de la página del mapa de oficinas (Office Map).
+ Actúa como contenedor que orquesta todos los subcomponentes y gestiona el estado
+ global de la aplicación de mapas de escritorios.
+ 
+ Esta página permite:
+ - Visualizar un mapa interactivo de la oficina con escritorios
+ - Arrastrar y soltar (drag-and-drop) escritorios desde el sidebar al mapa
+ - Importar datos de escritorios desde archivos CSV
+ - Buscar y filtrar elementos en el inventario
+ - Rotar y posicionar elementos en el canvas
+ - Ver estadísticas en tiempo real sobre los escritorios
+ 
+ Estructura de componentes:
+ 1. OfficeMapHeader - Encabezado con título y navegación
+ 2. StatsCards - Tarjetas de estadísticas (total, con reportes, sin problemas)
+ 3. MapLegend - Leyenda de colores del mapa
+ 4. MapSidebar - Panel lateral con inventario y herramientas
+ 5. MapCanvas - Área principal del mapa con elementos SVG
+ 6. TipBox - Caja de consejos para el usuario
+ 
+ Estados (State Management):
+ - search: Valor del campo de búsqueda
+ - desks: Array de todos los escritorios/objetos
+ - activeTab: Pestaña activa en el sidebar (inventory/objects)
+ - draggingId: ID del elemento actualmente siendo arrastrado
+ - resizingId: ID del elemento actualmente siendo redimensionado
+ 
+ Handlers:
+ - handleFileUpload: Procesa archivos CSV subidos por el usuario
+ - rotateItem: Rota un elemento intercambiando width y height
+ - handleSvgDrop: Maneja el evento de soltar un elemento en el canvas
+ - handleMouseMove: Maneja el movimiento del mouse para arrastrar/redimensionar
+ - handleMouseUp: Finaliza las operaciones de arrastre/redimensionado
+ - handleCanvasMouseDown: Inicia el arrastre de un elemento en el mapa
+  
+ Constantes:
+ - CANVAS_WIDTH: Ancho del área del mapa (2400px)
+ - CANVAS_HEIGHT: Alto del área del mapa (5000px)
+ - defaultObjects: Objetos por defecto disponibles para agregar al mapa
+ 
+ Dependencias:
+ - react: use_state, useRef para gestión de estado
+ - ../components/OfficeMap: Subcomponentes del mapa de oficinas
  */
 
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -104,6 +104,20 @@ export default function OfficeMap() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'objects'>('inventory');
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [resizingId, setResizingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{clientX:number;clientY:number;id:string} | null>(null);
+  // offset between cursor and element top-left when starting drag
+  const [dragOffset, setDragOffset] = useState<{x:number,y:number} | null>(null);
+  // data for active resize operation
+  const [resizeStartData, setResizeStartData] = useState<{
+    id: string;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
   const [activeMode, setActiveMode] = useState<'select' | 'add' | 'edit' | 'view'>('select');
   const [currentZoneId, setCurrentZoneId] = useState<number | null>(null);
   const [initialPlacedDeskIds, setInitialPlacedDeskIds] = useState<string[]>([]);
@@ -218,19 +232,26 @@ export default function OfficeMap() {
   const handleSvgDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData("objectData"));
-    // svgRef ya no se usa - usamos e.currentTarget
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    
+    // Corregimos sumando el scroll igual que en el movimiento
+    const x = (e.clientX - rect.left + target.scrollLeft) / scale;
+    const y = (e.clientY - rect.top + target.scrollTop) / scale;
+
+    
+    const correctedX = x - data.width / 2;
+    const correctedY = y - data.height / 2;
+
 
     if (data.isDefault) {
       // Es un objeto por defecto: crear nueva instancia
       const newObj = {
         ...data,
         id: `${data.id}-${Date.now()}`,
-        x: x - data.width / 2,
-        y: y - data.height / 2,
+        x: correctedX,
+        y: correctedY,
         placed: true
       };
       setDesks(prev => [...prev, newObj]);
@@ -251,29 +272,33 @@ export default function OfficeMap() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    // svgRef ya no se usa - usamos e.currentTarget
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    
+    // Agregamos target.scrollLeft y target.scrollTop para compensar el scroll
+    let mouseX = (e.clientX - rect.left + target.scrollLeft) / scale;
+    let mouseY = (e.clientY - rect.top + target.scrollTop) / scale;
 
-    if (draggingId) {
+    if (draggingId && dragOffset) {
       setDesks(prev =>
         prev.map(d =>
           d.id === draggingId
-            ? { ...d, x: mouseX - d.width / 2, y: mouseY - d.height / 2 }
+            ? { ...d, x: mouseX - dragOffset.x, y: mouseY - dragOffset.y }
             : d
         )
       );
     }
 
-    if (resizingId) {
+    if (resizingId && resizeStartData && resizeStartData.id === resizingId) {
+      const dx = mouseX - resizeStartData.mouseX;
+      const dy = mouseY - resizeStartData.mouseY;
       setDesks(prev =>
         prev.map(d =>
           d.id === resizingId
             ? {
                 ...d,
-                width: Math.max(40, mouseX - d.x),
-                height: Math.max(40, mouseY - d.y)
+                width: Math.max(20, resizeStartData.startWidth + dx),
+                height: Math.max(20, resizeStartData.startHeight + dy),
               }
             : d
         )
@@ -281,6 +306,7 @@ export default function OfficeMap() {
     }
   };
 
+  // ??? Context menu helpers ???
   // Capas de fondo: zonas, marcos y otros objetos placed en el mapa
   const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance'));
   // Items: escritorios placed en el mapa
@@ -312,23 +338,149 @@ export default function OfficeMap() {
   // Handler para el mouse up global
   const handleMouseUp = () => {
     setDraggingId(null);
+    setDragOffset(null);
     setResizingId(null);
+    setResizeStartData(null);
   };
 
-  // Handler para iniciar drag desde el canvas
-  const handleCanvasMouseDown = (id: string) => {
+  // Handler para iniciar drag desde el canvas.
+  // Recibe un desplazamiento precomputado (offsetX/offsetY) proporcionado
+  // por MapCanvas para que el elemento no "salte" al arrastrarse.
+  const handleCanvasMouseDown = (
+    id: string,
+    offsetX: number,
+    offsetY: number,
+  ) => {
+    closeContextMenu();
+    setSelectedId(id);
+    setDragOffset({ x: offsetX, y: offsetY });
     setDraggingId(id);
   };
 
   // Handler para iniciar el redimensionamiento
-  const handleResizeStart = (id: string) => {
-    setResizingId(id);
+  const handleResizeStart = (
+    id: string,
+    mouseX: number,
+    mouseY: number,
+  ) => {
+    setSelectedId(id);
+    const desk = desks.find(d => d.id === id);
+    if (desk) {
+      setResizeStartData({
+        id,
+        startX: desk.x,
+        startY: desk.y,
+        startWidth: desk.width,
+        startHeight: desk.height,
+        mouseX,
+        mouseY,
+      });
+      setResizingId(id);
+    }
   };
+
+  // context menu / z-order operations
+  const handleItemContextMenu = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedId(id);
+    setContextMenu({ clientX: e.clientX, clientY: e.clientY, id });
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  const deleteItem = (id: string) => {
+    handleDeleteItem(id);
+    closeContextMenu();
+  };
+  const moveToFront = (id: string) => {
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx < 0) return prev;
+      const item = prev[idx];
+      const others = prev.filter((_, i) => i !== idx);
+      return [...others, item];
+    });
+    closeContextMenu();
+  };
+  const moveToBack = (id: string) => {
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx < 0) return prev;
+      const item = prev[idx];
+      const others = prev.filter((_, i) => i !== idx);
+      return [item, ...others];
+    });
+    closeContextMenu();
+  };
+  const moveForward = (id: string) => {
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx < 0 || idx === prev.length - 1) return prev;
+      const newArr = [...prev];
+      [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
+      return newArr;
+    });
+    closeContextMenu();
+  };
+  const moveBackward = (id: string) => {
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx <= 0) return prev;
+      const newArr = [...prev];
+      [newArr[idx], newArr[idx - 1]] = [newArr[idx - 1], newArr[idx]];
+      return newArr;
+    });
+    closeContextMenu();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        handleDeleteItem(selectedId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedId, desks]); // Importante que dependa de desks
+
+  // close context menu when clicking anywhere else
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => closeContextMenu();
+    window.addEventListener('mousedown', handleClick);
+    return () => window.removeEventListener('mousedown', handleClick);
+  }, [contextMenu]);
 
   // Handler para cambiar el modo activo
   const handleModeChange = (mode: 'add' | 'edit' | 'view') => {
     setActiveMode(mode);
   };
+
+  // cerrar selecciones al cambiar modo o entrar en vista
+  useEffect(() => {
+    closeContextMenu();
+    setSelectedId(null);
+    setDraggingId(null);
+    setResizingId(null);
+  }, [activeMode, isViewOnly]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // No borrar si estamos escribiendo en un buscador o input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        handleDeleteItem(selectedId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedId, desks, bgLayers]);
 
   useEffect(() => {
     if (!isViewOnly) return;
@@ -384,6 +536,21 @@ export default function OfficeMap() {
     setAdminSelectedFloorId(String(selectedFloor.id_floor));
     setAdminSelectedLocationId(String(selectedFloor.id_location));
   }, [isViewOnly, currentZoneId, adminFloors]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Si el usuario está escribiendo en un input, no borramos nada
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        // Llamamos a la función de borrar que ya tienes o crearemos
+        handleDeleteItem(selectedId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedId, desks, bgLayers]); // Se actualiza cuando cambia la selección
 
   useEffect(() => {
     if (!isViewOnly) return;
@@ -563,13 +730,23 @@ export default function OfficeMap() {
 
   // Handler para eliminar un elemento placed y devolverlo al inventory
   const handleDeleteItem = (id: string) => {
-    setDesks(prev =>
-      prev.map(d =>
-        d.id === id
-          ? { ...d, x: null, y: null, placed: false }
-          : d
-      )
-    );
+    setDesks(prev => {
+      const item = prev.find(d => d.id === id);
+      if (!item) return prev;
+
+      if (item.type === 'desk') {
+        // Si es un escritorio, lo mandamos al inventario (placed: false)
+        return prev.map(d => 
+          d.id === id ? { ...d, placed: false, x: null, y: null } : d
+        );
+      } else {
+        // Si es un objeto decorativo (zona/marco), lo eliminamos de la lista
+        return prev.filter(d => d.id !== id);
+      }
+    });
+    
+    setSelectedId(null);
+    setDraggingId(null);
   };
 
   const normalizeTicketStatus = (status: string): 'pending' | 'in-progress' | 'resolved' => {
@@ -963,7 +1140,7 @@ export default function OfficeMap() {
                 <>
                   <MapCanvas
                     items={items}
-                    bgLayers={bgLayers}
+                    bgLayers={bgLayers}                
                     inventory={inventory}
                     CANVAS_WIDTH={canvasSize.width}
                     CANVAS_HEIGHT={canvasSize.height}
@@ -972,10 +1149,27 @@ export default function OfficeMap() {
                     onMouseDown={handleCanvasMouseDown}
                     onResizeStart={handleResizeStart}
                     onDeleteItem={handleDeleteItem}
+                    onContextMenu={handleItemContextMenu}
+                    onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
+                    onSelect={setSelectedId} // Añade esta línea
+                    selectedId={selectedId}   // Añade esta para poder darle un borde visual
                     scale={scale}
-                    isReadOnly
+                    isReadOnly={false}
+                    activeItemId={(draggingId || resizingId || selectedId) || undefined}
                     onItemClick={handleDeskClick}
                   />
+                  {contextMenu && (
+                    <div
+                      className="fixed bg-white border shadow-md rounded z-50 text-sm"
+                      style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
+                    >
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => deleteItem(contextMenu.id)}>Delete</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveForward(contextMenu.id)}>Bring forward</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveBackward(contextMenu.id)}>Send backward</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToFront(contextMenu.id)}>Bring to front</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToBack(contextMenu.id)}>Send to back</button>
+                    </div>
+                  )}
 
                   <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
                     <button
@@ -1131,10 +1325,26 @@ export default function OfficeMap() {
             onMouseDown={handleCanvasMouseDown}
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
+            onContextMenu={handleItemContextMenu}
+            onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
             scale={scale}
-            isReadOnly
+            isReadOnly={false}
+            activeItemId={(draggingId || resizingId || selectedId) || undefined}
             onItemClick={handleDeskClick}
           />
+          {contextMenu && (
+            <div
+              className="fixed bg-white border shadow-md rounded z-50 text-sm"
+              style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
+              onMouseLeave={closeContextMenu}
+            >
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => deleteItem(contextMenu.id)}>Delete</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveForward(contextMenu.id)}>Bring forward</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveBackward(contextMenu.id)}>Send backward</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToFront(contextMenu.id)}>Bring to front</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToBack(contextMenu.id)}>Send to back</button>
+            </div>
+          )}
 
           {/* Botones de zoom en la esquina inferior derecha */}
           <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
@@ -1236,8 +1446,11 @@ export default function OfficeMap() {
             onMouseDown={handleCanvasMouseDown}
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
+            onContextMenu={handleItemContextMenu}
+            onCanvasClick={() => { setSelectedId(null); closeContextMenu(); }}
             scale={scale}
             isReadOnly={false}
+            activeItemId={(draggingId || resizingId || selectedId) || undefined}
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
@@ -1352,4 +1565,3 @@ export default function OfficeMap() {
     </div>
   );
 }
-

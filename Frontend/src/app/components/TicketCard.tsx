@@ -31,7 +31,7 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
   }));
 
   return (
-    <div ref={drag} className={isDragging ? 'opacity-50' : 'opacity-100'}>
+    <div ref={(node) => { drag(node); }} className={isDragging ? 'opacity-50' : 'opacity-100'}>
     <Card
       className="cursor-pointer hover:shadow-md transition-all"
       onClick={onClick}

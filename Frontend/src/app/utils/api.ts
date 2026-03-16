@@ -243,13 +243,19 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    const token = localStorage.getItem('access_token');
+    const headers = new Headers(options.headers ?? undefined);
+    if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+    headers.set('ngrok-skip-browser-warning', 'true');
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-        ...options.headers,
-      },
       ...options,
+      headers,
     };
 
     try {
@@ -262,6 +268,14 @@ class ApiService {
       }
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          window.dispatchEvent(
+            new CustomEvent('auth:unauthorized', {
+              detail: { status: response.status, endpoint },
+            }),
+          );
+        }
+
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `Error HTTP: ${response.status}`);
       }

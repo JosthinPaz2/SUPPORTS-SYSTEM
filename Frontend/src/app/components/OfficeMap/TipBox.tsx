@@ -1,34 +1,33 @@
 /**
- * Componente: TipBox
- * 
- * Descripción:
- * Este componente renderiza una caja de consejos/información útil para el usuario.
- * Se muestra al final de la página del mapa de oficinas para proporcionar ayuda
- * contextual sobre las funcionalidades disponibles.
- * 
- * Funcionalidades:
- * - Mostrar un icono informativo (💡)
- * - Proporcionar instrucciones claras sobre cómo usar el mapa
- * - Diseño visual distintivo para llamar la atención del usuario
- * - Mensaje sobre las acciones de arrastrar, redimensionar y rotar elementos
- * 
- * Contenido del mensaje:
- * - Instrucción para arrastrar escritorios u objetos desde el sidebar al mapa
- * - Información sobre la capacidad de redimensionar y rotar elementos directamente en el canvas
- * 
- * Props: Este componente no recibe props (es estático)
- * 
- * Dependencias:
- * - lucide-react: Icono Info
+ Componente: TipBox
+ 
+ Descripción:
+ Este componente renderiza una caja de consejos/información útil para el usuario.
+ Se muestra al final de la página del mapa de oficinas para proporcionar ayuda
+ contextual sobre las funcionalidades disponibles.
+ 
+ Funcionalidades:
+ - Mostrar un mensaje de consejo con un diseño visual atracti
+ - Diseño visual distintivo para llamar la atención del usuario
+ - Mensaje sobre las acciones de arrastrar, redimensionar y rotar elementos
+ 
+ Contenido del mensaje:
+ - Instrucción para arrastrar escritorios u objetos desde el sidebar al mapa
+ - Información sobre la capacidad de redimensionar y rotar elementos directamente en el canvas
+ 
+ Props: Este componente no recibe props (es estático)
+ 
+ Dependencias:
+ - lucide-react: Icono Info
  */
 
-import { Info } from 'lucide-react';
+import { Info } from 'lucide-react'; 
 
 /**
- * Componente funcional que renderiza la caja de consejos
- * Muestra información de ayuda al usuario sobre las funcionalidades del mapa
- * 
- * @returns JSX.Element - Componente con el consejo/información
+ Componente funcional que renderiza la caja de consejos
+ Muestra información de ayuda al usuario sobre las funcionalidades del mapa
+ 
+ @returns JSX.Element - Componente con el consejo/información
  */
 export default function TipBox() {
   return (

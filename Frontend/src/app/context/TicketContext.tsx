@@ -3,23 +3,32 @@ import { Ticket, Comment, TicketCategory, TicketPriority, TicketStatus } from '.
 import { apiService } from '../utils/api';
 import { toast } from 'sonner';
 
+/* ==========================================
+  Tipo del contexto de tickets
+========================================== */
 interface TicketContextType {
-  tickets: Ticket[];
+  tickets: Ticket[]; // Lista de tickets cargados
   addTicket: (
     ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'> & {
       id?: string;
       createdAt?: Date;
       updatedAt?: Date;
     }
-  ) => void;
-  updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>;
-  addComment: (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => void;
-  deleteTicket: (id: string) => void;
-  refreshTickets: () => Promise<void>;
+  ) => void; // Agregar ticket localmente
+  updateTicket: (id: string, updates: Partial<Ticket>) => Promise<void>; // Actualizar ticket
+  addComment: (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => void; // Agregar comentario
+  deleteTicket: (id: string) => void; // Eliminar ticket
+  refreshTickets: () => Promise<void>; // Refrescar lista de tickets desde API
 }
 
+/* ==========================================
+  Crear contexto
+========================================== */
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
 
+/* ==========================================
+  Funciones de normalización de datos
+========================================== */
 const normalizeCategory = (categoryName: string): TicketCategory => {
   const normalized = categoryName.trim().toLowerCase();
   if (normalized === 'hardware') return 'hardware';
@@ -41,10 +50,21 @@ const normalizePriority = (priority: string): TicketPriority => {
   return 'low';
 };
 
+/* ==========================================
+  Provider de tickets
+  - Maneja estado, CRUD y sincronización con API
+========================================== */
 export function TicketProvider({ children }: { children: ReactNode }) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+
+  // Intervalo automático para refrescar tickets
   const AUTO_REFRESH_MS = Number(import.meta.env.VITE_TICKETS_REFRESH_MS || 5000);
 
+  /* ------------------------------------------
+    Función para obtener tickets y mapear datos
+    - Convierte IDs a nombres legibles
+    - Normaliza categorías, estado y prioridad
+  ------------------------------------------ */
   const fetchMappedTickets = useCallback(async (): Promise<Ticket[]> => {
     const [ticketRows, categories, users] = await Promise.all([
       apiService.getTickets(),
@@ -52,13 +72,8 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       apiService.getUsers(),
     ]);
 
-    const categoryById = new Map(
-      categories.map((category) => [category.id_category, category.category_name]),
-    );
-
-    const usersById = new Map(
-      users.map((user) => [String(user.id_user), user.full_name]),
-    );
+    const categoryById = new Map(categories.map((c) => [c.id_category, c.category_name]));
+    const usersById = new Map(users.map((u) => [String(u.id_user), u.full_name]));
 
     return ticketRows.map((ticket) => ({
       id: String(ticket.id_ticket),
@@ -74,18 +89,18 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       assignedTo: ticket.primary_technician != null ? String(ticket.primary_technician) : undefined,
       assignedToName:
         ticket.primary_technician != null
-          ? (usersById.get(String(ticket.primary_technician)) || `User ${ticket.primary_technician}`)
+          ? usersById.get(String(ticket.primary_technician)) || `User ${ticket.primary_technician}`
           : undefined,
       secondaryTechnicianId:
         ticket.secondary_technician != null ? String(ticket.secondary_technician) : undefined,
       secondaryTechnicianName:
         ticket.secondary_technician != null
-          ? (usersById.get(String(ticket.secondary_technician)) || `User ${ticket.secondary_technician}`)
+          ? usersById.get(String(ticket.secondary_technician)) || `User ${ticket.secondary_technician}`
           : undefined,
       movedBy: ticket.moved_by != null ? String(ticket.moved_by) : undefined,
       movedByName:
         ticket.moved_by != null
-          ? (usersById.get(String(ticket.moved_by)) || `User ${ticket.moved_by}`)
+          ? usersById.get(String(ticket.moved_by)) || `User ${ticket.moved_by}`
           : undefined,
       createdAt: new Date(ticket.created_at),
       updatedAt: new Date(ticket.created_at),
@@ -93,20 +108,22 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  // Refrescar tickets y actualizar estado
   const refreshTickets = useCallback(async () => {
     const mapped = await fetchMappedTickets();
     setTickets(mapped);
   }, [fetchMappedTickets]);
 
+  /* ------------------------------------------
+    useEffect: cargar tickets al inicio y refresco automático
+  ------------------------------------------ */
   useEffect(() => {
     let cancelled = false;
 
     const loadTickets = async (showErrorToast = true) => {
       try {
         const mappedTickets = await fetchMappedTickets();
-        if (!cancelled) {
-          setTickets(mappedTickets);
-        }
+        if (!cancelled) setTickets(mappedTickets);
       } catch (error) {
         if (showErrorToast && !cancelled) {
           toast.error((error as Error).message || 'Could not load tickets');
@@ -125,6 +142,9 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     };
   }, [AUTO_REFRESH_MS, fetchMappedTickets]);
 
+  /* ------------------------------------------
+    Agregar un ticket localmente
+  ------------------------------------------ */
   const addTicket = (
     ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'comments'> & {
       id?: string;
@@ -142,28 +162,26 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     setTickets((prev) => [newTicket, ...prev]);
   };
 
+  /* ------------------------------------------
+    Actualizar ticket
+    - Optimista en UI
+    - Sincroniza con API
+    - Maneja fallback en caso de error
+  ------------------------------------------ */
   const updateTicket = async (id: string, updates: Partial<Ticket>) => {
     let previousTicket: Ticket | undefined;
 
     setTickets((prev) =>
       prev.map((ticket) => {
-        if (ticket.id !== id) {
-          return ticket;
-        }
-
+        if (ticket.id !== id) return ticket;
         previousTicket = ticket;
         return { ...ticket, ...updates, updatedAt: new Date() };
       })
     );
 
     const numericTicketId = Number(id);
-    if (!Number.isFinite(numericTicketId)) {
-      return;
-    }
-
-    if (!updates.status) {
-      return;
-    }
+    if (!Number.isFinite(numericTicketId)) return;
+    if (!updates.status) return;
 
     const statusMap: Record<string, string> = {
       pending: 'Pending',
@@ -183,8 +201,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
       });
       await refreshTickets();
     } catch (error) {
-      // Compatibility fallback: if backend is not migrated yet for moved_by,
-      // retry status update without moved_by so board movement still persists.
+      // Fallback: si moved_by falla, actualizar solo status
       if (updates.movedBy) {
         try {
           await apiService.updateTicket(numericTicketId, basePayload);
@@ -192,15 +209,14 @@ export function TicketProvider({ children }: { children: ReactNode }) {
           toast.warning('Status updated, but the user who moved the ticket could not be saved.');
           return;
         } catch {
-          // Continue to rollback below if fallback also fails.
+          // rollback más abajo si falla
         }
       }
 
+      // Rollback a ticket anterior
       if (previousTicket) {
         setTickets((prev) =>
-          prev.map((ticket) =>
-            ticket.id === id ? previousTicket as Ticket : ticket
-          )
+          prev.map((ticket) => (ticket.id === id ? previousTicket as Ticket : ticket))
         );
       }
 
@@ -208,30 +224,31 @@ export function TicketProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /* ------------------------------------------
+    Agregar comentario a un ticket
+  ------------------------------------------ */
   const addComment = (ticketId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => {
-    const newComment: Comment = {
-      ...comment,
-      id: `comment-${Date.now()}`,
-      createdAt: new Date(),
-    };
+    const newComment: Comment = { ...comment, id: `comment-${Date.now()}`, createdAt: new Date() };
 
     setTickets((prev) =>
       prev.map((ticket) =>
         ticket.id === ticketId
-          ? {
-              ...ticket,
-              comments: [...ticket.comments, newComment],
-              updatedAt: new Date(),
-            }
+          ? { ...ticket, comments: [...ticket.comments, newComment], updatedAt: new Date() }
           : ticket
       )
     );
   };
 
+  /* ------------------------------------------
+    Eliminar ticket localmente
+  ------------------------------------------ */
   const deleteTicket = (id: string) => {
     setTickets((prev) => prev.filter((ticket) => ticket.id !== id));
   };
 
+  /* ------------------------------------------
+    Proveer contexto
+  ------------------------------------------ */
   return (
     <TicketContext.Provider
       value={{ tickets, addTicket, updateTicket, addComment, deleteTicket, refreshTickets }}
@@ -241,6 +258,10 @@ export function TicketProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* ==========================================
+  Hook para usar tickets
+  - Falla si no está dentro del Provider
+========================================== */
 export function useTickets() {
   const context = useContext(TicketContext);
   if (context === undefined) {

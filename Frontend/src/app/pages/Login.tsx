@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Navigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -16,7 +16,13 @@ type ModalState = 'forgot' | 'verify' | 'reset';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, requestPasswordRecovery, verifyCode, resetPassword} = useAuth();
+  const { user, login, requestPasswordRecovery, verifyCode, resetPassword} = useAuth();
+
+  // Already logged in → redirect to their dashboard
+  if (user) {
+    const destination = user.role === 'admin' ? '/admin' : '/employee';
+    return <Navigate to={destination} replace />;
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -171,9 +177,18 @@ export default function Login() {
   };
 
 return (
-
-  
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {/* OTD Support Logo - Top Left Corner */}
+      <div className="absolute top-8 left-8 z-20">
+        <div className="flex items-center space-x-2">
+          <span className="text-4xl text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-400 font-bold leading-tight">
+            OTD
+          </span>
+          <span className="text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-bold leading-tight">
+            Support
+          </span>
+        </div>
+      </div>
       {/* Background */}
       <BackgroundCircles />
       <div className="w-full max-w-md">

@@ -2,47 +2,105 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import type { User, UserRole } from '../types/auth';
 import { apiService } from '../utils/api';
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+
+    const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payloadBase64 + '='.repeat((4 - (payloadBase64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded)) as { exp?: number };
+
+    if (!payload.exp) return false;
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
+/* ==========================================
+  Definición del tipo de contexto de autenticación
+========================================== */
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<User | null>;
-  register: (fullName: string, email: string, password: string, campaign: string) => Promise<void>;
-  logout: () => void;
-  isAdmin: boolean;
-  isLoading: boolean;
-  requestPasswordRecovery: (email: string) => Promise<void>;
-  verifyCode: (email: string, code: string) => Promise<void>;
-  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  user: User | null; // Usuario actualmente logueado
+  login: (email: string, password: string) => Promise<User | null>; // Función para iniciar sesión
+  register: (fullName: string, email: string, password: string, campaign: string) => Promise<void>; // Registrar usuario
+  logout: () => void; // Cerrar sesión
+  isAdmin: boolean; // Indica si el usuario es admin
+  isLoading: boolean; // Indica si se está cargando el estado de autenticación
+  requestPasswordRecovery: (email: string) => Promise<void>; // Solicitar recuperación de contraseña
+  verifyCode: (email: string, code: string) => Promise<void>; // Verificar código enviado al email
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>; // Cambiar contraseña
 }
 
+/* ==========================================
+  Crear el contexto de autenticación
+========================================== */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/* ==========================================
+  Provider que envuelve la aplicación
+  y maneja la lógica de autenticación
+========================================== */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const clearSession = () => {
+    setUser(null);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_data');
+  };
+
+  /* ------------------------------------------
+    useEffect para revisar si hay un usuario
+    logueado en localStorage al iniciar la app
+  ------------------------------------------ */
   useEffect(() => {
-    // Check if user is logged in on app start
     const token = localStorage.getItem('access_token');
     const userData = localStorage.getItem('user_data');
 
     if (token && userData) {
       try {
+        if (isTokenExpired(token)) {
+          clearSession();
+          setIsLoading(false);
+          return;
+        }
+
         const parsedUser = JSON.parse(userData);
         setUser({ ...parsedUser, access_token: token });
       } catch (error) {
         console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_data');
+        clearSession();
       }
     }
-    setIsLoading(false);
+    setIsLoading(false); // Fin de la carga inicial
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearSession();
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  /* ------------------------------------------
+    Función para iniciar sesión
+    - Llama al API
+    - Almacena token y datos en localStorage
+  ------------------------------------------ */
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
       const response = await apiService.login({ institutional_email: email, password });
 
-      // Map role based on id_role: 1 = admin, 2+ = employee
       const role: UserRole = response.id_role === 1 ? 'admin' : 'employee';
 
       const userData: User = {
@@ -58,15 +116,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user_data', JSON.stringify(userData));
-      
+
       return userData;
     } catch (error) {
-      throw error;
+      throw error; // Re-lanza el error para manejarlo en el UI
     }
   };
 
+  /* ------------------------------------------
+    Función para registrar un nuevo usuario
+    - No inicia sesión automáticamente
+  ------------------------------------------ */
   const register = async (fullName: string, email: string, password: string, campaign: string) => {
-    // simply call API and return, do not log in automatically
     try {
       await apiService.register({ full_name: fullName, institutional_email: email, password, campaign });
     } catch (error) {
@@ -74,19 +135,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /* ------------------------------------------
+    Función para cerrar sesión
+    - Limpia localStorage
+    - Redirige al login
+  ------------------------------------------ */
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_data');
-    // Redirect to login so credentials are cleared and user can sign in again
+    clearSession();
+
     try {
       window.location.href = '/login';
     } catch (error) {
-      // fallback: do nothing if navigation isn't possible
       console.warn('Could not redirect after logout', error);
     }
   };
 
+  /* ------------------------------------------
+    Funciones de recuperación de contraseña
+  ------------------------------------------ */
   const requestPasswordRecovery = async (email: string) => {
     await apiService.requestPasswordRecovery({ institutional_email: email });
   };
@@ -103,8 +169,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  /* ------------------------------------------
+    Determina si el usuario es administrador
+  ------------------------------------------ */
   const isAdmin = user?.id_role === 1;
 
+  /* ------------------------------------------
+    Provee el contexto a todos los hijos
+  ------------------------------------------ */
   return (
     <AuthContext.Provider value={{
       user,
@@ -122,10 +194,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* ==========================================
+  Hook para usar el contexto de autenticación
+  - Incluye fallback seguro si no hay Provider
+========================================== */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    // Fail-safe to avoid crashing the UI during transient render/HMR edge cases.
+    // Fallback: intenta recuperar datos desde localStorage
     const stored = localStorage.getItem('user_data');
     let fallbackUser: User | null = null;
     if (stored) {
@@ -135,6 +211,8 @@ export function useAuth() {
         fallbackUser = null;
       }
     }
+
+    // Devuelve un objeto con funciones vacías y el usuario recuperado
     return {
       user: fallbackUser,
       login: async () => null,
