@@ -72,27 +72,57 @@ const EMPTY_SMART_GUIDES: SmartGuides = {
   labels: [],
 };
 
+/**
+ * Interfaz que define la estructura de un elemento (escritorio u objeto)
+ * Representa cada item que puede ser放置 (colocado) en el mapa
+ */
 interface DeskItem {
+  /** Identificador único del elemento */
   id: string;
+  /** Posición X del elemento en el canvas */
   x: number;
+  /** Posición Y del elemento en el canvas */
   y: number;
+  /** Ancho del elemento en píxeles */
   width: number;
+  /** Alto del elemento en píxeles */
   height: number;
+  /** Tipo de elemento ('desk', 'zone', 'frame', 'store', 'management', 'entrance') */
   type: string;
+  /** Indica si el elemento está colocado en el mapa */
   placed: boolean;
+  /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
+  /** Estado actual del puesto: 'Available', 'Not available', 'Available with issues' */
   currentStatus?: string;
+  /** Indica si es un objeto por defecto */
   isDefault?: boolean;
 }
 
+/**
+ * Interfaz de props para el componente MapCanvas
+ * Define todos los parámetros que el componente padre debe proporcionar
+ */
 interface MapCanvasProps {
+  /** Array de elementos que ya están colocados en el mapa (escritorios) */
   items: DeskItem[];
+  /** Array de capas de fondo (zonas, marcos) */
   bgLayers: DeskItem[];
+  /** Array de elementos pendientes (sin colocar) */
   inventory: DeskItem[];
+  /** Ancho del canvas SVG en píxeles */
   CANVAS_WIDTH: number;
+  /** Alto del canvas SVG en píxeles */
   CANVAS_HEIGHT: number;
+  /** Callback ejecutado cuando se suelta un elemento arrastrado sobre el canvas */
   onDrop: (e: React.DragEvent) => void;
+  /** Callback ejecutado cuando el mouse se mueve sobre el canvas */
   onMouseMove: (e: React.MouseEvent) => void;
+  /**
+   * Callback ejecutado cuando se hace clic en un elemento del mapa.
+   * Recibe además el offset del cursor respecto a la esquina superior izquierda
+   * del elemento (se calcula con base en la posición dentro del canvas SVG).
+   */
   onMouseDown: (
     id: string,
     offsetX: number,
@@ -101,21 +131,43 @@ interface MapCanvasProps {
     mouseY: number,
     appendToSelection?: boolean
   ) => void;
-  onResizeStart?: (id: string, mouseX: number, mouseY: number) => void;
+  /**
+   * Callback ejecutado cuando se inicia el redimensionamiento. Se pasa también
+   * la posición del cursor dentro del canvas para que el padre pueda calcular
+   * el ancho/alto nuevo correctamente.
+   */
+  onResizeStart?: (
+    id: string,
+    mouseX: number,
+    mouseY: number
+  ) => void;
+  /** Se dispara al hacer clic sobre el fondo (área sin elementos). */
   onCanvasClick?: () => void;
-  onContextMenu?: (id: string, e: React.MouseEvent<SVGElement, MouseEvent>) => void;
+  /** Se dispara al hacer click derecho sobre un elemento. */
+  onContextMenu?: (
+    id: string,
+    e: React.MouseEvent<SVGElement, MouseEvent>
+  ) => void;
+  /** Identificador del item que actualmente está activo (arrastrando, seleccionado, etc.). */
   activeItemId?: string;
+  /** Callback para eliminar un item */
   onDeleteItem?: (id: string) => void;
+  /** Escala actual del canvas (para zoom) */
   scale?: number;
+  /** Indica si el canvas está en modo solo lectura */
   isReadOnly?: boolean;
+  /** Callback cuando se hace clic en un item */
   onItemClick?: (id: string) => void;
+  /** Callback cuando se selecciona un item */
   onSelect?: (id: string, appendToSelection?: boolean) => void;
+  /** ID del item seleccionado */
   selectedId?: string | null;
+  /** IDs seleccionados para selección múltiple */
   selectedIds?: string[];
+  /** Callback para selección tipo marquee (arrastrar para seleccionar varios). */
   onMarqueeSelection?: (ids: string[]) => void;
+  /** Guías inteligentes para alineación y espaciado durante drag. */
   smartGuides?: SmartGuides;
-  // ESTA ES LA PROP QUE SOLUCIONA EL ERROR DE LA IMAGEN:
-  onRenameItem?: (id: string, newName: string) => void; 
 }
 
 const intersects = (
@@ -125,23 +177,41 @@ const intersects = (
   return !(a.x + a.width < b.x || b.x + b.width < a.x || a.y + a.height < b.y || b.y + b.height < a.y);
 };
 
+/**
+ * Función para obtener el color de relleno según el tipo de elemento
+ * Cada tipo de elemento tiene un color distintivo para mejor visualización
+ */
 const getFillColor = (item: DeskItem): string => {
   if (item.type === 'desk') {
     const status = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
-    if (status === 'Not available') return "#EF4444";
-    if (status === 'Available with issues') return "#F97316";
-    return "#22C55E";
+    if (status === 'Not available') return "#EF4444";       // Rojo
+    if (status === 'Available with issues') return "#F97316"; // Naranja
+    return "#22C55E"; // Verde
   }
+  // Para los diferentes tipos de objetos/zonas
   switch (item.type) {
-    case 'zone': return "#6B7280";
-    case 'frame': return "rgba(156, 163, 175, 0.5)";
-    case 'store': return "#F59E0B";
-    case 'management': return "#EAB308";
-    case 'entrance': return "#3B82F6";
-    default: return "#22C55E";
+    case 'zone':
+      return "#6B7280"; // Gris oscuro
+    case 'frame':
+      return "rgba(156, 163, 175, 0.5)"; // Gris translúcido
+    case 'store':
+      return "#F59E0B"; // Amarillo/Naranja
+    case 'management':
+      return "#EAB308"; // Amarillo
+    case 'entrance':
+      return "#3B82F6"; // Azul
+    default:
+      return "#22C55E"; // Verde por defecto
   }
 };
 
+/**
+ * Componente funcional que renderiza el canvas del mapa de oficinas
+ * Utiliza SVG para dibujar la cuadrícula y los elementos placed
+ * 
+ * @param props - Propiedades del componente conteniendo datos y handlers
+ * @returns JSX.Element - Componente canvas con elementos SVG
+ */
 export default function MapCanvas({
   items,
   bgLayers,
@@ -153,7 +223,6 @@ export default function MapCanvas({
   onMouseDown,
   onResizeStart,
   onDeleteItem,
-  onRenameItem,
   scale = 1,
   isReadOnly = false,
   onItemClick,
@@ -166,12 +235,11 @@ export default function MapCanvas({
   onMarqueeSelection,
   smartGuides = EMPTY_SMART_GUIDES,
 }: MapCanvasProps) {
+  // Referencia al elemento SVG para obtener dimensiones y posiciones
   const svgRef = useRef<SVGSVGElement>(null);
+  // Referencia al div contenedor para pan
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-
+  // Estado para panning
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isSelecting, setIsSelecting] = useState(false);
@@ -182,6 +250,7 @@ export default function MapCanvas({
     if (!svgRef.current) return null;
     const container = svgRef.current.parentElement;
     if (!container) return null;
+
     const rect = container.getBoundingClientRect();
     return {
       x: (e.clientX - rect.left + container.scrollLeft) / scale,
@@ -189,30 +258,25 @@ export default function MapCanvas({
     };
   };
 
-  const handleFinishEdit = (id: string) => {
-    const trimmed = editValue.trim();
-    if (trimmed !== "" && trimmed !== id) {
-      onRenameItem?.(id, trimmed);
-    }
-    setEditingId(null);
-  };
-
   const getSelectionRect = () => {
     if (!selectionStart || !selectionCurrent) return null;
-    return {
-      x: Math.min(selectionStart.x, selectionCurrent.x),
-      y: Math.min(selectionStart.y, selectionCurrent.y),
-      width: Math.abs(selectionCurrent.x - selectionStart.x),
-      height: Math.abs(selectionCurrent.y - selectionStart.y),
-    };
+    const x = Math.min(selectionStart.x, selectionCurrent.x);
+    const y = Math.min(selectionStart.y, selectionCurrent.y);
+    const width = Math.abs(selectionCurrent.x - selectionStart.x);
+    const height = Math.abs(selectionCurrent.y - selectionStart.y);
+    return { x, y, width, height };
   };
 
   const getPlacedElements = (): DeskItem[] => [...bgLayers, ...items].filter((el) => el.placed && el.x != null && el.y != null);
 
   const updateMarqueeSelection = (rect: { x: number; y: number; width: number; height: number }) => {
     const selected = getPlacedElements()
-      .filter((el) => intersects({ x: el.x, y: el.y, width: el.width, height: el.height }, rect))
+      .filter((el) => intersects(
+        { x: el.x, y: el.y, width: el.width, height: el.height },
+        rect,
+      ))
       .map((el) => el.id);
+
     onMarqueeSelection?.(selected);
   };
 
@@ -224,28 +288,40 @@ export default function MapCanvas({
       setSelectionCurrent(null);
       return;
     }
+
     if (rect.width < 4 && rect.height < 4) {
       onCanvasClick?.();
     } else {
       updateMarqueeSelection(rect);
     }
+
     setIsSelecting(false);
     setSelectionStart(null);
     setSelectionCurrent(null);
   };
 
   return (
+    // Contenedor principal: Card que ocupa el espacio restante (flex-1)
     <Card className="flex-1 relative overflow-hidden bg-white shadow-inner">
+      
+      {/* Badges superiores derechos: contadores de elementos */}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <Badge className="bg-green-600 text-white border-none">{items.length + bgLayers.length} Located</Badge>
-        <Badge variant="outline">{inventory.length} Pending</Badge>
+        {/* Badge verde: elementos ubicados/colocados */}
+        <Badge className="bg-green-600 text-white border-none">
+          {items.length + bgLayers.length} Located
+        </Badge>
+        {/* Badge outline: elementos pendientes */}
+        <Badge variant="outline">
+          {inventory.length} Pending
+        </Badge>
       </div>
 
+      {/* Área del canvas: manejo de drop y mouse */}
       <div
         ref={containerRef}
         className={`w-full h-full overflow-auto ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onDrop={isReadOnly ? undefined : onDrop}
-        onDragOver={isReadOnly ? undefined : (e) => e.preventDefault()}
+        onDragOver={isReadOnly ? undefined : (e) => e.preventDefault()} // Necesario para permitir drop
         onMouseMove={(e) => {
           if (isPanning && containerRef.current) {
             const deltaX = panStart.x - e.clientX;
@@ -254,20 +330,28 @@ export default function MapCanvas({
             containerRef.current.scrollTop += deltaY;
             setPanStart({ x: e.clientX, y: e.clientY });
           }
+
           if (isSelecting) {
             const point = getMousePosition(e);
             if (point && selectionStart) {
               setSelectionCurrent(point);
-              updateMarqueeSelection(getSelectionRect()!);
+              const rect = {
+                x: Math.min(selectionStart.x, point.x),
+                y: Math.min(selectionStart.y, point.y),
+                width: Math.abs(point.x - selectionStart.x),
+                height: Math.abs(point.y - selectionStart.y),
+              };
+              updateMarqueeSelection(rect);
             }
           }
+
           onMouseMove(e);
         }}
         onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
           if (e.button === 2) {
-            e.preventDefault();
+            e.preventDefault(); // Previene comportamientos raros del navegador
             setIsPanning(true);
-            setPanStart({ x: e.clientX, y: e.clientY });
+            setPanStart({ x: e.clientX, y: e.clientY }); // Corregido: ya no usa variables inexistentes
             onCanvasClick?.();
           }
         }}
@@ -280,6 +364,7 @@ export default function MapCanvas({
           if (isSelecting) finishMarqueeSelection();
         }}
       >
+        {/* Elemento SVG principal del canvas */}
         <svg 
           ref={svgRef} 
           width={CANVAS_WIDTH * scale}
@@ -289,171 +374,329 @@ export default function MapCanvas({
             if (e.button !== 0) return;
             const point = getMousePosition(e);
             if (!point) return;
-            if (editingId) handleFinishEdit(editingId);
             setIsSelecting(true);
             setSelectionStart(point);
             setSelectionCurrent(point);
           }}
         >
+          {/* Envolvemos todo en un grupo (g) que aplica el zoom visualmente */}
           <g transform={`scale(${scale})`}>
+            {/* Definiciones SVG: patrones y filtros */}
             <defs>
+              {/* Patrón de cuadrícula de puntos */}
               <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <circle cx="2" cy="2" r="1.5" fill="#64748B" />
               </pattern>
             </defs>
+            
+            {/* Rectángulo de fondo con patrón de cuadrícula - Usamos dimensiones absolutas */}
             <rect width={CANVAS_WIDTH} height={CANVAS_HEIGHT} fill="url(#dotGrid)" />
 
-            {bgLayers.map(layer => (
-              <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
-                <rect
-                  width={layer.width}
-                  height={layer.height}
-                  fill={getFillColor(layer)}
-                  rx={6}
-                  stroke={activeItemId === layer.id ? '#0284c7' : (selectedIds.includes(layer.id) || selectedId === layer.id ? '#3B82F6' : undefined)}
-                  strokeWidth={activeItemId === layer.id ? 3 : 2}
-                  onMouseDown={isReadOnly ? undefined : (e) => {
-                    if (editingId === layer.id) return;
-                    e.stopPropagation();
-                    if (e.button === 2) return;
-                    const point = getMousePosition(e);
-                    if (!point) return;
-                    onSelect?.(layer.id, e.ctrlKey || e.metaKey || e.shiftKey);
-                    onMouseDown(layer.id, point.x - layer.x, point.y - layer.y, point.x, point.y, e.ctrlKey || e.metaKey || e.shiftKey);
-                  }}
-                  onDoubleClick={(e) => {
-                    if (isReadOnly) return;
-                    e.stopPropagation();
-                    setEditingId(layer.id);
-                    setEditValue(layer.id.split("-").slice(0, -1).join("-") || layer.id);
-                  }}
-                  className={isReadOnly ? '' : 'cursor-move'}
-                  onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(layer.id, e); }}
-                />
-                
-                {layer.type !== "zone" && layer.type !== "frame" && (
-                  editingId === layer.id ? (
-                    <foreignObject x={5} y={layer.height / 2 - 12} width={layer.width - 10} height={24}>
-                      <input
-                        autoFocus
-                        className="w-full h-full text-[10px] text-center font-bold border border-blue-500 outline-none rounded bg-white text-black z-50 shadow-md"
-                        style={{ pointerEvents: 'auto' }}
-                        value={editValue}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={() => handleFinishEdit(layer.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleFinishEdit(layer.id);
-                          if (e.key === 'Escape') setEditingId(null);
-                        }}
-                      />
-                    </foreignObject>
-                  ) : (
-                    <text
-                      x={layer.width / 2}
-                      y={layer.height / 2}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill="white"
-                      className="text-xs font-bold pointer-events-none"
-                    >
-                      {layer.id.split("-").slice(0, -1).join("-") || layer.id}
-                    </text>
-                  )
-                )}
-                
-                {!isReadOnly && (
-                  <>
-                    <circle cx={layer.width - 6} cy={6} r={5} fill="#EF4444" className="cursor-pointer hover:fill-red-700" onClick={(e) => { e.stopPropagation(); onDeleteItem?.(layer.id); }} />
-                    <text x={layer.width - 6} y={6} textAnchor="middle" dominantBaseline="middle" fill="white" className="text-xs font-bold pointer-events-none">×</text>
-                    <rect x={layer.width - 7.5} y={layer.height - 7.5} width={10} height={10} rx={7} fill="white" stroke="#374151" className="cursor-se-resize" onMouseDown={(e) => { e.stopPropagation(); const point = getMousePosition(e); if (point) onResizeStart?.(layer.id, point.x, point.y); }} />
-                  </>
-                )}
-              </g>
-            ))}
+          {/* Renderizado de capas de fondo (zonas, marcos) - SE RENDERIZAN PRIMERO */}
+          {bgLayers.map(layer => (
+            // Grupo SVG para cada capa de fondo
+            <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
+              {/* Rectángulo de la capa de fondo con color según tipo */}
+              {(() => {
+                const isActive = activeItemId === layer.id;
+                const isSelected = selectedIds.includes(layer.id) || selectedId === layer.id;
+                return (
+                  <rect
+                    width={layer.width}
+                    height={layer.height}
+                    fill={getFillColor(layer)}
+                    rx={6} // Bordes más redondeados para zonas
+                    stroke={isActive ? '#0284c7' : isSelected ? '#3B82F6' : undefined}
+                    strokeWidth={isActive ? 3 : 2}
+                    onMouseDown={isReadOnly ? undefined : (e) => {
+                      e.stopPropagation();
+                      if (e.button === 2) return;
 
-            {items.map(item => (
-              <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
-                <rect
-                  width={item.width}
-                  height={item.height}
-                  fill={getFillColor(item)}
-                  rx={8}
-                  stroke={selectedIds.includes(item.id) || selectedId === item.id ? "#3B82F6" : "none"}
-                  strokeWidth={2}
-                  onMouseDown={isReadOnly ? undefined : (e) => {
-                    if (editingId === item.id) return;
-                    e.stopPropagation();
-                    const point = getMousePosition(e);
-                    if (point) {
-                      onSelect?.(item.id, e.ctrlKey || e.metaKey || e.shiftKey); 
-                      onMouseDown(item.id, point.x - item.x, point.y - item.y, point.x, point.y, e.ctrlKey || e.metaKey || e.shiftKey);
-                    }
-                  }}
-                  onDoubleClick={(e) => {
-                    if (isReadOnly) return;
-                    e.stopPropagation();
-                    setEditingId(item.id);
-                    setEditValue(item.id);
-                  }}
-                  className={isReadOnly ? 'cursor-pointer' : 'cursor-move'}
-                  onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(item.id, e); }}
-                />
+                      if (!svgRef.current) return;
+                      const container = svgRef.current.parentElement;
+                      if (!container) return;
 
-                {editingId === item.id ? (
-                  <foreignObject x={5} y={item.height / 2 - 12} width={item.width - 10} height={24}>
-                    <input
-                      autoFocus
-                      className="w-full h-full text-[10px] text-center font-bold border border-blue-500 outline-none rounded bg-white text-black z-50 shadow-md"
-                      style={{ pointerEvents: 'auto' }}
-                      value={editValue}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => handleFinishEdit(item.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleFinishEdit(item.id);
-                        if (e.key === 'Escape') setEditingId(null);
+                      const rect = container.getBoundingClientRect();
+                      const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                      const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                      
+                      const offsetX = mouseX - layer.x;
+                      const offsetY = mouseY - layer.y;
+                      const appendToSelection = e.ctrlKey || e.metaKey || e.shiftKey;
+                      
+                      onSelect?.(layer.id, appendToSelection);
+                      onMouseDown(layer.id, offsetX, offsetY, mouseX, mouseY, appendToSelection);
+                    }} // Iniciar arrastre
+                    className={isReadOnly ? '' : 'cursor-move'} // Cursor de movimiento
+                    onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(layer.id, e); }}
+                  />
+                );
+              })()}
+              {/* Texto con el ID del elemento centrado tambien sentencias de que los tres objetos tienen nombre y 2 sin */}
+              {layer.type !== "zone" && layer.type !== "frame" && (
+              <text
+                x={layer.width / 2}
+                y={layer.height / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="white"
+                className="text-xs font-bold pointer-events-none"
+              >
+                {layer.id.split("-").slice(0, -1).join("-")}
+              </text>
+            )}
+              
+              {/* Botón de eliminar (X) en la esquina superior derecha */}
+              {!isReadOnly && (
+                <>
+                  <circle
+                    cx={layer.width - 6}
+                    cy={6}
+                    r={5}
+                    fill="#EF4444"
+                    className="cursor-pointer hover:fill-red-700 transition"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteItem?.(layer.id);
+                    }}
+                  />
+                  <text
+                    x={layer.width - 6}
+                    y={6}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    className="text-xs font-bold pointer-events-none select-none"
+                  >
+                    ×
+                  </text>
+                </>
+              )}
+
+              {/* Handle de redimensionamiento (esquina inferior derecha) */}
+              {!isReadOnly && (
+                <rect
+                  x={layer.width - 7.5}
+                  y={layer.height - 7.5}
+                  width={10}
+                  height={10}
+                  rx={7}
+                  fill="white"
+                  stroke="#374151"
+                  strokeWidth={1}
+                  className="cursor-se-resize"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    if (!svgRef.current) return;
+                    const container = svgRef.current.parentElement;
+                    if (!container) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                    const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                    
+                    // Fíjate que quitamos la "e" de aquí adentro
+                    onResizeStart?.(layer.id, mouseX, mouseY);
+                  }}
+                />
+              )}
+            </g>
+          ))}
+
+          {/* Renderizado de escritorios/items en el mapa */}
+          {items.map(item => (
+            // Grupo SVG para cada elemento
+            <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
+              {/* Rectángulo del elemento: verde si OK, rojo si tiene reportes */}
+              {(() => {
+                return (
+                  <rect
+                    width={item.width}
+                    height={item.height}
+                    fill={getFillColor(item)}
+                    rx={8} // Bordes redondeados
+                    stroke={selectedIds.includes(item.id) || selectedId === item.id ? "#3B82F6" : "none"}
+                    strokeWidth={selectedIds.includes(item.id) || selectedId === item.id ? 2 : 0}
+                    onMouseDown={isReadOnly ? undefined : (e) => {
+                      e.stopPropagation();
+                      if (e.button === 2) return;
+                      
+                      if (!svgRef.current) return;
+                      const container = svgRef.current.parentElement;
+                      if (!container) return;
+
+                      const rect = container.getBoundingClientRect();
+                      const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                      const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                      
+                      const offsetX = mouseX - item.x;
+                      const offsetY = mouseY - item.y;
+                      const appendToSelection = e.ctrlKey || e.metaKey || e.shiftKey;
+                      
+                      // Seleccionamos el objeto y luego iniciamos el arrastre
+                      onSelect?.(item.id, appendToSelection); 
+                      onMouseDown(item.id, offsetX, offsetY, mouseX, mouseY, appendToSelection);
+                    
+
+                    }} // Iniciar arrastre
+                    onClick={isReadOnly ? () => onItemClick?.(item.id) : undefined}
+                    className={isReadOnly ? 'cursor-pointer' : 'cursor-move'} // Cursor de movimiento
+                    onContextMenu={isReadOnly ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(item.id, e); }}
+                  />
+                );
+              })()}
+              {/* Texto con el ID del elemento centrado */}
+              <text
+                x={item.width / 2}
+                y={item.height / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="white"
+                className="text-[10px] font-bold pointer-events-none"
+              >
+                {item.id}
+              </text>
+
+              {/* Botón de eliminar (X) en la esquina superior derecha */}
+              {!isReadOnly && (
+                <>
+                  <circle
+                    cx={item.width - 6}
+                    cy={6}
+                    r={5}
+                    fill="#EF4444"
+                    className="cursor-pointer hover:fill-red-700 transition"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteItem?.(item.id);
+                    }}
+                  />
+                  <text
+                    x={item.width - 6}
+                    y={6}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    className="text-xs font-bold pointer-events-none select-none"
+                  >
+                    ×
+                  </text>
+                </>
+              )}
+
+              {/* Solo mostramos herramientas de edición si NO estamos en modo lectura */}
+              {selectedId === item.id && !isReadOnly && (
+                <>
+                  {/* Botón de eliminar (X) */}
+                  <circle
+                    cx={item.width - 6}
+                    cy={6}
+                    r={8}
+                    fill="#EF4444"
+                    className="cursor-pointer hover:fill-red-600 transition"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Evita seleccionar el fondo
+                      onDeleteItem?.(item.id);
+                    }}
+                  />
+                  <text
+                    x={item.width - 6}
+                    y={6}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    className="text-xs font-bold pointer-events-none select-none"
+                  >
+                    ×
+                  </text>
+
+                  {/* Handle de redimensionamiento (esquina inferior derecha) */}
+                  {item.type !== 'desk' && (
+                    <rect
+                      x={item.width - 8}
+                      y={item.height - 8}
+                      width={12}
+                      height={12}
+                      rx={2}
+                      fill="#3B82F6"
+                      stroke="white"
+                      className="cursor-se-resize"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        if (!svgRef.current) return;
+                        const container = svgRef.current.parentElement;
+                        if (!container) return;
+                        const rect = container.getBoundingClientRect();
+                        const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
+                        const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
+                        onResizeStart?.(item.id, mouseX, mouseY);
                       }}
                     />
-                  </foreignObject>
-                ) : (
-                  <text x={item.width / 2} y={item.height / 2} textAnchor="middle" dominantBaseline="middle" fill="white" className="text-[10px] font-bold pointer-events-none">
-                    {item.id}
-                  </text>
-                )}
+                  )}
+                </>
+              )}
+            </g>
+          ))}
 
-                {!isReadOnly && (
-                  <>
-                    <circle cx={item.width - 6} cy={6} r={5} fill="#EF4444" className="cursor-pointer hover:fill-red-700" onClick={(e) => { e.stopPropagation(); onDeleteItem?.(item.id); }} />
-                    <text x={item.width - 6} y={6} textAnchor="middle" dominantBaseline="middle" fill="white" className="text-xs font-bold pointer-events-none">×</text>
-                    {(selectedId === item.id || selectedIds.includes(item.id)) && item.type !== 'desk' && (
-                      <rect x={item.width - 8} y={item.height - 8} width={12} height={12} rx={2} fill="#3B82F6" stroke="white" className="cursor-se-resize" onMouseDown={(e) => { e.stopPropagation(); const point = getMousePosition(e); if (point) onResizeStart?.(item.id, point.x, point.y); }} />
-                    )}
-                  </>
-                )}
+          {smartGuides.lines.map((line, index) => (
+            <line
+              key={`smart-guide-line-${index}`}
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              stroke="#9333EA"
+              strokeWidth={line.kind === 'alignment' ? 1.75 : 1.25}
+              strokeDasharray={line.kind === 'alignment' ? undefined : '5 4'}
+              pointerEvents="none"
+            />
+          ))}
+
+          {smartGuides.labels.map((label, index) => {
+            const boxWidth = Math.max(40, label.text.length * 7 + 12);
+            return (
+              <g key={`smart-guide-label-${index}`} pointerEvents="none">
+                <rect
+                  x={label.x - boxWidth / 2}
+                  y={label.y - 11}
+                  width={boxWidth}
+                  height={18}
+                  rx={6}
+                  fill="#F3E8FF"
+                  stroke="#C084FC"
+                  strokeWidth={1}
+                />
+                <text
+                  x={label.x}
+                  y={label.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#6B21A8"
+                  style={{ fontSize: 10, fontWeight: 700 }}
+                >
+                  {label.text}
+                </text>
               </g>
-            ))}
+            );
+          })}
 
-            {smartGuides.lines.map((line, index) => (
-              <line key={`guide-${index}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#9333EA" strokeWidth={line.kind === 'alignment' ? 1.75 : 1.25} strokeDasharray={line.kind === 'alignment' ? undefined : '5 4'} pointerEvents="none" />
-            ))}
-
-            {smartGuides.labels.map((label, index) => {
-              const boxWidth = Math.max(40, label.text.length * 7 + 12);
-              return (
-                <g key={`label-${index}`} pointerEvents="none">
-                  <rect x={label.x - boxWidth / 2} y={label.y - 11} width={boxWidth} height={18} rx={6} fill="#F3E8FF" stroke="#C084FC" strokeWidth={1} />
-                  <text x={label.x} y={label.y} textAnchor="middle" dominantBaseline="middle" fill="#6B21A8" style={{ fontSize: 10, fontWeight: 700 }}>{label.text}</text>
-                </g>
-              );
-            })}
-
-            {isSelecting && (
-              (() => {
-                const rect = getSelectionRect();
-                return rect ? <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="rgba(59, 130, 246, 0.12)" stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 4" pointerEvents="none" /> : null;
-              })()
-            )}
+          {(() => {
+            const rect = getSelectionRect();
+            if (!rect || !isSelecting) return null;
+            return (
+              <rect
+                x={rect.x}
+                y={rect.y}
+                width={rect.width}
+                height={rect.height}
+                fill="rgba(59, 130, 246, 0.12)"
+                stroke="#2563EB"
+                strokeWidth={1.5}
+                strokeDasharray="6 4"
+                pointerEvents="none"
+              />
+            );
+          })()}
           </g>
         </svg>
       </div>

@@ -61,7 +61,8 @@ import {
 } from '../components/OfficeMap';
 import TicketForm from '../components/TicketForm';
 import { Button } from '../components/ui/button';
-  import { Badge } from '../components/ui/badge';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -847,22 +848,6 @@ export default function OfficeMap() {
     handleDeleteItem(id);
     closeContextMenu();
   };
-
-
-  const handleRenameItem = useCallback((id: string, newName: string) => {
-  pushHistorySnapshot();
-
-  setDesks(prev =>
-    prev.map(d => (d.id === id ? { ...d, id: newName } : d))
-  );
-  if (selectedId === id) setSelectedId(newName);
-  setSelectedIds(prev => prev.map(sid => (sid === id ? newName : sid)));
-
-  toast.success('Element renamed', {
-    description: `New name: ${newName}`,
-    duration: 2000,
-  });
-}, [pushHistorySnapshot, selectedId]);
   const moveToFront = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => {
@@ -1037,12 +1022,10 @@ export default function OfficeMap() {
     const toCanvasY = (value: number) => (value / 100) * BASE_CANVAS_HEIGHT;
 
     let cancelled = false;
-    let isFirstLoad = true;
 
     const loadSelectedMap = async () => {
       try {
-        // Solo mostrar spinner en la carga inicial, no en refreshes periódicos
-        if (isFirstLoad) setLoadingMap(true);
+        setLoadingMap(true);
         const mapData = await apiService.getMapByZone(currentZoneId);
 
         const mappedStations = mapData.stations.map((station) => {
@@ -1091,19 +1074,17 @@ export default function OfficeMap() {
       } finally {
         if (!cancelled) {
           setLoadingMap(false);
-          isFirstLoad = false;
         }
       }
     };
 
-    // Carga inicial del mapa
     loadSelectedMap();
 
-    // Auto-refresh SOLO para empleados (isViewOnly). El modo 'view' del admin
-    // no necesita polling: el admin ya tiene los datos en memoria y el polling
-    // causaba un parpadeo molesto al resetear setLoadingMap(true) cada 5 seg.
-    const intervalId = isViewOnly
-      ? window.setInterval(loadSelectedMap, 30000)
+    const shouldAutoRefresh = isViewOnly || activeMode === 'view';
+    const intervalId = shouldAutoRefresh
+      ? window.setInterval(() => {
+          loadSelectedMap();
+        }, 5000)
       : null;
 
     return () => {
@@ -1526,200 +1507,161 @@ export default function OfficeMap() {
   );
 
   if (isViewOnly) {
-    // Bounding box de todos los elementos placed para fit-to-content
-    const allPlacedView = desks.filter(d => d.placed && d.x != null && d.y != null);
-    const VIEW_PAD_EMP = 60;
-    const viewBBoxEmp = allPlacedView.length > 0
-      ? (() => {
-          const minX = Math.min(...allPlacedView.map(d => d.x ?? 0)) - VIEW_PAD_EMP;
-          const minY = Math.min(...allPlacedView.map(d => d.y ?? 0)) - VIEW_PAD_EMP;
-          const maxX = Math.max(...allPlacedView.map(d => (d.x ?? 0) + (d.width ?? 0))) + VIEW_PAD_EMP;
-          const maxY = Math.max(...allPlacedView.map(d => (d.y ?? 0) + (d.height ?? 0))) + VIEW_PAD_EMP;
-          return { minX, minY, w: maxX - minX, h: maxY - minY };
-        })()
-      : { minX: 0, minY: 0, w: BASE_CANVAS_WIDTH, h: BASE_CANVAS_HEIGHT };
-
-    const getEmpFillColor = (item: typeof allPlacedView[0]): string => {
-      if (item.type === 'desk') {
-        const status = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
-        if (status === 'Not available') return '#EF4444';
-        if (status === 'Available with issues') return '#F97316';
-        return '#22C55E';
-      }
-      switch (item.type) {
-        case 'zone': return '#6B7280';
-        case 'frame': return 'rgba(156,163,175,0.5)';
-        case 'store': return '#F59E0B';
-        case 'management': return '#EAB308';
-        case 'entrance': return '#3B82F6';
-        default: return '#22C55E';
-      }
-    };
-
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col p-6 gap-4">
-
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
-            <p className="text-sm text-gray-600">Read-only office layout view</p>
-          </div>
-          <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
-        </div>
-
-        {/* Filtros: location + floor en fila horizontal compacta */}
-        <div className="shrink-0 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4">
-          <div className="space-y-1 min-w-[200px]">
-            <label htmlFor="empViewLocation" className="text-sm font-medium text-slate-700">Location</label>
-            <Select
-              value={selectedViewLocationId}
-              onValueChange={(value) => {
-                setSelectedViewLocationId(value);
-                setSelectedViewFloorId('');
-              }}
-              disabled={loadingViewMetadata}
-            >
-              <SelectTrigger id="empViewLocation" className="h-10 rounded-xl border-slate-200 bg-slate-50 shadow-none">
-                <SelectValue placeholder={loadingViewMetadata ? 'Loading...' : 'Select a location'} />
-              </SelectTrigger>
-              <SelectContent>
-                {viewLocations.map((location) => (
-                  <SelectItem key={location.id_location} value={String(location.id_location)}>
-                    {location.location_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
+        <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-7xl flex-col gap-4 overflow-hidden">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
+              <p className="text-sm text-gray-600">Read-only office layout view</p>
+            </div>
+            <Button variant="outline" onClick={handleBackToMenu}>B  ack</Button>
           </div>
 
-          <div className="space-y-1 min-w-[180px]">
-            <label htmlFor="empViewFloor" className="text-sm font-medium text-slate-700">Floor</label>
-            <Select
-              value={selectedViewFloorId}
-              onValueChange={setSelectedViewFloorId}
-              disabled={!selectedViewLocationId || loadingViewMetadata}
-            >
-              <SelectTrigger id="empViewFloor" className="h-10 rounded-xl border-slate-200 bg-slate-50 shadow-none">
-                <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableViewFloors.map((floor) => (
-                  <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
-                    {floor.floor_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <Card className="border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+              <CardContent className="pt-6 space-y-5">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Map Filter
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Choose the office area you want to inspect.
+                  </p>
+                </div>
 
-          {/* Leyenda de colores inline */}
-          {currentZoneId && allPlacedView.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 ml-auto text-xs text-slate-600">
-              {[
-                { color: '#22C55E', label: 'Available' },
-                { color: '#F97316', label: 'Issues' },
-                { color: '#EF4444', label: 'Not available' },
-                { color: '#6B7280', label: 'Zone' },
-              ].map(({ color, label }) => (
-                <span key={label} className="flex items-center gap-1.5">
-                  <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ background: color }} />
-                  {label}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Mapa fit-to-content — ocupa todo el espacio restante */}
-        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" style={{ minHeight: '400px' }}>
-          {loadingMap && (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              Loading map...
-            </div>
-          )}
-
-          {!loadingMap && !currentZoneId && (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
-                <p className="mt-1 text-sm text-slate-400">The map will be displayed here.</p>
-              </div>
-            </div>
-          )}
-
-          {!loadingMap && currentZoneId && allPlacedView.length === 0 && (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">No elements placed</p>
-                <p className="mt-1 text-sm text-slate-400">This floor has no elements added to the map yet.</p>
-              </div>
-            </div>
-          )}
-
-          {!loadingMap && currentZoneId && allPlacedView.length > 0 && (
-            <svg
-              width="100%"
-              height="100%"
-              viewBox={`${viewBBoxEmp.minX} ${viewBBoxEmp.minY} ${viewBBoxEmp.w} ${viewBBoxEmp.h}`}
-              preserveAspectRatio="xMidYMid meet"
-              style={{ display: 'block', minHeight: '400px' }}
-            >
-              {/* Fondo limpio */}
-              <rect
-                x={viewBBoxEmp.minX} y={viewBBoxEmp.minY}
-                width={viewBBoxEmp.w} height={viewBBoxEmp.h}
-                fill="#f8fafc"
-              />
-
-              {/* Capas de fondo (zonas, frames, store, etc.) primero */}
-              {bgLayers.map(layer => (
-                <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
-                  <rect
-                    width={layer.width} height={layer.height}
-                    fill={getEmpFillColor(layer)} rx={6}
-                  />
-                  {layer.type !== 'zone' && layer.type !== 'frame' && (
-                    <text
-                      x={layer.width / 2} y={layer.height / 2}
-                      textAnchor="middle" dominantBaseline="middle"
-                      fill="white"
-                      fontSize={Math.max(10, Math.min(14, layer.height * 0.2))}
-                      fontWeight="bold"
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {layer.id.split('-').slice(0, -1).join('-')}
-                    </text>
-                  )}
-                </g>
-              ))}
-
-              {/* Escritorios encima — clickeables para ver tickets */}
-              {items.map(item => (
-                <g
-                  key={item.id}
-                  transform={`translate(${item.x}, ${item.y})`}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleDeskClick(item.id)}
-                >
-                  <rect
-                    width={item.width} height={item.height}
-                    fill={getEmpFillColor(item)} rx={6}
-                  />
-                  <text
-                    x={item.width / 2} y={item.height / 2}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="white"
-                    fontSize={Math.max(8, Math.min(11, item.height * 0.25))}
-                    fontWeight="bold"
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                <div className="space-y-2">
+                  <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-700">
+                    Location
+                  </label>
+                  <Select
+                    value={selectedViewLocationId}
+                    onValueChange={(value) => {
+                      setSelectedViewLocationId(value);
+                      setSelectedViewFloorId('');
+                    }}
+                    disabled={loadingViewMetadata}
                   >
-                    {item.id}
-                  </text>
-                </g>
-              ))}
-            </svg>
-          )}
+                    <SelectTrigger
+                      id="employeeViewLocation"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                    >
+                      <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {viewLocations.map((location) => (
+                        <SelectItem key={location.id_location} value={String(location.id_location)}>
+                          {location.location_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-700">
+                    Floor
+                  </label>
+                  <Select
+                    value={selectedViewFloorId}
+                    onValueChange={setSelectedViewFloorId}
+                    disabled={!selectedViewLocationId || loadingViewMetadata}
+                  >
+                    <SelectTrigger
+                      id="employeeViewFloor"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                    >
+                      <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableViewFloors.map((floor) => (
+                        <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
+                          {floor.floor_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 text-sm text-slate-600">
+                  <p className="font-medium text-slate-700">Read-only view</p>
+                  <p className="mt-1 leading-6">
+                    Select a location and floor to view the office layout. You can inspect the map and use zoom, but not edit anything.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="h-120 relative">
+              {currentZoneId ? (
+                <>
+                  <MapCanvas
+                    items={items}
+                    bgLayers={bgLayers}                
+                    inventory={inventory}
+                    CANVAS_WIDTH={canvasSize.width}
+                    CANVAS_HEIGHT={canvasSize.height}
+                    onDrop={handleSvgDrop}
+                    onMouseMove={handleMouseMove}
+                    onMouseDown={handleCanvasMouseDown}
+                    onResizeStart={handleResizeStart}
+                    onDeleteItem={handleDeleteItem}
+                    onContextMenu={handleItemContextMenu}
+                    onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
+                    onSelect={handleSelectItem}
+                    onMarqueeSelection={handleMarqueeSelection}
+                    selectedId={selectedId}
+                    selectedIds={selectedIds}
+                    smartGuides={EMPTY_SMART_GUIDES}
+                    scale={scale}
+                    isReadOnly={true}
+                    activeItemId={(draggingId || resizingId || selectedId) || undefined}
+                    onItemClick={handleDeskClick}
+                  />
+                  {contextMenu && (
+                    <div
+                      className="fixed bg-white border shadow-md rounded z-50 text-sm"
+                      style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
+                    >
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => deleteItem(contextMenu.id)}>Delete</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveForward(contextMenu.id)}>Bring forward</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveBackward(contextMenu.id)}>Send backward</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToFront(contextMenu.id)}>Bring to front</button>
+                      <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToBack(contextMenu.id)}>Send to back</button>
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+                      onClick={handleZoomIn}
+                      aria-label="Zoom in"
+                      title="Zoom in"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+                      onClick={handleZoomOut}
+                      aria-label="Zoom out"
+                      title="Zoom out"
+                    >
+                      −
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white text-center shadow-sm">
+                  <div>
+                    <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
+                    <p className="mt-2 text-sm text-slate-500">The map will be displayed here.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {deskStatusDialog}
@@ -1744,45 +1686,18 @@ export default function OfficeMap() {
     );
   }
 
-  // Si el modo es 'view', mostrar el mapa completo ajustado automáticamente (fit-to-content)
+  // Si el modo es 'view', mostrar solo el canvas sin sidebars
   if (activeMode === 'view') {
-    // Calcular el bounding box de todos los elementos placed para hacer fit-to-content
-    const allPlaced = desks.filter(d => d.placed && d.x != null && d.y != null);
-    const VIEW_PAD = 60;
-    const viewBBox = allPlaced.length > 0
-      ? (() => {
-          const minX = Math.min(...allPlaced.map(d => d.x ?? 0)) - VIEW_PAD;
-          const minY = Math.min(...allPlaced.map(d => d.y ?? 0)) - VIEW_PAD;
-          const maxX = Math.max(...allPlaced.map(d => (d.x ?? 0) + (d.width ?? 0))) + VIEW_PAD;
-          const maxY = Math.max(...allPlaced.map(d => (d.y ?? 0) + (d.height ?? 0))) + VIEW_PAD;
-          return { minX, minY, w: maxX - minX, h: maxY - minY };
-        })()
-      : { minX: 0, minY: 0, w: BASE_CANVAS_WIDTH, h: BASE_CANVAS_HEIGHT };
-
-    const getViewFillColor = (item: typeof allPlaced[0]): string => {
-      if (item.type === 'desk') {
-        const status = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
-        if (status === 'Not available') return '#EF4444';
-        if (status === 'Available with issues') return '#F97316';
-        return '#22C55E';
-      }
-      switch (item.type) {
-        case 'zone': return '#6B7280';
-        case 'frame': return 'rgba(156,163,175,0.5)';
-        case 'store': return '#F59E0B';
-        case 'management': return '#EAB308';
-        case 'entrance': return '#3B82F6';
-        default: return '#22C55E';
-      }
-    };
-
     return (
-      <div className="p-6 bg-gray-50 min-h-screen select-none flex flex-col gap-4">
+      <div className="p-6 bg-gray-50 min-h-screen select-none flex flex-col gap-4"
+           onMouseUp={handleMouseUp}>
 
+        {/* Header simple */}
         <div className="shrink-0">
           <OfficeMapHeader />
         </div>
 
+        {/* Leyenda */}
         <div className="shrink-0">
           <MapLegend
             onModeChange={handleModeChange}
@@ -1793,7 +1708,6 @@ export default function OfficeMap() {
           />
         </div>
 
-        {/* Filtros de ubicación y piso */}
         <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-3 space-y-3">
           <div className="max-w-md">
             <label htmlFor="adminViewLocationFilter" className="text-sm font-medium text-slate-700">
@@ -1828,6 +1742,7 @@ export default function OfficeMap() {
                     {adminAvailableFloors.map((floor) => {
                       const floorId = String(floor.id_floor);
                       const isActive = adminSelectedFloorId === floorId;
+
                       return (
                         <button
                           key={floor.id_floor}
@@ -1857,106 +1772,77 @@ export default function OfficeMap() {
           </div>
         </div>
 
-        {/* Mapa estático fit-to-content */}
-        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          {loadingMap && (
-            <div className="flex h-64 items-center justify-center text-sm text-slate-400">
-              Loading map...
-            </div>
-          )}
-          {!loadingMap && !currentZoneId && (
-            <div className="flex h-64 items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
-                <p className="mt-1 text-sm text-slate-400">The map will be displayed here.</p>
-              </div>
-            </div>
-          )}
-          {!loadingMap && currentZoneId && allPlaced.length === 0 && (
-            <div className="flex h-64 items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">No elements placed</p>
-                <p className="mt-1 text-sm text-slate-400">This floor has no elements added to the map yet.</p>
-              </div>
-            </div>
-          )}
-          {!loadingMap && currentZoneId && allPlaced.length > 0 && (
-            <svg
-              width="100%"
-              height="100%"
-              viewBox={`${viewBBox.minX} ${viewBBox.minY} ${viewBBox.w} ${viewBBox.h}`}
-              preserveAspectRatio="xMidYMid meet"
-              style={{ display: 'block', minHeight: '420px' }}
+        {/* Canvas a pantalla completa */}
+        <div className="h-120 flex gap-6 relative">
+          <MapCanvas
+            items={items}
+            bgLayers={bgLayers}
+            inventory={inventory}
+            CANVAS_WIDTH={canvasSize.width}
+            CANVAS_HEIGHT={canvasSize.height}
+            onDrop={handleSvgDrop}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleCanvasMouseDown}
+            onResizeStart={handleResizeStart}
+            onDeleteItem={handleDeleteItem}
+            onContextMenu={handleItemContextMenu}
+            onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
+            onSelect={handleSelectItem}
+            onMarqueeSelection={handleMarqueeSelection}
+            selectedId={selectedId}
+            selectedIds={selectedIds}
+            smartGuides={EMPTY_SMART_GUIDES}
+            scale={scale}
+            isReadOnly={true}
+            activeItemId={(draggingId || resizingId || selectedId) || undefined}
+            onItemClick={handleDeskClick}
+          />
+          {contextMenu && (
+            <div
+              className="fixed bg-white border shadow-md rounded z-50 text-sm"
+              style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
+              onMouseLeave={closeContextMenu}
             >
-              <rect x={viewBBox.minX} y={viewBBox.minY} width={viewBBox.w} height={viewBBox.h} fill="#f8fafc" />
-              {bgLayers.map(layer => (
-                <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
-                  <rect width={layer.width} height={layer.height} fill={getViewFillColor(layer)} rx={6} />
-                  {layer.type !== 'zone' && layer.type !== 'frame' && (
-                    <text
-                      x={layer.width / 2} y={layer.height / 2}
-                      textAnchor="middle" dominantBaseline="middle"
-                      fill="white"
-                      fontSize={Math.max(10, Math.min(14, layer.height * 0.2))}
-                      fontWeight="bold"
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {layer.id.split('-').slice(0, -1).join('-')}
-                    </text>
-                  )}
-                </g>
-              ))}
-              {items.map(item => (
-                <g
-                  key={item.id}
-                  transform={`translate(${item.x}, ${item.y})`}
-                  className="cursor-pointer"
-                  onClick={() => handleDeskClick(item.id)}
-                >
-                  <rect width={item.width} height={item.height} fill={getViewFillColor(item)} rx={6} />
-                  <text
-                    x={item.width / 2} y={item.height / 2}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="white"
-                    fontSize={Math.max(8, Math.min(12, item.height * 0.25))}
-                    fontWeight="bold"
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}
-                  >
-                    {item.id}
-                  </text>
-                </g>
-              ))}
-            </svg>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => deleteItem(contextMenu.id)}>Delete</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveForward(contextMenu.id)}>Bring forward</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveBackward(contextMenu.id)}>Send backward</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToFront(contextMenu.id)}>Bring to front</button>
+              <button className="block px-3 py-1 w-full text-left hover:bg-gray-100" onClick={() => moveToBack(contextMenu.id)}>Send to back</button>
+            </div>
           )}
-        </div>
 
-        {/* Leyenda de colores */}
-        {!loadingMap && currentZoneId && allPlaced.length > 0 && (
-          <div className="shrink-0 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700 text-sm">Legend:</span>
-            {[
-              { color: '#22C55E', label: 'Available' },
-              { color: '#F97316', label: 'Available with issues' },
-              { color: '#EF4444', label: 'Not available' },
-              { color: '#6B7280', label: 'Zone' },
-              { color: 'rgba(156,163,175,0.5)', label: 'Frame', border: true },
-              { color: '#F59E0B', label: 'Store area' },
-              { color: '#EAB308', label: 'Management' },
-              { color: '#3B82F6', label: 'Entrance' },
-            ].map(({ color, label, border }) => (
-              <span key={label} className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-sm" style={{ background: color, border: border ? '1px solid #9CA3AF' : undefined }} />
-                {label}
-              </span>
-            ))}
+          {/* Botones de zoom en la esquina inferior derecha */}
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomIn}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              onClick={handleZoomOut}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
           </div>
-        )}
+        </div>
 
         {deskStatusDialog}
         {deskTicketDetailsDialog}
+
         {showDeskTicketForm && selectedDeskForTicket && user?.id && (
           <TicketForm
-            onClose={() => { setShowDeskTicketForm(false); setSelectedDeskForTicket(null); }}
+            onClose={() => {
+              setShowDeskTicketForm(false);
+              setSelectedDeskForTicket(null);
+            }}
             userId={String(user.id)}
             userName={user.name || ''}
             presetStationId={selectedDeskForTicket}
@@ -2045,7 +1931,6 @@ export default function OfficeMap() {
             onMouseDown={handleCanvasMouseDown}
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
-            onRenameItem={handleRenameItem}
             onContextMenu={handleItemContextMenu}
             onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
             onSelect={handleSelectItem}
@@ -2056,7 +1941,6 @@ export default function OfficeMap() {
             scale={scale}
             isReadOnly={false}
             activeItemId={(draggingId || resizingId || selectedId) || undefined}
-           
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
@@ -2084,36 +1968,6 @@ export default function OfficeMap() {
 
         {/* Tip */}
         <TipBox />
-
-        {/* Context Menu de jerarquía (click derecho sobre elemento) */}
-        {contextMenu && (
-          <div
-            className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 min-w-[180px]"
-            style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="px-3 py-1.5 text-xs font-semibold text-black-400 uppercase tracking-wider border-b border-slate-100 mb-1 ">
-              Layer order
-            </div>
-            <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveToFront(contextMenu.id)}>
-              <span className="text-base">🡩</span> Bring to front
-            </button>
-            <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveForward(contextMenu.id)}>
-              <span className="text-base">🡡</span> Move forward
-            </button>
-            <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveBackward(contextMenu.id)}>
-              <span className="text-base">🡣</span> Move backward
-            </button>
-            <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveToBack(contextMenu.id)}>
-              <span className="text-base">🡫</span> Send to back
-            </button>
-            <div className="border-t border-slate-100 mt-1">
-              <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" onClick={() => deleteItem(contextMenu.id)}>
-                <span className="text-base">✕</span> Delete
-              </button>
-            </div>
-          </div>
-        )}
 
       </div>
     );
