@@ -507,6 +507,12 @@ export default function MapCanvas({
           {items.map(item => (
             // Grupo SVG para cada elemento
             <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
+              {/* ClipPath para evitar desbordamiento de texto */}
+              <defs>
+                <clipPath id={`clip-${item.id}`}>
+                  <rect width={item.width} height={item.height} rx={8} />
+                </clipPath>
+              </defs>
               {/* Rectángulo del elemento: verde si OK, rojo si tiene reportes */}
               {(() => {
                 return (
@@ -545,14 +551,17 @@ export default function MapCanvas({
                   />
                 );
               })()}
-              {/* Texto con el ID del elemento centrado */}
+              {/* Texto con el ID del elemento — recortado dentro del rectángulo */}
               <text
                 x={item.width / 2}
                 y={item.height / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fill="white"
-                className="text-[10px] font-bold pointer-events-none"
+                fontSize={Math.max(7, Math.min(10, item.width / (item.id.length * 0.65)))}
+                fontWeight="bold"
+                clipPath={`url(#clip-${item.id})`}
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
                 {item.id}
               </text>
