@@ -61,7 +61,7 @@ import {
 } from '../components/OfficeMap';
 import TicketForm from '../components/TicketForm';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+  import { Badge } from '../components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -79,7 +79,6 @@ import {
   TicketResponseDto,
 } from '../utils/api';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
-
 
 // Objetos por defecto disponibles para agregar al mapa
 // Incluye zonas, marcos, áreas de tienda, gestión y entrada
@@ -848,6 +847,22 @@ export default function OfficeMap() {
     handleDeleteItem(id);
     closeContextMenu();
   };
+
+
+  const handleRenameItem = useCallback((id: string, newName: string) => {
+  pushHistorySnapshot();
+
+  setDesks(prev =>
+    prev.map(d => (d.id === id ? { ...d, id: newName } : d))
+  );
+  if (selectedId === id) setSelectedId(newName);
+  setSelectedIds(prev => prev.map(sid => (sid === id ? newName : sid)));
+
+  toast.success('Element renamed', {
+    description: `New name: ${newName}`,
+    duration: 2000,
+  });
+}, [pushHistorySnapshot, selectedId]);
   const moveToFront = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => {
@@ -2030,6 +2045,7 @@ export default function OfficeMap() {
             onMouseDown={handleCanvasMouseDown}
             onResizeStart={handleResizeStart}
             onDeleteItem={handleDeleteItem}
+            onRenameItem={handleRenameItem}
             onContextMenu={handleItemContextMenu}
             onCanvasClick={() => { setSelectedId(null); setSelectedIds([]); closeContextMenu(); }}
             onSelect={handleSelectItem}
@@ -2040,7 +2056,7 @@ export default function OfficeMap() {
             scale={scale}
             isReadOnly={false}
             activeItemId={(draggingId || resizingId || selectedId) || undefined}
-          
+           
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
