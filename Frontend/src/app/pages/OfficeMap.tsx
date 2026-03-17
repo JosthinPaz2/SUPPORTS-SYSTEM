@@ -61,7 +61,7 @@ import {
 } from '../components/OfficeMap';
 import TicketForm from '../components/TicketForm';
 import { Button } from '../components/ui/button';
-  import { Badge } from '../components/ui/badge';
+import { Badge } from '../components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +79,7 @@ import {
   TicketResponseDto,
 } from '../utils/api';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
+
 
 // Objetos por defecto disponibles para agregar al mapa
 // Incluye zonas, marcos, áreas de tienda, gestión y entrada
@@ -2039,8 +2040,7 @@ export default function OfficeMap() {
             scale={scale}
             isReadOnly={false}
             activeItemId={(draggingId || resizingId || selectedId) || undefined}
-            selectedId={selectedId}
-            onSelect={handleSelectItem}
+          
           />
 
           {/* Botones de zoom en la esquina inferior derecha */}
