@@ -79,6 +79,7 @@ import {
   MapStationSavePayload,
   TicketResponseDto,
 } from '../utils/api';
+import { formatBogotaDateTime } from '../utils/datetime';
 import { toast } from 'sonner'; // Importamos toast para las notificaciones
 
 // Objetos por defecto disponibles para agregar al mapa
@@ -1361,10 +1362,7 @@ export default function OfficeMap() {
 
   const formatTicketDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      });
+      return formatBogotaDateTime(dateStr);
     } catch {
       return dateStr;
     }

@@ -9,6 +9,7 @@ import TicketForm from '../components/TicketForm';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import NotificationsButton from '../components/NotificationsButton';
 import { Ticket } from '../types/ticket';
+import { formatBogotaDate } from '../utils/datetime';
 
 type FilterStatus = 'all' | 'in-progress' | 'resolved' | 'pending';
 
@@ -185,7 +186,7 @@ export default function EmployeeDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
-                          {new Date(ticket.createdAt).toLocaleDateString()}
+                          {formatBogotaDate(ticket.createdAt)}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Button 

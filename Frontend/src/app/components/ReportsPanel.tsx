@@ -3,6 +3,7 @@ import { useTickets } from '../context/TicketContext';
 import { apiService, UserListItemDto } from '../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { formatBogotaDateTime } from '../utils/datetime';
 
 // Colores para los gráficos
 const COLORS = { 
@@ -116,16 +117,6 @@ export default function ReportsPanel() {
   const recentTickets = [...tickets]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 5);
-
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date));
-  };
 
   return (
     <div className="space-y-6">
@@ -293,7 +284,7 @@ export default function ReportsPanel() {
                 <div className="flex-1">
                   <h4 className="font-medium">{ticket.title}</h4>
                   <p className="text-sm text-gray-600">
-                    {ticket.createdByName} - {formatDateTime(ticket.createdAt)}
+                    {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

@@ -13,6 +13,7 @@ import TicketDetailsModal from '../components/TicketDetailsModal';
 import { Ticket } from '../types/ticket';
 import DownloadButtons from '../components/DownloadButtons';
 import TipBox from '../components/OfficeMap/TipBox';
+import UsersManagementButton from '../components/UsersManagementButton';
 
 type AdminTab = 'kanban' | 'reports' | 'map';
 
@@ -72,6 +73,7 @@ export default function AdminDashboard() {
             
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <NotificationsButton />
+              <UsersManagementButton canEditRoles={isIT} />
               <DownloadButtons tickets={tickets} />
               <Button 
                 variant="outline" 

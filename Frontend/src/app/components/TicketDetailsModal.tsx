@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../components/ui/separator';
 import { Ticket, TicketStatus, TicketCategory, Comment } from '../types/ticket';
 import { Clock, User, Tag, AlertCircle, MessageSquare, MapPin, Reply, X, History, CalendarClock, Laptop } from 'lucide-react';
+import { formatBogotaDateTime } from '../utils/datetime';
 
 interface TicketDetailsModalProps {
   ticket: Ticket;
@@ -212,16 +213,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date));
-  };
-
   const publicComments = localComments.filter((c) => {
     if (c.isInternal) return false;
     return isAdmin || String(user?.id) === String(ticket.createdBy);
@@ -273,7 +264,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 Date & Time
               </div>
               <div className="font-medium text-sm">
-                {formatDateTime(ticket.createdAt)}
+                {formatBogotaDateTime(ticket.createdAt)}
               </div>
             </div>
           </div>
@@ -464,7 +455,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                         {c.isInternal && <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Internal note</Badge>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{formatDateTime(c.createdAt)}</span>
+                        <span className="text-xs text-gray-400">{formatBogotaDateTime(c.createdAt)}</span>
                         <button onClick={() => handleReply(c)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500">
                           <Reply className="w-3.5 h-3.5" /> Reply
                         </button>
@@ -528,7 +519,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <p className="text-xs text-gray-600">{h.change_description}</p>
                       <div className="flex items-center gap-3 text-[10px] text-gray-400">
                         <span className="flex items-center gap-1"><User className="w-3 h-3"/> {usersById.get(h.action_user)}</span>
-                        <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3"/> {formatDateTime(new Date(h.created_at))}</span>
+                        <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3"/> {formatBogotaDateTime(h.created_at)}</span>
                       </div>
                     </div>
                   ))

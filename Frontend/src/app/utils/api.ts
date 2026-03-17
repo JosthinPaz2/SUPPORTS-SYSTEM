@@ -24,8 +24,19 @@ export interface UserListItemDto {
   full_name: string;
   institutional_email: string;
   id_role: number;
-  campaign: string;
+  campaign?: string | null;
   created_at: string;
+  recovery_code?: string | null;
+  recovery_code_expiration?: string | null;
+  failed_login_attempts?: number | null;
+  last_failed_login?: string | null;
+  locked_until?: string | null;
+}
+
+export interface UpdateUserRequest {
+  full_name?: string;
+  institutional_email?: string;
+  id_role?: number;
 }
 
 export interface PasswordRecoveryRequest {
@@ -331,6 +342,13 @@ class ApiService {
 
   async getUsers(): Promise<UserListItemDto[]> {
     return this.request<UserListItemDto[]>('/users/');
+  }
+
+  async updateUserRole(userId: number, idRole: number): Promise<UserListItemDto> {
+    return this.request<UserListItemDto>(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ id_role: idRole } as UpdateUserRequest),
+    });
   }
 
   async getLocations(): Promise<LocationOption[]> {
