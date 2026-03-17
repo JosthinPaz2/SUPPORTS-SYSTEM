@@ -374,6 +374,7 @@ export default function OfficeMap() {
   const [adminSelectedFloorId, setAdminSelectedFloorId] = useState('');
   const [loadingAdminMetadata, setLoadingAdminMetadata] = useState(false);
   const [smartGuides, setSmartGuides] = useState<SmartGuides>(EMPTY_SMART_GUIDES);
+  const [hoveredDesk, setHoveredDesk] = useState<{ id: string; x: number; y: number; status: string } | null>(null);
   const historyRef = useRef<any[][]>([]);
   const redoRef = useRef<any[][]>([]);
   
@@ -389,11 +390,11 @@ export default function OfficeMap() {
   const isViewOnly = searchParams.get('viewOnly') === 'true';
   const autoOpenViewSelector = searchParams.get('openViewSelector') === 'true';
 
-  const BASE_CANVAS_WIDTH = 3000;
-  const BASE_CANVAS_HEIGHT = 3000;
+  const BASE_CANVAS_WIDTH = 5000;
+  const BASE_CANVAS_HEIGHT = 5800;
   // Bases de guardado: X usa el ancho, Y usa el alto — deben coincidir con WIDTH/HEIGHT
-  const BASE_CANVAS_SAVE_X = 1900;
-  const BASE_CANVAS_SAVE_Y = 2100;
+  const BASE_CANVAS_SAVE_X = 1700;
+  const BASE_CANVAS_SAVE_Y = 4000;
 
   const cloneDesksSnapshot = useCallback((snapshot: any[]) => {
     return snapshot.map((desk) => ({ ...desk }));
@@ -492,8 +493,8 @@ export default function OfficeMap() {
           // CSV desks always start in inventory and are placed manually by drag/drop.
           x: null,
           y: null,
-          width: Number(widthVal) || 90,
-          height: Number(heightVal) || 65,
+          width: Number(widthVal) || 140,
+          height: Number(heightVal) || 100,
           type: typeVal || 'desk',
           placed: false,
           currentStatus,
@@ -1101,8 +1102,8 @@ export default function OfficeMap() {
             id: station.id_station,
             x: placed ? toCanvasX(station.pos_x ?? 0) : null,
             y: placed ? toCanvasY(station.pos_y ?? 0) : null,
-            width: toCanvasX(station.width ?? 4),
-            height: toCanvasY(station.height ?? 2.5),
+            width: toCanvasX(station.width ?? 5.5),
+            height: toCanvasY(station.height ?? 4.5),
             type: 'desk',
             placed,
             hasReport: station.has_active_reports,
@@ -1627,7 +1628,7 @@ export default function OfficeMap() {
               <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
               <p className="text-sm text-gray-600">Read-only office layout view</p>
             </div>
-            <Button variant="outline" onClick={handleBackToMenu}>B  ack</Button>
+            <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
           </div>
 
           <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -1700,51 +1701,50 @@ export default function OfficeMap() {
 
             <div className="flex min-h-0 flex-col gap-3">
 
-          {/* Leyenda de colores inline */}
-          {currentZoneId && allPlacedView.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                  onClick={handleViewZoomOut}
-                  title="Zoom out"
-                  aria-label="Zoom out"
-                >
-                  -
-                </button>
-                <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
-                  {Math.round(viewScale * 100)}%
-                </span>
-                <button
-                  type="button"
-                  className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                  onClick={handleViewZoomIn}
-                  title="Zoom in"
-                  aria-label="Zoom in"
-                >
-                  +
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-              {[
-                { color: '#22C55E', label: 'Available' },
-                { color: '#F97316', label: 'Issues' },
-                { color: '#EF4444', label: 'Not available' },
-                { color: '#6B7280', label: 'Zone' },
-              ].map(({ color, label }) => (
-                <span key={label} className="flex items-center gap-1.5">
-                  <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ background: color }} />
-                  {label}
-                </span>
-              ))}
-              </div>
-            </div>
-          )}
-        </div>
+              {/* Controles de zoom + leyenda de colores */}
+              {currentZoneId && allPlacedView.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      onClick={handleViewZoomOut}
+                      title="Zoom out"
+                      aria-label="Zoom out"
+                    >
+                      -
+                    </button>
+                    <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+                      {Math.round(viewScale * 100)}%
+                    </span>
+                    <button
+                      type="button"
+                      className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      onClick={handleViewZoomIn}
+                      title="Zoom in"
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {[
+                      { color: '#22C55E', label: 'No issues' },
+                      { color: '#F97316', label: 'With issues' },
+                      { color: '#EF4444', label: 'With active reports' },
+                      { color: '#6B7280', label: 'Zone' },
+                    ].map(({ color, label }) => (
+                      <span key={label} className="flex items-center gap-1.5">
+                        <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ background: color }} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {/* Mapa fit-to-content — ocupa todo el espacio restante */}
-        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" style={{ minHeight: '400px' }}>
+              {/* Mapa fit-to-content */}
+              <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden relative min-h-0">
           {loadingMap && (
             <div className="flex h-full items-center justify-center text-sm text-slate-400">
               Loading map...
@@ -1776,6 +1776,7 @@ export default function OfficeMap() {
               viewBox={`${zoomedViewBBoxEmp.minX} ${zoomedViewBBoxEmp.minY} ${zoomedViewBBoxEmp.w} ${zoomedViewBBoxEmp.h}`}
               preserveAspectRatio="xMidYMid meet"
               style={{ display: 'block', minHeight: '400px' }}
+              onMouseLeave={() => setHoveredDesk(null)}
             >
               {/* Fondo limpio */}
               <rect
@@ -1807,53 +1808,103 @@ export default function OfficeMap() {
               ))}
 
               {/* Escritorios encima — clickeables para ver tickets */}
-              {items.map(item => (
-                <g
-                  key={item.id}
-                  transform={`translate(${item.x}, ${item.y})`}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleDeskClick(item.id)}
-                >
-                  <rect
-                    width={item.width} height={item.height}
-                    fill={getEmpFillColor(item)} rx={6}
-                  />
-                  <text
-                    x={item.width / 2} y={item.height / 2}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="white"
-                    fontSize={Math.max(8, Math.min(11, item.height * 0.25))}
-                    fontWeight="bold"
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+              {items.map(item => {
+                // Mapear el status interno al label visible en el tooltip
+                const rawStatus = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
+                const displayStatus =
+                  rawStatus === 'Not available'         ? 'With Active Reports' :
+                  rawStatus === 'Available with issues' ? 'Available with issues' :
+                  'No issues';
+                return (
+                  <g
+                    key={item.id}
+                    transform={`translate(${item.x}, ${item.y})`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => handleDeskClick(item.id)}
+                    onMouseEnter={(e) => {
+                      const svgEl = (e.currentTarget as SVGGElement).closest('svg');
+                      if (!svgEl) return;
+                      const svgRect = svgEl.getBoundingClientRect();
+                      const containerRect = svgEl.parentElement?.getBoundingClientRect() ?? svgRect;
+                      const scaleX = svgRect.width / zoomedViewBBoxEmp.w;
+                      const scaleY = svgRect.height / zoomedViewBBoxEmp.h;
+                      const screenX = svgRect.left - containerRect.left + ((item.x - zoomedViewBBoxEmp.minX) + item.width / 2) * scaleX;
+                      const screenY = svgRect.top - containerRect.top + (item.y - zoomedViewBBoxEmp.minY) * scaleY - 8;
+                      setHoveredDesk({ id: item.id, x: screenX, y: screenY, status: displayStatus });
+                    }}
+                    onMouseLeave={() => setHoveredDesk(null)}
                   >
-                    {item.id}
-                  </text>
-                </g>
-              ))}
+                    {/* clipPath para evitar desbordamiento de texto */}
+                    <defs>
+                      <clipPath id={`eclip-${item.id}`}>
+                        <rect width={item.width} height={item.height} rx={6} />
+                      </clipPath>
+                    </defs>
+                    <rect
+                      width={item.width} height={item.height}
+                      fill={getEmpFillColor(item)} rx={6}
+                    />
+                    <text
+                      x={item.width / 2} y={item.height / 2}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fill="white"
+                      fontSize={Math.max(9, Math.min(14, item.width / (item.id.length * 0.6)))}
+                      fontWeight="bold"
+                      clipPath={`url(#eclip-${item.id})`}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >
+                      {item.id}
+                    </text>
+                  </g>
+                );
+              })}
             </svg>
           )}
-        </div>
-      </div>
-    </div>
 
-        {deskStatusDialog}
-        {deskTicketDetailsDialog}
-        {showDeskTicketForm && selectedDeskForTicket && user?.id && (
-          <TicketForm
-            onClose={() => {
-              setShowDeskTicketForm(false);
-              setSelectedDeskForTicket(null);
-            }}
-            userId={String(user.id)}
-            userName={user.name || ''}
-            presetLocationId={selectedViewLocationId || undefined}
-            presetLocationName={selectedViewLocationName || undefined}
-            presetFloorId={selectedViewFloorId || undefined}
-            presetFloorName={selectedViewFloorName || undefined}
-            presetStationId={selectedDeskForTicket}
-            hideStationSelectors
-          />
-        )}
+                  {/* Tooltip flotante */}
+              {hoveredDesk && (
+                <div
+                  className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full"
+                  style={{ left: hoveredDesk.x, top: hoveredDesk.y }}
+                >
+                  <div className="bg-gray-900 text-white rounded-lg px-3 py-2 shadow-xl whitespace-nowrap flex flex-col gap-0.5 min-w-[130px]">
+                    <span className="font-bold text-sm">{hoveredDesk.id}</span>
+                    <span className={`text-[11px] font-semibold ${
+                      hoveredDesk.status === 'With Active Reports'   ? 'text-red-400' :
+                      hoveredDesk.status === 'Available with issues' ? 'text-orange-400' :
+                      'text-green-400'
+                    }`}>
+                      {hoveredDesk.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-gray-900" />
+                  </div>
+                </div>
+              )}
+              </div>{/* /mapa */}
+            </div>{/* /columna derecha */}
+          </div>{/* /grid */}
+
+          {deskStatusDialog}
+          {deskTicketDetailsDialog}
+          {showDeskTicketForm && selectedDeskForTicket && user?.id && (
+            <TicketForm
+              onClose={() => {
+                setShowDeskTicketForm(false);
+                setSelectedDeskForTicket(null);
+              }}
+              userId={String(user.id)}
+              userName={user.name || ''}
+              presetLocationId={selectedViewLocationId || undefined}
+              presetLocationName={selectedViewLocationName || undefined}
+              presetFloorId={selectedViewFloorId || undefined}
+              presetFloorName={selectedViewFloorName || undefined}
+              presetStationId={selectedDeskForTicket}
+              hideStationSelectors
+            />
+          )}
+        </div>{/* /outer flex */}
       </div>
     );
   }
@@ -1971,7 +2022,7 @@ export default function OfficeMap() {
         )}
 
         {/* Mapa estático fit-to-content */}
-        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden relative">
           {loadingMap && (
             <div className="flex h-64 items-center justify-center text-sm text-slate-400">
               Loading map...
@@ -2000,6 +2051,7 @@ export default function OfficeMap() {
               viewBox={`${zoomedViewBBox.minX} ${zoomedViewBBox.minY} ${zoomedViewBBox.w} ${zoomedViewBBox.h}`}
               preserveAspectRatio="xMidYMid meet"
               style={{ display: 'block', minHeight: '420px' }}
+              onMouseLeave={() => setHoveredDesk(null)}
             >
               <rect x={viewBBox.minX} y={viewBBox.minY} width={viewBBox.w} height={viewBBox.h} fill="#f8fafc" />
               {bgLayers.map(layer => (
@@ -2019,27 +2071,74 @@ export default function OfficeMap() {
                   )}
                 </g>
               ))}
-              {items.map(item => (
-                <g
-                  key={item.id}
-                  transform={`translate(${item.x}, ${item.y})`}
-                  className="cursor-pointer"
-                  onClick={() => handleDeskClick(item.id)}
-                >
-                  <rect width={item.width} height={item.height} fill={getViewFillColor(item)} rx={6} />
-                  <text
-                    x={item.width / 2} y={item.height / 2}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="white"
-                    fontSize={Math.max(8, Math.min(12, item.height * 0.25))}
-                    fontWeight="bold"
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+              {items.map(item => {
+                const rawStatus = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
+                const displayStatus =
+                  rawStatus === 'Not available'         ? 'With Active Reports' :
+                  rawStatus === 'Available with issues' ? 'Available with issues' :
+                  'No issues';
+                return (
+                  <g
+                    key={item.id}
+                    transform={`translate(${item.x}, ${item.y})`}
+                    className="cursor-pointer"
+                    onClick={() => handleDeskClick(item.id)}
+                    onMouseEnter={(e) => {
+                      const svgEl = (e.currentTarget as SVGGElement).closest('svg');
+                      if (!svgEl) return;
+                      const svgRect = svgEl.getBoundingClientRect();
+                      const containerRect = svgEl.parentElement?.getBoundingClientRect() ?? svgRect;
+                      const scaleX = svgRect.width / zoomedViewBBox.w;
+                      const scaleY = svgRect.height / zoomedViewBBox.h;
+                      const screenX = svgRect.left - containerRect.left + ((item.x - zoomedViewBBox.minX) + item.width / 2) * scaleX;
+                      const screenY = svgRect.top - containerRect.top + (item.y - zoomedViewBBox.minY) * scaleY - 8;
+                      setHoveredDesk({ id: item.id, x: screenX, y: screenY, status: displayStatus });
+                    }}
+                    onMouseLeave={() => setHoveredDesk(null)}
                   >
-                    {item.id}
-                  </text>
-                </g>
-              ))}
+                    <defs>
+                      <clipPath id={`vclip-${item.id}`}>
+                        <rect width={item.width} height={item.height} rx={6} />
+                      </clipPath>
+                    </defs>
+                    <rect width={item.width} height={item.height} fill={getViewFillColor(item)} rx={6} />
+                    <text
+                      x={item.width / 2} y={item.height / 2}
+                      textAnchor="middle" dominantBaseline="middle"
+                      fill="white"
+                      fontSize={Math.max(7, Math.min(12, item.width / (item.id.length * 0.65)))}
+                      fontWeight="bold"
+                      clipPath={`url(#vclip-${item.id})`}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >
+                      {item.id}
+                    </text>
+                  </g>
+                );
+              })}
             </svg>
+          )}
+
+          {/* Tooltip flotante al hacer hover sobre un escritorio */}
+          {hoveredDesk && (
+            <div
+              className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full"
+              style={{ left: hoveredDesk.x, top: hoveredDesk.y }}
+            >
+              <div className="bg-gray-900 text-white rounded-lg px-3 py-2 shadow-xl whitespace-nowrap flex flex-col gap-0.5 min-w-[130px]">
+                <span className="font-bold text-sm">{hoveredDesk.id}</span>
+                <span className={`text-[11px] font-semibold ${
+                  hoveredDesk.status === 'With Active Reports'   ? 'text-red-400' :
+                  hoveredDesk.status === 'Available with issues' ? 'text-orange-400' :
+                  'text-green-400'
+                }`}>
+                  {hoveredDesk.status}
+                </span>
+              </div>
+              <div className="flex justify-center">
+                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-gray-900" />
+              </div>
+            </div>
           )}
         </div>
 

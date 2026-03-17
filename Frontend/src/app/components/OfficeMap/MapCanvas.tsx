@@ -520,6 +520,12 @@ export default function MapCanvas({
           {items.map(item => (
             // Grupo SVG para cada elemento
             <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
+              {/* ClipPath individual para recortar texto dentro del bloque */}
+              <defs>
+                <clipPath id={`canvas-clip-${item.id}`}>
+                  <rect width={item.width} height={item.height} rx={8} />
+                </clipPath>
+              </defs>
               {/* Rectángulo del elemento: verde si OK, rojo si tiene reportes */}
               {(() => {
                 return (
@@ -558,14 +564,17 @@ export default function MapCanvas({
                   />
                 );
               })()}
-              {/* Texto con el ID del elemento centrado */}
+              {/* Texto con el ID: tamaño adaptivo al ancho del bloque, recortado con clipPath */}
               <text
                 x={item.width / 2}
                 y={item.height / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fill="white"
-                className="text-[10px] font-bold pointer-events-none"
+                fontSize={Math.max(9, Math.min(14, item.width / (item.id.length * 0.6)))}
+                fontWeight="bold"
+                clipPath={`url(#canvas-clip-${item.id})`}
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
                 {item.id}
               </text>
