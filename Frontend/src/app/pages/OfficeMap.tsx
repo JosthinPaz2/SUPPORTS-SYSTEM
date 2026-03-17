@@ -2076,20 +2076,20 @@ export default function OfficeMap() {
             style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+            <div className="px-3 py-1.5 text-xs font-semibold text-black-400 uppercase tracking-wider border-b border-slate-100 mb-1 ">
               Layer order
             </div>
             <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveToFront(contextMenu.id)}>
-              <span className="text-base">⬆</span> Bring to front
+              <span className="text-base">🡩</span> Bring to front
             </button>
             <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveForward(contextMenu.id)}>
-              <span className="text-base">↑</span> Move forward
+              <span className="text-base">🡡</span> Move forward
             </button>
             <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveBackward(contextMenu.id)}>
-              <span className="text-base">↓</span> Move backward
+              <span className="text-base">🡣</span> Move backward
             </button>
             <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => moveToBack(contextMenu.id)}>
-              <span className="text-base">⬇</span> Send to back
+              <span className="text-base">🡫</span> Send to back
             </button>
             <div className="border-t border-slate-100 mt-1">
               <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" onClick={() => deleteItem(contextMenu.id)}>
