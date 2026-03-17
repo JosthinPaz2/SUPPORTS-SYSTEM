@@ -89,6 +89,7 @@ const defaultObjects = [
   { id: 'STORE-AREA', type: 'store', width: 200, height: 100, placed: false, isDefault: true },
   { id: 'MANAGEMENT', type: 'management', width: 180, height: 80, placed: false, isDefault: true },
   { id: 'ENTRANCE', type: 'entrance', width: 150, height: 60, placed: false, isDefault: true },
+  { id: 'TEXT-BOX', type: 'note', width: 220, height: 90, placed: false, isDefault: true, labelText: 'Text box' },
 ];
 
 type RectBounds = {
@@ -351,6 +352,7 @@ export default function OfficeMap() {
   const [savingMap, setSavingMap] = useState(false);
   const [loadingMap, setLoadingMap] = useState(false);
   const [scale, setScale] = useState(1);
+  const [viewScale, setViewScale] = useState(1);
   const [viewLocations, setViewLocations] = useState<LocationOption[]>([]);
   const [viewFloors, setViewFloors] = useState<FloorOption[]>([]);
   const [selectedViewLocationId, setSelectedViewLocationId] = useState('');
@@ -361,6 +363,8 @@ export default function OfficeMap() {
   const [selectedDeskTicketDetail, setSelectedDeskTicketDetail] = useState<TicketResponseDto | null>(null);
   const [selectedDeskForTicket, setSelectedDeskForTicket] = useState<string | null>(null);
   const [showDeskTicketForm, setShowDeskTicketForm] = useState(false);
+  const [pendingNoteDrop, setPendingNoteDrop] = useState<{ template: any; x: number; y: number } | null>(null);
+  const [pendingNoteLabel, setPendingNoteLabel] = useState('');
   const [deskTicketUsers, setDeskTicketUsers] = useState<Map<number, string>>(new Map());
   const [deskTicketCategories, setDeskTicketCategories] = useState<Map<number, string>>(new Map());
   const [loadingDeskTicket, setLoadingDeskTicket] = useState(false);
@@ -370,7 +374,6 @@ export default function OfficeMap() {
   const [adminSelectedFloorId, setAdminSelectedFloorId] = useState('');
   const [loadingAdminMetadata, setLoadingAdminMetadata] = useState(false);
   const [smartGuides, setSmartGuides] = useState<SmartGuides>(EMPTY_SMART_GUIDES);
-  const [hoveredDesk, setHoveredDesk] = useState<{ id: string; x: number; y: number; status: string } | null>(null);
   const historyRef = useRef<any[][]>([]);
   const redoRef = useRef<any[][]>([]);
   
@@ -542,11 +545,19 @@ export default function OfficeMap() {
 
 
     if (data.isDefault) {
+      if (data.type === 'note') {
+        setPendingNoteDrop({ template: data, x: correctedX, y: correctedY });
+        setPendingNoteLabel(data.labelText || 'New note');
+        return;
+      }
+
       pushHistorySnapshot();
+
       // Es un objeto por defecto: crear nueva instancia
       const newObj = {
         ...data,
         id: `${data.id}-${Date.now()}`,
+        labelText: data.labelText,
         x: correctedX,
         y: correctedY,
         placed: true
@@ -567,6 +578,41 @@ export default function OfficeMap() {
         )
       );
     }
+  };
+
+  const handleCancelNoteDrop = () => {
+    setPendingNoteDrop(null);
+    setPendingNoteLabel('');
+  };
+
+  const handleConfirmNoteDrop = () => {
+    if (!pendingNoteDrop) return;
+
+    const label = pendingNoteLabel.trim();
+    if (!label) {
+      toast.error('Please enter a name for the text box');
+      return;
+    }
+
+    pushHistorySnapshot();
+
+    const newObj = {
+      ...pendingNoteDrop.template,
+      id: `NOTE-${Date.now()}`,
+      labelText: label,
+      x: pendingNoteDrop.x,
+      y: pendingNoteDrop.y,
+      placed: true,
+    };
+
+    setDesks((prev) => [...prev, newObj]);
+    toast.success('Element added', {
+      description: `The element ${label} has been added to the map`,
+      duration: 3000,
+    });
+
+    setPendingNoteDrop(null);
+    setPendingNoteLabel('');
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -670,13 +716,78 @@ export default function OfficeMap() {
 
   // ??? Context menu helpers ???
   // Capas de fondo: zonas, marcos y otros objetos placed en el mapa
-  const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance'));
+  const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance' || d.type === 'note'));
   // Items: escritorios placed en el mapa
   const items = desks.filter(d => d.placed && d.type === 'desk');
   // Inventario: elementos no placed que coinciden con la búsqueda
   const inventory = desks.filter(d => !d.placed && d.type === 'desk' && d.id.toLowerCase().includes(search.toLowerCase()));
   // Objects: objetos no placed (zonas, frames, store, management, entrance)
-  const objects = desks.filter(d => !d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance') && d.id.toLowerCase().includes(search.toLowerCase()));
+  const objects = desks.filter(d => !d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance' || d.type === 'note') && d.id.toLowerCase().includes(search.toLowerCase()));
+
+  const allPlaced = useMemo(() => [...bgLayers, ...items], [bgLayers, items]);
+  const allPlacedView = allPlaced;
+
+  const viewBBox = useMemo(() => {
+    if (allPlaced.length === 0) {
+      return { minX: 0, minY: 0, w: BASE_CANVAS_WIDTH, h: BASE_CANVAS_HEIGHT };
+    }
+
+    const minX = Math.min(...allPlaced.map((el) => el.x ?? 0));
+    const minY = Math.min(...allPlaced.map((el) => el.y ?? 0));
+    const maxX = Math.max(...allPlaced.map((el) => (el.x ?? 0) + (el.width ?? 0)));
+    const maxY = Math.max(...allPlaced.map((el) => (el.y ?? 0) + (el.height ?? 0)));
+    const padding = 80;
+
+    return {
+      minX: minX - padding,
+      minY: minY - padding,
+      w: Math.max(400, (maxX - minX) + padding * 2),
+      h: Math.max(400, (maxY - minY) + padding * 2),
+    };
+  }, [BASE_CANVAS_HEIGHT, BASE_CANVAS_WIDTH, allPlaced]);
+
+  const viewBBoxEmp = viewBBox;
+
+  const zoomedViewBBox = useMemo(() => {
+    const zoomedWidth = viewBBox.w / viewScale;
+    const zoomedHeight = viewBBox.h / viewScale;
+    return {
+      minX: viewBBox.minX + (viewBBox.w - zoomedWidth) / 2,
+      minY: viewBBox.minY + (viewBBox.h - zoomedHeight) / 2,
+      w: zoomedWidth,
+      h: zoomedHeight,
+    };
+  }, [viewBBox, viewScale]);
+
+  const zoomedViewBBoxEmp = zoomedViewBBox;
+
+  const getViewFillColor = (item: { type: string; hasReport?: boolean; currentStatus?: string }) => {
+    if (item.type === 'desk') {
+      const status = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
+      if (status === 'Not available') return '#EF4444';
+      if (status === 'Available with issues') return '#F97316';
+      return '#22C55E';
+    }
+
+    switch (item.type) {
+      case 'zone':
+        return '#6B7280';
+      case 'frame':
+        return 'rgba(156, 163, 175, 0.5)';
+      case 'store':
+        return '#F59E0B';
+      case 'management':
+        return '#EAB308';
+      case 'entrance':
+        return '#3B82F6';
+      case 'note':
+        return '#E8D8B8';
+      default:
+        return '#22C55E';
+    }
+  };
+
+  const getEmpFillColor = getViewFillColor;
 
   const canvasSize = useMemo(() => {
     const placedItems = desks.filter((item) => item.placed && item.x != null && item.y != null);
@@ -848,55 +959,6 @@ export default function OfficeMap() {
 
   const closeContextMenu = () => setContextMenu(null);
 
-  const deleteItem = (id: string) => {
-    handleDeleteItem(id);
-    closeContextMenu();
-  };
-  const moveToFront = (id: string) => {
-    pushHistorySnapshot();
-    setDesks(prev => {
-      const idx = prev.findIndex(d => d.id === id);
-      if (idx < 0) return prev;
-      const item = prev[idx];
-      const others = prev.filter((_, i) => i !== idx);
-      return [...others, item];
-    });
-    closeContextMenu();
-  };
-  const moveToBack = (id: string) => {
-    pushHistorySnapshot();
-    setDesks(prev => {
-      const idx = prev.findIndex(d => d.id === id);
-      if (idx < 0) return prev;
-      const item = prev[idx];
-      const others = prev.filter((_, i) => i !== idx);
-      return [item, ...others];
-    });
-    closeContextMenu();
-  };
-  const moveForward = (id: string) => {
-    pushHistorySnapshot();
-    setDesks(prev => {
-      const idx = prev.findIndex(d => d.id === id);
-      if (idx < 0 || idx === prev.length - 1) return prev;
-      const newArr = [...prev];
-      [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
-      return newArr;
-    });
-    closeContextMenu();
-  };
-  const moveBackward = (id: string) => {
-    pushHistorySnapshot();
-    setDesks(prev => {
-      const idx = prev.findIndex(d => d.id === id);
-      if (idx <= 0) return prev;
-      const newArr = [...prev];
-      [newArr[idx], newArr[idx - 1]] = [newArr[idx - 1], newArr[idx]];
-      return newArr;
-    });
-    closeContextMenu();
-  };
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -1058,7 +1120,8 @@ export default function OfficeMap() {
           const normalizedType = String(decoration.decoration_type || '').toLowerCase();
           const placed = (decoration.pos_x ?? 0) > 0 || (decoration.pos_y ?? 0) > 0;
           return {
-            id: decoration.label || `${normalizedType}-${decoration.id_decoration}`,
+            id: `${normalizedType}-${decoration.id_decoration}`,
+            labelText: decoration.label || `${normalizedType.toUpperCase()}-${decoration.id_decoration}`,
             x: placed ? toCanvasX(decoration.pos_x ?? 0) : null,
             y: placed ? toCanvasY(decoration.pos_y ?? 0) : null,
             width: toCanvasX(decoration.width ?? 10),
@@ -1086,10 +1149,11 @@ export default function OfficeMap() {
     loadSelectedMap();
 
     const shouldAutoRefresh = isViewOnly || activeMode === 'view';
+    const refreshIntervalMs = 60_000;
     const intervalId = shouldAutoRefresh
       ? window.setInterval(() => {
           loadSelectedMap();
-        }, 5000)
+        }, refreshIntervalMs)
       : null;
 
     return () => {
@@ -1145,7 +1209,7 @@ export default function OfficeMap() {
       .filter((d) => d.placed && d.type !== 'desk')
       .map((d) => ({
         decoration_type: String(d.type || '').toUpperCase(),
-        label: d.id,
+        label: d.labelText || d.id,
         pos_x: toPercentX(d.x ?? 0),
         pos_y: toPercentY(d.y ?? 0),
         width: toPercentX(d.width),
@@ -1185,6 +1249,8 @@ export default function OfficeMap() {
   // Handlers para zoom
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.1, MAX_SCALE));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.1, MIN_SCALE));
+  const handleViewZoomIn = () => setViewScale((s) => Math.min(s + 0.1, 3));
+  const handleViewZoomOut = () => setViewScale((s) => Math.max(s - 0.1, 0.6));
 
   // Handler para eliminar un elemento placed y devolverlo al inventory
   const handleDeleteItem = (id: string, recordHistory = true) => {
@@ -1512,6 +1578,46 @@ export default function OfficeMap() {
     </Dialog>
   );
 
+  const noteLabelDialog = (
+    <Dialog
+      open={Boolean(pendingNoteDrop)}
+      onOpenChange={(open) => {
+        if (!open) handleCancelNoteDrop();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Name your text box</DialogTitle>
+          <DialogDescription>
+            Write the label to display and save as map decoration.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <label htmlFor="noteLabelInput" className="text-sm font-medium text-slate-700">
+            Text
+          </label>
+          <input
+            id="noteLabelInput"
+            type="text"
+            value={pendingNoteLabel}
+            onChange={(e) => setPendingNoteLabel(e.target.value)}
+            placeholder="Example: Reception"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={handleCancelNoteDrop}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleConfirmNoteDrop}>
+            Add
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (isViewOnly) {
     return (
       <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
@@ -1589,9 +1695,38 @@ export default function OfficeMap() {
                   </Select>
                 </div>
 
+              </CardContent>
+            </Card>
+
+            <div className="flex min-h-0 flex-col gap-3">
+
           {/* Leyenda de colores inline */}
           {currentZoneId && allPlacedView.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 ml-auto text-xs text-slate-600">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                  onClick={handleViewZoomOut}
+                  title="Zoom out"
+                  aria-label="Zoom out"
+                >
+                  -
+                </button>
+                <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+                  {Math.round(viewScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                  onClick={handleViewZoomIn}
+                  title="Zoom in"
+                  aria-label="Zoom in"
+                >
+                  +
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
               {[
                 { color: '#22C55E', label: 'Available' },
                 { color: '#F97316', label: 'Issues' },
@@ -1603,6 +1738,7 @@ export default function OfficeMap() {
                   {label}
                 </span>
               ))}
+              </div>
             </div>
           )}
         </div>
@@ -1637,7 +1773,7 @@ export default function OfficeMap() {
             <svg
               width="100%"
               height="100%"
-              viewBox={`${viewBBoxEmp.minX} ${viewBBoxEmp.minY} ${viewBBoxEmp.w} ${viewBBoxEmp.h}`}
+              viewBox={`${zoomedViewBBoxEmp.minX} ${zoomedViewBBoxEmp.minY} ${zoomedViewBBoxEmp.w} ${zoomedViewBBoxEmp.h}`}
               preserveAspectRatio="xMidYMid meet"
               style={{ display: 'block', minHeight: '400px' }}
             >
@@ -1697,6 +1833,8 @@ export default function OfficeMap() {
             </svg>
           )}
         </div>
+      </div>
+    </div>
 
         {deskStatusDialog}
         {deskTicketDetailsDialog}
@@ -1806,6 +1944,32 @@ export default function OfficeMap() {
           </div>
         </div>
 
+        {!loadingMap && currentZoneId && allPlaced.length > 0 && (
+          <div className="shrink-0 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              onClick={handleViewZoomOut}
+              title="Zoom out"
+              aria-label="Zoom out"
+            >
+              -
+            </button>
+            <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+              {Math.round(viewScale * 100)}%
+            </span>
+            <button
+              type="button"
+              className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              onClick={handleViewZoomIn}
+              title="Zoom in"
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+          </div>
+        )}
+
         {/* Mapa estático fit-to-content */}
         <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {loadingMap && (
@@ -1833,7 +1997,7 @@ export default function OfficeMap() {
             <svg
               width="100%"
               height="100%"
-              viewBox={`${viewBBox.minX} ${viewBBox.minY} ${viewBBox.w} ${viewBBox.h}`}
+              viewBox={`${zoomedViewBBox.minX} ${zoomedViewBBox.minY} ${zoomedViewBBox.w} ${zoomedViewBBox.h}`}
               preserveAspectRatio="xMidYMid meet"
               style={{ display: 'block', minHeight: '420px' }}
             >
@@ -2035,6 +2199,8 @@ export default function OfficeMap() {
 
         {/* Tip */}
         <TipBox />
+
+        {noteLabelDialog}
 
       </div>
     );

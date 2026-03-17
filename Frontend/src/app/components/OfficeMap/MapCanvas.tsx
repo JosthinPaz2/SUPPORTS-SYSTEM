@@ -97,6 +97,8 @@ interface DeskItem {
   currentStatus?: string;
   /** Indica si es un objeto por defecto */
   isDefault?: boolean;
+  /** Texto visible para elementos decorativos */
+  labelText?: string;
 }
 
 /**
@@ -200,9 +202,21 @@ const getFillColor = (item: DeskItem): string => {
       return "#EAB308"; // Amarillo
     case 'entrance':
       return "#3B82F6"; // Azul
+    case 'note':
+      return "#E8D8B8"; // Beige
     default:
       return "#22C55E"; // Verde por defecto
   }
+};
+
+const getLayerDisplayText = (layer: DeskItem): string => {
+  if (layer.labelText) return layer.labelText;
+  return layer.id.split("-").slice(0, -1).join("-") || layer.id;
+};
+
+const getLayerTextColor = (layer: DeskItem): string => {
+  if (layer.type === 'note') return '#334155';
+  return 'white';
 };
 
 /**
@@ -411,65 +425,6 @@ export default function MapCanvas({
                     onMouseDown={isReadOnly ? undefined : (e) => {
                       e.stopPropagation();
                       if (e.button === 2) return;
-
-<<<<<<< HEAD
-            {/* Renderizado de Escritorios (Items) */}
-            {items.map(item => (
-              <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
-                <rect
-                  width={item.width}
-                  height={item.height}
-                  fill={getFillColor(item)}
-                  rx={8}
-                  stroke={selectedIds.includes(item.id) || selectedId === item.id ? "#3B82F6" : "none"}
-                  strokeWidth={2}
-                  onMouseDown={(e) => {
-                    if (isReadOnly || editingId === item.id) return;
-                    e.stopPropagation();
-                    if (e.button === 2) return;
-                    const point = getMousePosition(e);
-                    if (!point) return;
-                    onSelect?.(item.id, e.ctrlKey || e.metaKey || e.shiftKey);
-                    onMouseDown(item.id, point.x - item.x, point.y - item.y, point.x, point.y, e.ctrlKey || e.metaKey || e.shiftKey);
-                  }}
-                  onDoubleClick={(e) => {
-                    if (isReadOnly) return;
-                    e.stopPropagation();
-                    setEditingId(item.id);
-                    setEditValue(item.id);
-                  }}
-                  onClick={isReadOnly ? () => onItemClick?.(item.id) : undefined}
-                  className={isReadOnly ? 'cursor-pointer' : 'cursor-move'}
-                />
-
-                {/* LOGICA DE TEXTO VS INPUT */}
-                {editingId === item.id ? (
-                  <foreignObject x={5} y={item.height / 2 - 10} width={item.width - 10} height={20}>
-                    <input
-                      autoFocus
-                      className="w-full h-full text-[10px] text-center font-bold border-none outline-none rounded bg-white text-black shadow-sm"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => handleFinishEdit(item.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleFinishEdit(item.id);
-                        if (e.key === 'Escape') setEditingId(null);
-                      }}
-                    />
-                  </foreignObject>
-                ) : (
-                  <text
-                    x={item.width / 2}
-                    y={item.height / 2}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="white"
-                    className="text-[10px] font-bold pointer-events-none"
-                  >
-                    {item.id}
-                  </text>
-                )}
-=======
                       if (!svgRef.current) return;
                       const container = svgRef.current.parentElement;
                       if (!container) return;
@@ -497,10 +452,10 @@ export default function MapCanvas({
                 y={layer.height / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill="white"
+                fill={getLayerTextColor(layer)}
                 className="text-xs font-bold pointer-events-none"
               >
-                {layer.id.split("-").slice(0, -1).join("-")}
+                {getLayerDisplayText(layer)}
               </text>
             )}
               
@@ -641,61 +596,8 @@ export default function MapCanvas({
                   </text>
                 </>
               )}
-
-              {/* Solo mostramos herramientas de edición si NO estamos en modo lectura */}
-              {selectedId === item.id && !isReadOnly && (
-                <>
-                  {/* Botón de eliminar (X) */}
-                  <circle
-                    cx={item.width - 6}
-                    cy={6}
-                    r={8}
-                    fill="#EF4444"
-                    className="cursor-pointer hover:fill-red-600 transition"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Evita seleccionar el fondo
-                      onDeleteItem?.(item.id);
-                    }}
-                  />
-                  <text
-                    x={item.width - 6}
-                    y={6}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="white"
-                    className="text-xs font-bold pointer-events-none select-none"
-                  >
-                    ×
-                  </text>
-
-                  {/* Handle de redimensionamiento (esquina inferior derecha) */}
-                  {item.type !== 'desk' && (
-                    <rect
-                      x={item.width - 8}
-                      y={item.height - 8}
-                      width={12}
-                      height={12}
-                      rx={2}
-                      fill="#3B82F6"
-                      stroke="white"
-                      className="cursor-se-resize"
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        if (!svgRef.current) return;
-                        const container = svgRef.current.parentElement;
-                        if (!container) return;
-                        const rect = container.getBoundingClientRect();
-                        const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
-                        const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
-                        onResizeStart?.(item.id, mouseX, mouseY);
-                      }}
-                    />
-                  )}
-                </>
-              )}
             </g>
           ))}
->>>>>>> b9d09effd60fabb7b504c1c79916a2b91031b693
 
           {smartGuides.lines.map((line, index) => (
             <line
