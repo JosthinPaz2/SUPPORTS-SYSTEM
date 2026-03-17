@@ -279,7 +279,7 @@ return (
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-teal-600 mt-4">
+        <p className="text-center text-white mt-4">
           Don't have an account?{' '}
           <button
             className="text-teal-400 hover:text-teal-300 hover:underline"
@@ -402,7 +402,7 @@ return (
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
                   tabIndex={-1}
                 >
-                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  
                 </button>
               </div>
             </div>
@@ -426,7 +426,7 @@ return (
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  
                 </button>
               </div>
             </div>

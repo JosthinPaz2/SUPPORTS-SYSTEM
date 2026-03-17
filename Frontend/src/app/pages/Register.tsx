@@ -247,7 +247,7 @@ return (
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-teal-600 mt-4">
+        <p className="text-center text-white mt-4">
           Already have an account?{' '}
           <button
             className="text-teal-400 hover:text-teal-300 hover:underline"
