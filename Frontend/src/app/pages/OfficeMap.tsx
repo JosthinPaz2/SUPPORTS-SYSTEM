@@ -354,6 +354,8 @@ export default function OfficeMap() {
   const [loadingMap, setLoadingMap] = useState(false);
   const [scale, setScale] = useState(1);
   const [viewScale, setViewScale] = useState(1);
+  const [viewPanOffset, setViewPanOffset] = useState({ x: 0, y: 0 });
+  const viewPanRef = useRef<{ isPanning: boolean; startX: number; startY: number; startPanX: number; startPanY: number }>({ isPanning: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
   const [viewLocations, setViewLocations] = useState<LocationOption[]>([]);
   const [viewFloors, setViewFloors] = useState<FloorOption[]>([]);
   const [selectedViewLocationId, setSelectedViewLocationId] = useState('');
@@ -753,13 +755,14 @@ export default function OfficeMap() {
   const zoomedViewBBox = useMemo(() => {
     const zoomedWidth = viewBBox.w / viewScale;
     const zoomedHeight = viewBBox.h / viewScale;
+    // viewPanOffset is stored in SVG units (converted in handleViewPanMove using getBoundingClientRect)
     return {
-      minX: viewBBox.minX + (viewBBox.w - zoomedWidth) / 2,
-      minY: viewBBox.minY + (viewBBox.h - zoomedHeight) / 2,
+      minX: viewBBox.minX + (viewBBox.w - zoomedWidth) / 2 - viewPanOffset.x,
+      minY: viewBBox.minY + (viewBBox.h - zoomedHeight) / 2 - viewPanOffset.y,
       w: zoomedWidth,
       h: zoomedHeight,
     };
-  }, [viewBBox, viewScale]);
+  }, [viewBBox, viewScale, viewPanOffset]);
 
   const zoomedViewBBoxEmp = zoomedViewBBox;
 
@@ -961,6 +964,66 @@ export default function OfficeMap() {
 
   const closeContextMenu = () => setContextMenu(null);
 
+  // ─── Z-Order helpers ─────────────────────────────────────────────────────────
+  // Mueve el elemento al frente (último en el array → se renderiza encima)
+  const moveToFront = (id: string) => {
+    pushHistorySnapshot();
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx < 0) return prev;
+      const item = prev[idx];
+      const others = prev.filter((_, i) => i !== idx);
+      return [...others, item];
+    });
+    closeContextMenu();
+  };
+
+  // Mueve el elemento al fondo (primero en el array → se renderiza debajo)
+  const moveToBack = (id: string) => {
+    pushHistorySnapshot();
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx < 0) return prev;
+      const item = prev[idx];
+      const others = prev.filter((_, i) => i !== idx);
+      return [item, ...others];
+    });
+    closeContextMenu();
+  };
+
+  // Sube el elemento un nivel en el orden de renderizado
+  const moveForward = (id: string) => {
+    pushHistorySnapshot();
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx < 0 || idx === prev.length - 1) return prev;
+      const newArr = [...prev];
+      [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
+      return newArr;
+    });
+    closeContextMenu();
+  };
+
+  // Baja el elemento un nivel en el orden de renderizado
+  const moveBackward = (id: string) => {
+    pushHistorySnapshot();
+    setDesks(prev => {
+      const idx = prev.findIndex(d => d.id === id);
+      if (idx <= 0) return prev;
+      const newArr = [...prev];
+      [newArr[idx], newArr[idx - 1]] = [newArr[idx - 1], newArr[idx]];
+      return newArr;
+    });
+    closeContextMenu();
+  };
+
+  // Elimina el elemento desde el context menu
+  const deleteItemFromContextMenu = (id: string) => {
+    handleDeleteItem(id);
+    closeContextMenu();
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -1080,6 +1143,8 @@ export default function OfficeMap() {
     }
 
     setCurrentZoneId(Number(selectedViewFloorId));
+    setViewPanOffset({ x: 0, y: 0 });
+    setViewScale(1);
   }, [isViewOnly, selectedViewFloorId]);
 
   useEffect(() => {
@@ -1251,8 +1316,39 @@ export default function OfficeMap() {
   // Handlers para zoom
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.1, MAX_SCALE));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.1, MIN_SCALE));
-  const handleViewZoomIn = () => setViewScale((s) => Math.min(s + 0.1, 3));
-  const handleViewZoomOut = () => setViewScale((s) => Math.max(s - 0.1, 0.6));
+  const handleViewZoomIn = () => {
+    setViewScale((s) => Math.min(s + 0.15, 5));
+  };
+  const handleViewZoomOut = () => {
+    setViewScale((s) => {
+      const next = Math.max(s - 0.15, 0.5);
+      if (next <= 1) setViewPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const viewSvgRef = useRef<SVGSVGElement | null>(null);
+
+  const handleViewPanStart = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    viewPanRef.current = { isPanning: true, startX: e.clientX, startY: e.clientY, startPanX: viewPanOffset.x, startPanY: viewPanOffset.y };
+  };
+  const handleViewPanMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!viewPanRef.current.isPanning) return;
+    const svgEl = viewSvgRef.current;
+    if (!svgEl) return;
+    const rect = svgEl.getBoundingClientRect();
+    // px → SVG units: zoomedWidth SVG units span rect.width screen px
+    const zoomedW = viewBBox.w / viewScale;
+    const zoomedH = viewBBox.h / viewScale;
+    const pxToSvgX = zoomedW / rect.width;
+    const pxToSvgY = zoomedH / rect.height;
+    const dx = (e.clientX - viewPanRef.current.startX) * pxToSvgX;
+    const dy = (e.clientY - viewPanRef.current.startY) * pxToSvgY;
+    setViewPanOffset({ x: viewPanRef.current.startPanX + dx, y: viewPanRef.current.startPanY + dy });
+  };
+  const handleViewPanEnd = () => { viewPanRef.current.isPanning = false; };
 
   // Handler para eliminar un elemento placed y devolverlo al inventory
   const handleDeleteItem = (id: string, recordHistory = true) => {
@@ -1710,7 +1806,7 @@ export default function OfficeMap() {
                       title="Zoom out"
                       aria-label="Zoom out"
                     >
-                      -
+                      −
                     </button>
                     <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
                       {Math.round(viewScale * 100)}%
@@ -1724,6 +1820,17 @@ export default function OfficeMap() {
                     >
                       +
                     </button>
+                    {(viewScale !== 1 || viewPanOffset.x !== 0 || viewPanOffset.y !== 0) && (
+                      <button
+                        type="button"
+                        className="h-8 px-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs font-medium"
+                        onClick={() => { setViewScale(1); setViewPanOffset({ x: 0, y: 0 }); }}
+                        title="Reset view"
+                        aria-label="Reset view"
+                      >
+                        Reset
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     {[
@@ -1769,12 +1876,16 @@ export default function OfficeMap() {
 
           {!loadingMap && currentZoneId && allPlacedView.length > 0 && (
             <svg
+              ref={viewSvgRef}
               width="100%"
               height="100%"
               viewBox={`${zoomedViewBBoxEmp.minX} ${zoomedViewBBoxEmp.minY} ${zoomedViewBBoxEmp.w} ${zoomedViewBBoxEmp.h}`}
               preserveAspectRatio="xMidYMid meet"
-              style={{ display: 'block', minHeight: '400px' }}
-              onMouseLeave={() => setHoveredDesk(null)}
+              style={{ display: 'block', minHeight: '400px', userSelect: 'none', cursor: viewScale > 1 ? (viewPanRef.current.isPanning ? 'grabbing' : 'grab') : 'default' }}
+              onMouseDown={handleViewPanStart}
+              onMouseMove={handleViewPanMove}
+              onMouseUp={handleViewPanEnd}
+              onMouseLeave={() => { handleViewPanEnd(); setHoveredDesk(null); }}
             >
               {/* Fondo limpio */}
               <rect
@@ -1939,6 +2050,8 @@ export default function OfficeMap() {
               onValueChange={(value) => {
                 setAdminSelectedLocationId(value);
                 setAdminSelectedFloorId('');
+                setViewPanOffset({ x: 0, y: 0 });
+                setViewScale(1);
               }}
               disabled={loadingAdminMetadata}
             >
@@ -2002,7 +2115,7 @@ export default function OfficeMap() {
               title="Zoom out"
               aria-label="Zoom out"
             >
-              -
+              −
             </button>
             <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
               {Math.round(viewScale * 100)}%
@@ -2016,6 +2129,17 @@ export default function OfficeMap() {
             >
               +
             </button>
+            {(viewScale !== 1 || viewPanOffset.x !== 0 || viewPanOffset.y !== 0) && (
+              <button
+                type="button"
+                className="h-8 px-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs font-medium"
+                onClick={() => { setViewScale(1); setViewPanOffset({ x: 0, y: 0 }); }}
+                title="Reset view"
+                aria-label="Reset view"
+              >
+                Reset
+              </button>
+            )}
           </div>
         )}
 
@@ -2044,12 +2168,16 @@ export default function OfficeMap() {
           )}
           {!loadingMap && currentZoneId && allPlaced.length > 0 && (
             <svg
+              ref={viewSvgRef}
               width="100%"
               height="100%"
               viewBox={`${zoomedViewBBox.minX} ${zoomedViewBBox.minY} ${zoomedViewBBox.w} ${zoomedViewBBox.h}`}
               preserveAspectRatio="xMidYMid meet"
-              style={{ display: 'block', minHeight: '420px' }}
-              onMouseLeave={() => setHoveredDesk(null)}
+              style={{ display: 'block', minHeight: '420px', userSelect: 'none', cursor: viewScale > 1 ? (viewPanRef.current.isPanning ? 'grabbing' : 'grab') : 'default' }}
+              onMouseDown={handleViewPanStart}
+              onMouseMove={handleViewPanMove}
+              onMouseUp={handleViewPanEnd}
+              onMouseLeave={() => { handleViewPanEnd(); setHoveredDesk(null); }}
             >
               <rect x={viewBBox.minX} y={viewBBox.minY} width={viewBBox.w} height={viewBBox.h} fill="#f8fafc" />
               {bgLayers.map(layer => (
@@ -2145,11 +2273,10 @@ export default function OfficeMap() {
           <div className="shrink-0 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
             <span className="font-semibold text-slate-700 text-sm">Legend:</span>
             {[
-              { color: '#22C55E', label: 'Available' },
-              { color: '#F97316', label: 'Available with issues' },
-              { color: '#EF4444', label: 'Not available' },
+              { color: '#22C55E', label: 'No issues' },
+              { color: '#EF4444', label: 'With active reports' },
               { color: '#6B7280', label: 'Zone' },
-              { color: 'rgba(156,163,175,0.5)', label: 'Frame', border: true },
+              { color: 'rgba(156,163,175,0.5)', label: 'Wall', border: true },
               { color: '#F59E0B', label: 'Store area' },
               { color: '#EAB308', label: 'Management' },
               { color: '#3B82F6', label: 'Entrance' },
@@ -2299,6 +2426,51 @@ export default function OfficeMap() {
 
         {noteLabelDialog}
 
+        {/* Context Menu — Z-Layer Order (click derecho sobre un elemento) */}
+        {contextMenu && (
+          <div
+            className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 min-w-[180px]"
+            style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+              Layer order
+            </div>
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              onClick={() => moveToFront(contextMenu.id)}
+            >
+              <span className="text-base">🡩</span> Bring to front
+            </button>
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              onClick={() => moveForward(contextMenu.id)}
+            >
+              <span className="text-base">🡡</span> Move forward
+            </button>
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              onClick={() => moveBackward(contextMenu.id)}
+            >
+              <span className="text-base">🡣</span> Move backward
+            </button>
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              onClick={() => moveToBack(contextMenu.id)}
+            >
+              <span className="text-base">🡫</span> Send to back
+            </button>
+            <div className="border-t border-slate-100 mt-1">
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                onClick={() => deleteItemFromContextMenu(contextMenu.id)}
+              >
+                <span className="text-base">✕</span> Delete
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     );
   }
@@ -2356,6 +2528,8 @@ export default function OfficeMap() {
                         onClick={() => {
                           setAdminSelectedFloorId(floorId);
                           setCurrentZoneId(floor.id_floor);
+                          setViewPanOffset({ x: 0, y: 0 });
+                          setViewScale(1);
                           setActiveMode('view');
                         }}
                         className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
