@@ -327,10 +327,13 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="monitor">Monitor</SelectItem>
-                        <SelectItem value="pc">PC / Desktop</SelectItem>
-                        <SelectItem value="peripheral">Keyboard / Mouse</SelectItem>
-                        <SelectItem value="printer">Printer</SelectItem>
+                        <SelectItem value="teclado">Teclado ESENSES Básico USB</SelectItem>
+                        <SelectItem value="mouse">Mouse Álambrico HP Óptico negro 100</SelectItem>
+                        <SelectItem value="ethernet">Ethernet 3.0 LAN a USB</SelectItem>
+                        <SelectItem value="cable-vga">Cable Display Port a VGA 18</SelectItem>
+                        <SelectItem value="cable-vga-vga">Cable Display VGA a VGA 18</SelectItem>
+                        <SelectItem value="extension">Extensión de Cable eléctrico</SelectItem>
+                        <SelectItem value="cable-hdmi">Cable Display Port a HDMI 18</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
