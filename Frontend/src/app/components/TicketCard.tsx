@@ -3,7 +3,6 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from '../components/ui/badge';
 import { Ticket, TicketCategory } from '../types/ticket';
 import { Clock, User, Tag, AlertCircle, MapPin, Route } from 'lucide-react';
-import { formatBogotaDate } from '../utils/datetime';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -89,7 +88,7 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
             )}
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>{formatBogotaDate(ticket.createdAt)}</span>
+              <span>{ticket.createdAt.toLocaleDateString('es-ES')}</span>
             </div>
           </div>
         </div>

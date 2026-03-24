@@ -57,8 +57,6 @@ interface DeskItem {
   placed: boolean;
   /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
-  /** Texto visible para algunos objetos decorativos */
-  labelText?: string;
 }
 
 /**
@@ -119,8 +117,6 @@ export default function MapSidebar({
         return 'w-7 h-4 rounded bg-yellow-400 border border-yellow-500';
       case 'entrance':
         return 'w-7 h-3 rounded bg-blue-500 border border-blue-600';
-      case 'note':
-        return 'w-7 h-5 rounded bg-[#E8D8B8] border border-[#D1BE97]';
       default:
         return 'w-7 h-4 rounded bg-emerald-500 border border-emerald-600';
     }

@@ -12,7 +12,6 @@ import { exportPDF } from "../utils/exportPDF";
 import { exportExcel } from "../utils/exportExcel";
 import { Ticket } from "../types/ticket";
 import { toast } from "sonner";
-import { formatBogotaDateTime } from "../utils/datetime";
 
 interface Props {
   tickets: Ticket[];
@@ -109,8 +108,8 @@ export default function DownloadButtons({ tickets }: Props) {
       movedBy: ticket.movedBy ?? "-",
       movedByName: ticket.movedByName ?? "-",
       commentsCount: ticket.comments.length,
-      createdAt: formatBogotaDateTime(ticket.createdAt),
-      updatedAt: formatBogotaDateTime(ticket.updatedAt),
+      createdAt: ticket.createdAt.toLocaleString(),
+      updatedAt: ticket.updatedAt.toLocaleString(),
       createdAtDate: ticket.createdAt,
     }));
   }, [tickets]);

@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import { apiService } from "../utils/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { formatBogotaDateTime } from "../utils/datetime";
 
 export interface Notification {
   id: number;
@@ -135,7 +134,7 @@ export default function NotificationsButton() {
             return {
               id: row.id_notification,
               title: row.message,
-              time: formatBogotaDateTime(row.sent_at),
+              time: new Date(row.sent_at).toLocaleString(),
               read: row.read,
               actionType: row.action_type ?? undefined,
               severity: row.severity ?? undefined,
