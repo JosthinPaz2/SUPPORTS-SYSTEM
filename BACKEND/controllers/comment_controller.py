@@ -26,6 +26,18 @@ def _get_role_one_user_ids(db: Session) -> set[int]:
     return {int(row[0]) for row in rows}
 
 
+def _is_admin_user(db: Session, user_id: int | None) -> bool:
+    if not user_id:
+        return False
+
+    return (
+        db.query(User.id_user)
+        .filter(User.id_user == user_id, User.id_role == 1)
+        .first()
+        is not None
+    )
+
+
 def _create_notifications(
     db: Session,
     user_ids: set[int],
@@ -67,9 +79,12 @@ def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
     assigned_techs = {
         tech_id for tech_id in [db_ticket.primary_technician, db_ticket.secondary_technician] if tech_id
     }
+    commenter_is_admin = _is_admin_user(db, comment.id_user)
 
     if bool(comment.internal_note):
-        recipients = set(role_one_user_ids).union(assigned_techs)
+        recipients = set(assigned_techs)
+        if not commenter_is_admin:
+            recipients.update(role_one_user_ids)
         _create_notifications(
             db,
             recipients,
@@ -81,7 +96,11 @@ def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
             id_station=db_ticket.id_station,
         )
     else:
-        recipients = {db_ticket.created_by}.union(role_one_user_ids).union(assigned_techs)
+        recipients = {db_ticket.created_by}.union(assigned_techs)
+        if not commenter_is_admin:
+            recipients.update(role_one_user_ids)
+
+        recipients.discard(None)
         _create_notifications(
             db,
             recipients,

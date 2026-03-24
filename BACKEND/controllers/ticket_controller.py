@@ -99,6 +99,18 @@ def _get_role_one_user_ids(db: Session) -> set[int]:
     return {int(row[0]) for row in rows}
 
 
+def _is_admin_user(db: Session, user_id: Optional[int]) -> bool:
+    if not user_id:
+        return False
+
+    return (
+        db.query(User.id_user)
+        .filter(User.id_user == user_id, User.id_role == 1)
+        .first()
+        is not None
+    )
+
+
 def _create_notifications(
     db: Session,
     user_ids: set[int],
@@ -166,16 +178,17 @@ def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
             station.current_status = EstadoEstacion.NO_DISPONIBLE
 
     role_one_user_ids = _get_role_one_user_ids(db)
-    _create_notifications(
-        db,
-        role_one_user_ids,
-        f"New ticket #{db_ticket.id_ticket} created: {db_ticket.title}",
-        exclude_user_id=db_ticket.created_by,
-        action_type="open_ticket",
-        severity="info",
-        id_ticket=db_ticket.id_ticket,
-        id_station=db_ticket.id_station,
-    )
+    if not _is_admin_user(db, db_ticket.created_by):
+        _create_notifications(
+            db,
+            role_one_user_ids,
+            f"New ticket #{db_ticket.id_ticket} created: {db_ticket.title}",
+            exclude_user_id=db_ticket.created_by,
+            action_type="open_ticket",
+            severity="info",
+            id_ticket=db_ticket.id_ticket,
+            id_station=db_ticket.id_station,
+        )
 
     _refresh_open_ticket_priorities(db)
 
@@ -222,6 +235,7 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
     normalized_status = _normalize_status(ticket.status) if ticket.status else previous_status
 
     role_one_user_ids = _get_role_one_user_ids(db)
+    actor_is_admin = _is_admin_user(db, actor_user)
 
     if ticket.status and normalized_status != previous_status:
         db.add(ChangeHistory(
@@ -232,13 +246,16 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
 
         status_recipients = {
             db_ticket.created_by,
-            *(role_one_user_ids),
         }
+        if not actor_is_admin:
+            status_recipients.update(role_one_user_ids)
 
         if db_ticket.primary_technician:
             status_recipients.add(db_ticket.primary_technician)
         if db_ticket.secondary_technician:
             status_recipients.add(db_ticket.secondary_technician)
+
+        status_recipients.discard(None)
 
         _create_notifications(
             db,
@@ -281,16 +298,20 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
             )
 
         assignment_audit_recipients = set(role_one_user_ids)
-        _create_notifications(
-            db,
-            assignment_audit_recipients,
-            f"Ticket #{db_ticket.id_ticket} technician assignment was updated",
-            exclude_user_id=assignment_actor_user,
-            action_type="open_ticket",
-            severity="info",
-            id_ticket=db_ticket.id_ticket,
-            id_station=db_ticket.id_station,
-        )
+        if _is_admin_user(db, assignment_actor_user):
+            assignment_audit_recipients.clear()
+
+        if assignment_audit_recipients:
+            _create_notifications(
+                db,
+                assignment_audit_recipients,
+                f"Ticket #{db_ticket.id_ticket} technician assignment was updated",
+                exclude_user_id=assignment_actor_user,
+                action_type="open_ticket",
+                severity="info",
+                id_ticket=db_ticket.id_ticket,
+                id_station=db_ticket.id_station,
+            )
 
     # Auto-log change history when ticket is resolved
     if normalized_status == "resolved" and previous_status != "resolved":
