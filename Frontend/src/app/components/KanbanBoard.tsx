@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrop } from 'react-dnd';
 import { useTickets } from '../context/TicketContext';
 import { useAuth } from '../context/AuthContext';
+import { apiService, LocationOption, FloorOption, StationOption } from '../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
@@ -11,7 +12,7 @@ import { Badge } from '../components/ui/badge';
 import { Ticket, TicketStatus, TicketCategory, TicketPriority } from '../types/ticket'; 
 import TicketCard from './TicketCard';
 import TicketDetailsModal from './TicketDetailsModal';
-import { BarChart3, Search, Calendar, User, XCircle, ShieldCheck, ChevronDown } from 'lucide-react';
+import { BarChart3, Search, Calendar, User, XCircle, ShieldCheck, ChevronDown, MapPin } from 'lucide-react';
 
 interface DropZoneProps {
   status: TicketStatus;
@@ -79,10 +80,66 @@ export default function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
+  const [locationFilter, setLocationFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
+  const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [stationToLocation, setStationToLocation] = useState<Map<string, string>>(new Map());
+
+  const locationOptions = useMemo(() => {
+    return locations
+      .map((location) => location.location_name.trim())
+      .filter((name) => name.length > 0)
+      .sort((a, b) => a.localeCompare(b));
+  }, [locations]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLocationData = async () => {
+      try {
+        const [locationRows, floorRows, stationRows] = await Promise.all([
+          apiService.getLocations(),
+          apiService.getFloors(),
+          apiService.getStations(),
+        ]);
+
+        if (cancelled) return;
+
+        setLocations(locationRows);
+
+        const locationNameById = new Map<number, string>(
+          locationRows.map((location) => [location.id_location, location.location_name])
+        );
+        const locationIdByFloor = new Map<number, number>(
+          floorRows.map((floor: FloorOption) => [floor.id_floor, floor.id_location])
+        );
+
+        const stationLocationMap = new Map<string, string>();
+        stationRows.forEach((station: StationOption) => {
+          const locationId = locationIdByFloor.get(station.id_floor);
+          if (!locationId) return;
+          const locationName = locationNameById.get(locationId);
+          if (!locationName) return;
+          stationLocationMap.set(station.id_station, locationName);
+        });
+
+        setStationToLocation(stationLocationMap);
+      } catch {
+        if (cancelled) return;
+        setLocations([]);
+        setStationToLocation(new Map());
+      }
+    };
+
+    loadLocationData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Lógica para mantener abierto el panel si hay filtros activos
-  const hasFiltersActive = searchTerm !== '' || categoryFilter !== 'all' || priorityFilter !== 'all' || dateFilter !== '';
+  const hasFiltersActive = searchTerm !== '' || categoryFilter !== 'all' || priorityFilter !== 'all' || locationFilter !== 'all' || dateFilter !== '';
   const isExpanded = isHovered || hasFiltersActive;
 
   const handleDrop = (ticketId: string, newStatus: TicketStatus) => {
@@ -99,6 +156,10 @@ export default function KanbanBoard() {
     return tickets.filter((t) => {
       const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
       const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
+      const ticketLocationName = t.location ? stationToLocation.get(t.location) ?? t.location : '';
+      const matchesLocation =
+        locationFilter === 'all' ||
+        ticketLocationName.trim().toLowerCase() === locationFilter.toLowerCase();
       
       const matchesSearch = searchTerm === '' || 
         t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,9 +172,9 @@ export default function KanbanBoard() {
         matchesDate = ticketDateStr === dateFilter;
       }
 
-      return matchesCategory && matchesPriority && matchesSearch && matchesDate;
+      return matchesCategory && matchesPriority && matchesLocation && matchesSearch && matchesDate;
     });
-  }, [tickets, categoryFilter, priorityFilter, searchTerm, dateFilter]);
+  }, [tickets, categoryFilter, priorityFilter, locationFilter, searchTerm, dateFilter, stationToLocation]);
 
   const ticketsByStatus = {
     pending: filteredTickets.filter((t) => t.status === 'pending'),
@@ -127,6 +188,7 @@ export default function KanbanBoard() {
     setSearchTerm('');
     setCategoryFilter('all');
     setPriorityFilter('all');
+    setLocationFilter('all');
     setDateFilter('');
   };
 
@@ -158,7 +220,7 @@ export default function KanbanBoard() {
                 <div className="flex items-center justify-between mb-[-25px]">
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                   {/* Búsqueda */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-600 uppercase flex items-center gap-1">
@@ -222,6 +284,25 @@ export default function KanbanBoard() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Location */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-600 uppercase flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-blue-500" /> Location
+                    </label>
+                    <Select value={locationFilter} onValueChange={setLocationFilter}>
+                      <SelectTrigger className="border-slate-200 bg-white text-xs">
+                        <SelectValue placeholder="All Locations" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Locations</SelectItem>
+                        {locationOptions.map((location) => (
+                          <SelectItem key={location} value={location}>{location}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                     {hasFiltersActive && (
                     <button 
                       onClick={resetFilters}
