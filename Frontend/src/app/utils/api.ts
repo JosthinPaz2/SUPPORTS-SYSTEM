@@ -1,7 +1,7 @@
 // API configuration and utilities
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  'https://margery-highfalutin-unambiguously.ngrok-free.dev';
+  'https://frizzier-rayna-crunchily.ngrok-free.dev ';
 
 export interface LoginRequest {
   institutional_email: string;
