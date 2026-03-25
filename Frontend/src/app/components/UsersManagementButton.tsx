@@ -13,6 +13,12 @@ interface UsersManagementButtonProps {
   canEditRoles: boolean;
 }
 
+type UserDraft = {
+  full_name: string;
+  institutional_email: string;
+  id_role: number;
+};
+
 const ROLE_OPTIONS = [
   { value: 1, label: 'Administrator' },
   { value: 2, label: 'Employee' },
@@ -38,12 +44,23 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingUserId, setSavingUserId] = useState<number | null>(null);
+  const [userDrafts, setUserDrafts] = useState<Record<number, UserDraft>>({});
 
   const loadUsers = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
       const list = await apiService.getUsers();
       setUsers(list);
+      setUserDrafts(
+        list.reduce<Record<number, UserDraft>>((acc, user) => {
+          acc[user.id_user] = {
+            full_name: user.full_name,
+            institutional_email: user.institutional_email,
+            id_role: user.id_role,
+          };
+          return acc;
+        }, {}),
+      );
     } catch (error) {
       if (showLoading) {
         toast.error((error as Error).message || 'Could not load users');
@@ -108,26 +125,95 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
     await copyText(lines.join('\n'), 'Visible table copied');
   };
 
-  const handleRoleChange = async (userId: number, nextRoleId: number) => {
+  const handleRoleChange = (userId: number, nextRoleId: number) => {
     if (!canEditRoles) {
       toast.error('Only administrators can change roles');
       return;
     }
 
-    const selectedUser = users.find((user) => user.id_user === userId);
-    if (!selectedUser || selectedUser.id_role === nextRoleId) return;
+    setUserDrafts((prev) => {
+      const current = prev[userId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [userId]: {
+          ...current,
+          id_role: nextRoleId,
+        },
+      };
+    });
+  };
+
+  const handleDraftChange = (userId: number, field: 'full_name' | 'institutional_email', value: string) => {
+    setUserDrafts((prev) => {
+      const current = prev[userId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [userId]: {
+          ...current,
+          [field]: value,
+        },
+      };
+    });
+  };
+
+  const handleSaveUserChanges = async (userId: number) => {
+    if (!canEditRoles) {
+      toast.error('Only administrators can edit users');
+      return;
+    }
+
+    const original = users.find((user) => user.id_user === userId);
+    const draft = userDrafts[userId];
+
+    if (!original || !draft) return;
+
+    const payload: {
+      full_name?: string;
+      institutional_email?: string;
+      id_role?: number;
+    } = {};
+
+    const normalizedName = draft.full_name.trim();
+    const normalizedEmail = draft.institutional_email.trim();
+
+    if (!normalizedName) {
+      toast.error('Full name cannot be empty');
+      return;
+    }
+
+    if (!normalizedEmail) {
+      toast.error('Email cannot be empty');
+      return;
+    }
+
+    if (normalizedName !== original.full_name) payload.full_name = normalizedName;
+    if (normalizedEmail !== original.institutional_email) payload.institutional_email = normalizedEmail;
+    if (draft.id_role !== original.id_role) payload.id_role = draft.id_role;
+
+    if (Object.keys(payload).length === 0) {
+      toast.message('No changes to save');
+      return;
+    }
 
     setSavingUserId(userId);
     try {
-      await apiService.updateUserRole(userId, nextRoleId);
+      const updated = await apiService.updateUser(userId, payload);
       setUsers((prev) =>
-        prev.map((user) =>
-          user.id_user === userId ? { ...user, id_role: nextRoleId } : user,
-        ),
+        prev.map((user) => (user.id_user === userId ? updated : user)),
       );
-      toast.success('Role updated successfully');
+      setUserDrafts((prev) => ({
+        ...prev,
+        [userId]: {
+          full_name: updated.full_name,
+          institutional_email: updated.institutional_email,
+          id_role: updated.id_role,
+        },
+      }));
+      toast.success('User updated successfully');
     } catch (error) {
-      toast.error((error as Error).message || 'Could not update role');
+      toast.error((error as Error).message || 'Could not update user');
     } finally {
       setSavingUserId(null);
     }
@@ -208,24 +294,34 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                       <th className="px-2 py-2">Failed Attempts</th>
                       <th className="px-2 py-2">Last Failed Login</th>
                       <th className="px-2 py-2">Locked Until</th>
+                      <th className="px-2 py-2">Actions</th>
                     </tr>
                   </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="px-2 py-6 text-center text-gray-500">
+                      <td colSpan={10} className="px-2 py-6 text-center text-gray-500">
                         Loading users...
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-2 py-6 text-center text-gray-500">
+                      <td colSpan={10} className="px-2 py-6 text-center text-gray-500">
                         No users found
                       </td>
                     </tr>
                   ) : (
                     filteredUsers.map((user, index) => {
                       const status = getAccountStatus(user.locked_until);
+                      const draft = userDrafts[user.id_user] ?? {
+                        full_name: user.full_name,
+                        institutional_email: user.institutional_email,
+                        id_role: user.id_role,
+                      };
+                      const hasPendingChanges =
+                        draft.full_name.trim() !== user.full_name ||
+                        draft.institutional_email.trim() !== user.institutional_email ||
+                        draft.id_role !== user.id_role;
                       return (
                       <tr
                         key={user.id_user}
@@ -238,28 +334,24 @@ status.blocked
                       }`}
                       >
                         <td className="px-2 py-1.5 align-top">
-                          <button
-                            type="button"
-                            onClick={() => copyText(user.full_name, 'Name copied')}
-                            className="text-left w-full hover:underline font-medium leading-tight"
-                            title="Click to copy"
-                          >
-                            {user.full_name}
-                          </button>
+                          <Input
+                            value={draft.full_name}
+                            onChange={(event) => handleDraftChange(user.id_user, 'full_name', event.target.value)}
+                            disabled={!canEditRoles || savingUserId === user.id_user}
+                            className="h-8"
+                          />
                         </td>
                         <td className="px-2 py-1.5 align-top max-w-52">
-                          <button
-                            type="button"
-                            onClick={() => copyText(user.institutional_email, 'Email copied')}
-                            className="text-left w-full hover:underline break-all leading-tight"
-                            title="Click to copy"
-                          >
-                            {user.institutional_email}
-                          </button>
+                          <Input
+                            value={draft.institutional_email}
+                            onChange={(event) => handleDraftChange(user.id_user, 'institutional_email', event.target.value)}
+                            disabled={!canEditRoles || savingUserId === user.id_user}
+                            className="h-8"
+                          />
                         </td>
                         <td className="px-2 py-1.5 align-top">
                           <Select
-                            value={String(user.id_role)}
+                            value={String(draft.id_role)}
                             onValueChange={(value) => handleRoleChange(user.id_user, Number(value))}
                             disabled={!canEditRoles || savingUserId === user.id_user}
                           >
@@ -275,8 +367,8 @@ status.blocked
                                   {role.label}
                                 </SelectItem>
                               ))}
-                              {!ROLE_OPTIONS.some((role) => role.value === user.id_role) && (
-                                <SelectItem value={String(user.id_role)}>{getRoleLabel(user.id_role)}</SelectItem>
+                              {!ROLE_OPTIONS.some((role) => role.value === draft.id_role) && (
+                                <SelectItem value={String(draft.id_role)}>{getRoleLabel(draft.id_role)}</SelectItem>
                               )}
                             </SelectContent>
                           </Select>
@@ -308,6 +400,17 @@ status.blocked
                         <td className="px-2 py-1.5 align-top font-semibold text-center">{user.failed_login_attempts ?? 0}</td>
                         <td className="px-2 py-1.5 align-top whitespace-nowrap">{formatBogotaDateTime(user.last_failed_login)}</td>
                         <td className="px-2 py-1.5 align-top whitespace-nowrap">{formatBogotaDateTime(user.locked_until)}</td>
+                        <td className="px-2 py-1.5 align-top">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={hasPendingChanges ? 'default' : 'outline'}
+                            disabled={!canEditRoles || !hasPendingChanges || savingUserId === user.id_user}
+                            onClick={() => handleSaveUserChanges(user.id_user)}
+                          >
+                            {savingUserId === user.id_user ? 'Saving...' : 'Save'}
+                          </Button>
+                        </td>
                       </tr>
                     )})
                   )}

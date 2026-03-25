@@ -73,6 +73,21 @@ const authorizationDecisionLabels: Record<string, string> = {
   preapproved_more_specs: 'Pre-approved, needs more specifications',
 };
 
+const authorizationStatusBadge: Record<string, { label: string; className: string }> = {
+  approved: {
+    label: 'Authorized',
+    className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  },
+  rejected: {
+    label: 'Rejected',
+    className: 'bg-rose-100 text-rose-800 border-rose-200',
+  },
+  preapproved_more_specs: {
+    label: 'Pre-approved (needs specs)',
+    className: 'bg-amber-100 text-amber-800 border-amber-200',
+  },
+};
+
 function parseCategoryDetailToMap(rawDetail?: string): Map<string, string> {
   if (!rawDetail) {
     return new Map<string, string>();
@@ -227,9 +242,10 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
   const [showAuthorizationModal, setShowAuthorizationModal] = useState(false);
   const [authorizationInternalComment, setAuthorizationInternalComment] = useState('');
   const [submittingAuthorizationDecision, setSubmittingAuthorizationDecision] = useState(false);
+  const [authorizationDecision, setAuthorizationDecision] = useState<string>('');
 
   const canManageHardwareDetails = isAdmin && Number(user?.id) !== 1;
-  const isSupremeAdmin = isAdmin && Number(user?.id) === 1;
+  const canAuthorizeTicket = isAdmin;
   const canShowHardwareSaveButton =
     canManageHardwareDetails && hardwareComponent.trim() !== '' && assetStatus.trim() !== '';
 
@@ -307,6 +323,11 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     setHardwareComponent(parsed.component);
     setAssetStatus(parsed.status);
   }, [ticket.id, ticket.category, ticket.categoryDetail]);
+
+  useEffect(() => {
+    const parsed = parseCategoryDetailToMap(ticket.categoryDetail);
+    setAuthorizationDecision(parsed.get('authorization_decision') ?? '');
+  }, [ticket.id, ticket.categoryDetail]);
 
   const handleStatusChange = (newStatus: TicketStatus) => {
     updateTicket(ticket.id, { status: newStatus });
@@ -422,7 +443,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
   const handleAuthorizationDecision = async (
     decision: 'approved' | 'rejected' | 'preapproved_more_specs',
   ) => {
-    if (!isSupremeAdmin || !user?.id) {
+    if (!canAuthorizeTicket || !user?.id) {
       return;
     }
 
@@ -470,6 +491,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
       if (decision === 'rejected') {
         publicDecisionMessage = 'No se acepto el cambio, por politicas de IT.';
       }
+      if (decision === 'preapproved_more_specs') {
+        publicDecisionMessage = 'Cambio preaprobado. Se requieren mas especificaciones para ejecutarlo.';
+      }
 
       if (publicDecisionMessage) {
         const savedPublicComment = await apiService.createComment({
@@ -492,6 +516,8 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
       }
 
       setAuthorizationInternalComment('');
+      setAuthorizationDecision(decision);
+      setActiveTab('internal');
       setShowAuthorizationModal(false);
       toast.success('Authorization decision saved');
     } catch (error) {
@@ -556,6 +582,18 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               </div>
             </div>
           </div>
+
+          {authorizationDecision && authorizationStatusBadge[authorizationDecision] && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ShieldCheck className="w-4 h-4" />
+                Authorization Status
+              </div>
+              <Badge className={authorizationStatusBadge[authorizationDecision].className}>
+                {authorizationStatusBadge[authorizationDecision].label}
+              </Badge>
+            </div>
+          )}
 
           {ticket.location && (
             <div className="space-y-1">
@@ -654,7 +692,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   </div>
                 )}
 
-                {isSupremeAdmin && (
+                {canAuthorizeTicket && (
                   <div className="flex justify-end">
                     <Button
                       onClick={() => setShowAuthorizationModal(true)}
@@ -674,6 +712,16 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             <>
               <Separator />
               <div className="space-y-4">
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setShowAuthorizationModal(true)}
+                    className="gap-2 bg-black hover:bg-neutral-900 text-emerald-300 border border-emerald-600/70"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Authorize change
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Change Status</Label>
@@ -869,7 +917,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
         </div>
       </DialogContent>
 
-      {isSupremeAdmin && (
+      {canAuthorizeTicket && (
         <Dialog open={showAuthorizationModal} onOpenChange={setShowAuthorizationModal}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>

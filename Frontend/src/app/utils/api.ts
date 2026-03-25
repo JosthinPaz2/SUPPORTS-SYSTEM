@@ -1,7 +1,7 @@
 // API configuration and utilities
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  'https://josefina-remittent-jama.ngrok-free.dev';
+  '';
 
 export interface LoginRequest {
   institutional_email: string;
@@ -37,6 +37,7 @@ export interface UpdateUserRequest {
   full_name?: string;
   institutional_email?: string;
   id_role?: number;
+  campaign?: string;
 }
 
 export interface PasswordRecoveryRequest {
@@ -260,6 +261,10 @@ class ApiService {
       headers.set('Content-Type', 'application/json');
     }
     headers.set('ngrok-skip-browser-warning', 'true');
+    // Desactiva caching para evitar respuestas 304 Not Modified
+    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
@@ -276,6 +281,11 @@ class ApiService {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('text/html')) {
         throw new Error('The server returned HTML instead of JSON. Verify that the backend is running correctly.');
+      }
+
+      // Manejar 304 Not Modified como error para forzar datos frescos
+      if (response.status === 304) {
+        throw new Error('Received 304 Not Modified - cache headers should be disabled. Verify server configuration.');
       }
 
       if (!response.ok) {
@@ -345,9 +355,13 @@ class ApiService {
   }
 
   async updateUserRole(userId: number, idRole: number): Promise<UserListItemDto> {
+    return this.updateUser(userId, { id_role: idRole });
+  }
+
+  async updateUser(userId: number, payload: UpdateUserRequest): Promise<UserListItemDto> {
     return this.request<UserListItemDto>(`/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify({ id_role: idRole } as UpdateUserRequest),
+      body: JSON.stringify(payload),
     });
   }
 
