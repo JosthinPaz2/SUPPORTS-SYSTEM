@@ -1,7 +1,7 @@
 // API configuration and utilities
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  'https://josefina-remittent-jama.ngrok-free.dev';
+  'https://configurations-twins-virtual-zip.trycloudflare.com';
 
 export interface LoginRequest {
   institutional_email: string;

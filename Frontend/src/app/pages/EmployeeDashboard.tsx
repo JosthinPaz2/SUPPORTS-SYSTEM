@@ -128,7 +128,7 @@ export default function EmployeeDashboard() {
                 </Button>
 
               {/* Boton principal con menu: mantiene funcionalidad antigua con UI mejorada. */}
-        <div
+              <div
                 className={`absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-2xl 
                 border border-slate-700/80 bg-slate-900/90 backdrop-blur-md p-2 
                 shadow-2xl shadow-black/50 transition-all duration-300 

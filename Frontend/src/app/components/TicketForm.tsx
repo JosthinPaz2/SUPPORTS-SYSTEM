@@ -237,7 +237,7 @@ export default function TicketForm({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-slate-300 text-sm font-medium">
+            <Label htmlFor="title" className="text-white text-sm font-medium">
               Issue Title *
             </Label>
             <Input
@@ -250,7 +250,7 @@ export default function TicketForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-slate-600 text-sm font-medium">
+            <Label htmlFor="description" className="text-white text-sm font-medium">
               Detailed Description *
             </Label>
             <Textarea
@@ -287,7 +287,7 @@ export default function TicketForm({
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="siteLocation" className="text-slate-300 text-sm font-medium">
+                <Label htmlFor="siteLocation" className="text-white text-sm font-medium">
                   Select Location
                 </Label>
                 <Select value={selectedLocationId} onValueChange={handleLocationChange}>
@@ -312,7 +312,7 @@ export default function TicketForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="floor" className="text-slate-300 text-sm font-medium">
+                <Label htmlFor="floor" className="text-white text-sm font-medium">
                   Select Floor
                 </Label>
                 <Select

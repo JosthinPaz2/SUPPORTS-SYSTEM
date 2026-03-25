@@ -2157,164 +2157,257 @@ export default function OfficeMap() {
 
   if (isViewOnly) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-800
+                      via-slate-900 to-slate-950 p-6 text-slate-100" onMouseUp={handleMouseUp}>
         <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-7xl flex-col gap-4 overflow-hidden">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 
+                          rounded-2xl border border-slate-700/70 
+                          bg-slate-900/80 backdrop-blur-md 
+                          px-5 py-4 shadow-lg">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
-              <p className="text-sm text-gray-600">Read-only office layout view</p>
+              <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Office Map</h1>
+              <p className="text-sm text-slate-300">Read-only office layout view</p>
             </div>
-            <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
+
+            <Button 
+            variant="outline"
+            onClick={handleBackToMenu}
+            className='border-slate-600 bg-slate-800/60 text-slate-200
+                   hover:bg-slate-700 hover:text-white 
+                   transition-all duration-300 shadow-sm'
+                   >Back
+            </Button>
+
           </div>
 
           <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <Card className="border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-              <CardContent className="pt-6 space-y-5">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Map Filter
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Choose the office area you want to inspect.
-                  </p>
-                </div>
+          <Card className="border border-slate-700/70 bg-slate-900/90 shadow-md backdrop-blur-md rounded-2xl">
+            <CardContent className="pt-6 space-y-5">
 
-                <div className="space-y-2">
-                  <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-700">
-                    Location
-                  </label>
-                  <Select
-                    value={selectedViewLocationId}
-                    onValueChange={(value) => {
-                      setSelectedViewLocationId(value);
-                      setSelectedViewFloorId('');
-                    }}
-                    disabled={loadingViewMetadata}
+              {/* HEADER */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Map Filter
+                </p>
+                <p className="text-sm text-slate-300">
+                 Choose the office area you want to inspect.
+                </p>
+              </div>
+
+              {/* LOCATION */}
+              <div className="space-y-2">
+                <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-300">
+                  Location
+                </label>
+
+                <Select
+                  value={selectedViewLocationId}
+                  onValueChange={(value) => {
+                    setSelectedViewLocationId(value);
+                    setSelectedViewFloorId('');
+                  }}
+                  disabled={loadingViewMetadata}
+                >
+                  <SelectTrigger
+                    id="employeeViewLocation"
+                    className="h-11 rounded-xl 
+                              border-slate-700 
+                     bg-slate-800/70 
+                     text-slate-200
+                              hover:bg-slate-800 
+                              focus:ring-1 focus:ring-blue-500"
                   >
-                    <SelectTrigger
-                      id="employeeViewLocation"
-                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
-                    >
-                      <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {viewLocations.map((location) => (
-                        <SelectItem key={location.id_location} value={String(location.id_location)}>
-                          {location.location_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
+                  </SelectTrigger>
 
-                <div className="space-y-2">
-                  <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-700">
-                    Floor
-                  </label>
-                  <Select
-                    value={selectedViewFloorId}
-                    onValueChange={setSelectedViewFloorId}
-                    disabled={!selectedViewLocationId || loadingViewMetadata}
+                  <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                    {viewLocations.map((location) => (
+                      <SelectItem 
+                        key={location.id_location} 
+                        value={String(location.id_location)}
+                        className="focus:bg-slate-800 focus:text-white"
+                      >
+                        {location.location_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* FLOOR */}
+              <div className="space-y-2">
+                <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-300">
+                 Floor
+                </label>
+
+                <Select
+                  value={selectedViewFloorId}
+                  onValueChange={setSelectedViewFloorId}
+                  disabled={!selectedViewLocationId || loadingViewMetadata}
+                >
+                  <SelectTrigger
+                    id="employeeViewFloor"
+                    className="h-11 rounded-xl 
+                              border-slate-700 
+                              bg-slate-800/70 
+                              text-slate-200
+                              hover:bg-slate-800 
+                              focus:ring-1 focus:ring-blue-500"
                   >
-                    <SelectTrigger
-                      id="employeeViewFloor"
-                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
-                    >
-                      <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableViewFloors.map((floor) => (
-                        <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
-                          {floor.floor_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
+                  </SelectTrigger>
 
-              </CardContent>
-            </Card>
+                  <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                    {availableViewFloors.map((floor) => (
+                      <SelectItem 
+                        key={floor.id_floor} 
+                        value={String(floor.id_floor)}
+                        className="focus:bg-slate-800 focus:text-white"
+                      >
+                        {floor.floor_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
             <div className="flex min-h-0 flex-col gap-3">
 
               {/* Controles de zoom + leyenda de colores */}
               {currentZoneId && allPlacedView.length > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+                <div className="flex flex-wrap items-center justify-between gap-3 
+                                text-xs text-slate-400
+                                rounded-xl border border-slate-700/70 
+                                bg-slate-900/80 backdrop-blur-md 
+                                px-4 py-3 shadow-md">
+
+                  {/* CONTROLES DE ZOOM */}
                   <div className="flex items-center gap-2">
+
+                    {/* ZOOM OUT */}
                     <button
                       type="button"
-                      className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      className="h-8 w-8 rounded-md border border-slate-600 
+                                bg-slate-800 text-slate-200 
+                                hover:bg-slate-700 hover:text-white
+                                transition-all duration-200"
                       onClick={handleViewZoomOut}
                       title="Zoom out"
                       aria-label="Zoom out"
                     >
-                      −
+                     −
                     </button>
-                    <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+
+                    {/* PORCENTAJE */}
+                    <span className="text-xs font-medium text-slate-300 min-w-[3rem] text-center">
                       {Math.round(viewScale * 100)}%
                     </span>
+
+                    {/* ZOOM IN */}
                     <button
                       type="button"
-                      className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      className="h-8 w-8 rounded-md border border-slate-600 
+                                bg-slate-800 text-slate-200 
+                                hover:bg-slate-700 hover:text-white
+                                transition-all duration-200"
                       onClick={handleViewZoomIn}
                       title="Zoom in"
                       aria-label="Zoom in"
                     >
                       +
                     </button>
+
+                    {/* RESET */}
                     {(viewScale !== 1 || viewPanOffset.x !== 0 || viewPanOffset.y !== 0) && (
                       <button
                         type="button"
-                        className="h-8 px-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs font-medium"
-                        onClick={() => { setViewScale(1); setViewPanOffset({ x: 0, y: 0 }); }}
+                        className="h-8 px-3 rounded-md border border-slate-600 
+                                  bg-slate-800 text-slate-300 
+                                  hover:bg-slate-700 hover:text-white
+                                  text-xs font-medium transition-all duration-200"
+                        onClick={() => { 
+                          setViewScale(1); 
+                          setViewPanOffset({ x: 0, y: 0 }); 
+                        }}
                         title="Reset view"
                         aria-label="Reset view"
                       >
                         Reset
                       </button>
                     )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
+                 </div>
+
+                  {/* LEYENDA */}
+                  <div className="flex flex-wrap items-center gap-4">
                     {[
-                      { color: '#22C55E', label: 'No issues' },
-                      { color: '#F97316', label: 'With issues' },
-                      { color: '#EF4444', label: 'With active reports' },
-                      { color: '#6B7280', label: 'Zone' },
+                     { color: '#22C55E', label: 'No issues' },
+                     { color: '#F97316', label: 'With issues' },
+                     { color: '#EF4444', label: 'With active reports' },
+                     { color: '#6B7280', label: 'Zone' },
                     ].map(({ color, label }) => (
-                      <span key={label} className="flex items-center gap-1.5">
-                        <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ background: color }} />
+                      <span 
+                       key={label} 
+                       className="flex items-center gap-1.5 text-slate-300"
+                      >
+                        <span 
+                          className="inline-block w-3 h-3 rounded-sm shrink-0 border border-slate-700" 
+                          style={{ background: color }} 
+                        />
                         {label}
                       </span>
-                    ))}
+                   ))}
                   </div>
+
                 </div>
               )}
 
               {/* Mapa fit-to-content */}
-              <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden relative min-h-0">
-          {loadingMap && (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              Loading map...
-            </div>
-          )}
+              <div className="flex-1 rounded-2xl border border-slate-700/70 
+                bg-slate-900/80 backdrop-blur-md 
+                shadow-lg overflow-hidden relative min-h-0">
 
-          {!loadingMap && !currentZoneId && (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
-                <p className="mt-1 text-sm text-slate-400">The map will be displayed here.</p>
-              </div>
-            </div>
-          )}
+  {/* LOADING */}
+  {loadingMap && (
+    <div className="flex h-full items-center justify-center text-sm text-slate-400">
+      Loading map...
+    </div>
+  )}
 
-          {!loadingMap && currentZoneId && allPlacedView.length === 0 && (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">No elements placed</p>
-                <p className="mt-1 text-sm text-slate-400">This floor has no elements added to the map yet.</p>
-              </div>
-            </div>
-          )}
+  {/* SIN SELECCIÓN */}
+  {!loadingMap && !currentZoneId && (
+    <div className="flex h-full items-center justify-center text-center px-4">
+      <div>
+        {/* TÍTULO */}
+        <p className="text-lg font-semibold text-slate-200">
+          Select a location and floor
+        </p>
+
+        {/* DESCRIPCIÓN */}
+        <p className="mt-1 text-sm text-slate-400">
+          The map will be displayed here.
+        </p>
+      </div>
+    </div>
+  )}
+
+  {/* SIN ELEMENTOS */}
+  {!loadingMap && currentZoneId && allPlacedView.length === 0 && (
+    <div className="flex h-full items-center justify-center text-center px-4">
+      <div>
+        {/* TÍTULO */}
+        <p className="text-lg font-semibold text-slate-200">
+          No elements placed
+        </p>
+
+        {/* DESCRIPCIÓN */}
+        <p className="mt-1 text-sm text-slate-400">
+          This floor has no elements added to the map yet.
+        </p>
+      </div>
+    </div>
+  )}
 
           {!loadingMap && currentZoneId && allPlacedView.length > 0 && (
             <svg
@@ -2333,7 +2426,7 @@ export default function OfficeMap() {
               <rect
                 x={viewBBoxEmp.minX} y={viewBBoxEmp.minY}
                 width={viewBBoxEmp.w} height={viewBBoxEmp.h}
-                fill="#f8fafc"
+                fill="#ffffff"
               />
 
               {/* Capas de fondo (zonas, frames, store, etc.) primero */}
