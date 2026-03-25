@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../context/TicketContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { LogOut, Plus, Clock, CheckCircle2, AlertCircle, Map } from 'lucide-react';
+import { LogOut, Plus, Clock, CheckCircle2, AlertCircle, Map, ChevronDown, FilePlus2 } from 'lucide-react';
 import TicketForm from '../components/TicketForm';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import NotificationsButton from '../components/NotificationsButton';
@@ -18,8 +18,12 @@ export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
   const { tickets } = useTickets();
   const [showForm, setShowForm] = useState(false);
+  // Estado del menu desplegable de Create Ticket (nuevo comportamiento visual).
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [manualSelectedTicket, setManualSelectedTicket] = useState<Ticket | null>(null);
   const [filter, setFilter] = useState<FilterStatus>('all');
+  // Referencia para detectar click fuera y cerrar el menu.
+  const createMenuRef = useRef<HTMLDivElement | null>(null);
 
   const myTicketsBase = tickets.filter((ticket) => 
     String(ticket.createdBy) === String(user?.id)
@@ -49,13 +53,49 @@ export default function EmployeeDashboard() {
     }
   };
 
+  useEffect(() => {
+    // Cierra el menu al hacer click fuera del boton/lista.
+    function handleClickOutside(event: MouseEvent) {
+      if (createMenuRef.current && !createMenuRef.current.contains(event.target as Node)) {
+        setIsCreateMenuOpen(false);
+      }
+    }
+
+    // Mejora UX: permite cerrar el menu con tecla Escape.
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsCreateMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  const openMapTicketFlow = () => {
+    setIsCreateMenuOpen(false);
+    // Se conserva la funcionalidad original: abrir OfficeMap en modo solo lectura.
+    navigate('/OfficeMap?viewOnly=true');
+  };
+
+  const openFormTicketFlow = () => {
+    setIsCreateMenuOpen(false);
+    // Se conserva la funcionalidad original: abrir modal de TicketForm.
+    setShowForm(true);
+  };
+
+  // Clases compartidas de animacion expandible usadas en botones del header.
   const expandibleClass = "group flex items-center overflow-hidden transition-all duration-300 ease-in-out";
   const textClass = "max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-2";
 
   return (
     /* 1. Cambio a w-full para ocupar todo el ancho del computador */
-    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
-      <header className="bg-white border-b w-full">
+    <div className="min-h-screen w-full bg-[linear-gradient(160deg,#f7fafc_0%,#eef4ff_55%,#f9fbff_100%)] flex flex-col">
+      <header className="bg-white/90 backdrop-blur border-b border-slate-200/80 w-full">
         {/* 2. Eliminado max-w-7xl para diseño fluido */}
         <div className="w-full px-4 md:px-8 py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -65,22 +105,61 @@ export default function EmployeeDashboard() {
             </div>
             
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/OfficeMap?viewOnly=true')}
-                className={expandibleClass}
-              >
-                <Map className="w-4 h-4" />
-                <span className={textClass}>Office Map</span>
-              </Button>
+              {/* Boton principal con menu: mantiene funcionalidad antigua con UI mejorada. */}
+              <div className="relative" ref={createMenuRef}>
+                <Button
+                  onClick={() => setIsCreateMenuOpen((prev) => !prev)}
+                  className={`${expandibleClass} h-10 rounded-xl px-4 bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_55%,#334155_100%)] text-white shadow-[0_10px_22px_-12px_rgba(15,23,42,0.7)] hover:shadow-[0_14px_30px_-12px_rgba(15,23,42,0.8)]`}
+                  aria-haspopup="menu"
+                  aria-expanded={isCreateMenuOpen}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className={textClass}>Create Ticket</span>
+                  <ChevronDown className={`w-4 h-4 transition-all duration-300 group-hover:ml-2 ${isCreateMenuOpen ? 'rotate-180' : ''}`} />
+                </Button>
 
-              <Button 
-                onClick={() => setShowForm(true)}
-                className={`${expandibleClass} bg-black hover:bg-black/90 text-white`}
-              >
-                <Plus className="w-4 h-4" />
-                <span className={textClass}>New Ticket</span>
-              </Button>
+                <div
+                  className={`absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white/95 backdrop-blur p-2 shadow-xl transition-all duration-300 ${isCreateMenuOpen ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'}`}
+                  role="menu"
+                  aria-label="Create ticket options"
+                >
+                  {/* Opcion 1: desde mapa (viewOnly=true) */}
+                  <button
+                    type="button"
+                    onClick={openMapTicketFlow}
+                    className="w-full text-left rounded-xl px-3 py-3 transition-colors duration-200 hover:bg-sky-50"
+                    role="menuitem"
+                  >
+                    <span className="flex items-start gap-3">
+                      <span className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-sky-100 p-2 text-sky-700">
+                        <Map className="w-4 h-4" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-900">From Office Map</span>
+                        <span className="block text-xs text-slate-600">Choose desk/location and report the issue from the map.</span>
+                      </span>
+                    </span>
+                  </button>
+
+                  {/* Opcion 2: desde formulario rapido (modal TicketForm) */}
+                  <button
+                    type="button"
+                    onClick={openFormTicketFlow}
+                    className="mt-1 w-full text-left rounded-xl px-3 py-3 transition-colors duration-200 hover:bg-indigo-50"
+                    role="menuitem"
+                  >
+                    <span className="flex items-start gap-3">
+                      <span className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-indigo-100 p-2 text-indigo-700">
+                        <FilePlus2 className="w-4 h-4" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-900">Quick Form</span>
+                        <span className="block text-xs text-slate-600">Open the classic form to create the ticket manually.</span>
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
 
               <NotificationsButton />
 
@@ -98,7 +177,7 @@ export default function EmployeeDashboard() {
       </header>
 
       {/* 3. Main al 100% del ancho */}
-      <main className="w-full flex-grow p-4 md:p-8">
+      <main className="w-full grow p-4 md:p-8">
         
         {/* STATS: Ajustadas para que nunca se amontonen */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
@@ -163,7 +242,7 @@ export default function EmployeeDashboard() {
                   No tickets found with this status.
                 </div>
               ) : (
-                <table className="w-full text-left border-collapse min-w-[600px]">
+                <table className="w-full text-left border-collapse min-w-150">
                   <thead>
                     <tr className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
                       <th className="px-6 py-3 border-b">Title</th>

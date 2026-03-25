@@ -167,7 +167,7 @@ export default function NotificationsButton() {
             } else {
               toast.success("New notification", {
                 description: item.title,
-                duration: 4000,
+                duration: 4500,
               });
             }
           }
@@ -289,8 +289,8 @@ export default function NotificationsButton() {
       {open && (
         <>
           {/* Desktop view */}
-          <div className="hidden md:block absolute right-0 mt-2 w-80 z-50">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+          <div className="hidden md:block absolute right-0 top-full mt-4 w-80 z-40">
+            <div className="bg-white/95 rounded-xl shadow-xl overflow-hidden border border-slate-200 backdrop-blur-sm">
               <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
                 <h3 className="text-sm font-semibold text-gray-800">
                   Notifications

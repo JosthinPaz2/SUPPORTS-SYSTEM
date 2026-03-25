@@ -48,7 +48,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { CheckCircle2, AlertCircle, User } from 'lucide-react';
+import { CheckCircle2, AlertCircle, User, Upload, Download } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -119,6 +119,21 @@ type SmartGuideLabel = {
 type SmartGuides = {
   lines: SmartGuideLine[];
   labels: SmartGuideLabel[];
+};
+
+type MapTransferFile = {
+  version: number;
+  exported_at: string;
+  location?: {
+    id: number;
+    name: string;
+  };
+  floor: {
+    id: number;
+    name: string;
+  };
+  stations: MapStationSavePayload[];
+  decorations: MapDecorationSavePayload[];
 };
 
 const EMPTY_SMART_GUIDES: SmartGuides = {
@@ -369,6 +384,14 @@ export default function OfficeMap() {
   const [adminSelectedLocationId, setAdminSelectedLocationId] = useState('');
   const [adminSelectedFloorId, setAdminSelectedFloorId] = useState('');
   const [loadingAdminMetadata, setLoadingAdminMetadata] = useState(false);
+  const [mapTransferDialogOpen, setMapTransferDialogOpen] = useState(false);
+  const [mapTransferMode, setMapTransferMode] = useState<'import' | 'export'>('import');
+  const [mapTransferLocationId, setMapTransferLocationId] = useState('');
+  const [mapTransferFloorId, setMapTransferFloorId] = useState('');
+  const [mapTransferFloorNameInput, setMapTransferFloorNameInput] = useState('');
+  const [mapTransferFile, setMapTransferFile] = useState<File | null>(null);
+  const [processingMapTransfer, setProcessingMapTransfer] = useState(false);
+  const mapTransferFileInputRef = useRef<HTMLInputElement>(null);
   const [smartGuides, setSmartGuides] = useState<SmartGuides>(EMPTY_SMART_GUIDES);
   const historyRef = useRef<any[][]>([]);
   const redoRef = useRef<any[][]>([]);
@@ -1265,6 +1288,267 @@ export default function OfficeMap() {
         .sort((a, b) => a.floor_name.localeCompare(b.floor_name))
     : [];
 
+  const mapTransferAvailableFloors = mapTransferLocationId
+    ? adminFloors
+        .filter((floor) => floor.id_location === Number(mapTransferLocationId))
+        .sort((a, b) => a.floor_name.localeCompare(b.floor_name))
+    : [];
+
+  const openMapTransferDialog = (mode: 'import' | 'export') => {
+    // Reuse current filters to reduce clicks when opening import/export.
+    setMapTransferMode(mode);
+    setMapTransferDialogOpen(true);
+    setMapTransferLocationId(adminSelectedLocationId);
+    setMapTransferFloorId(adminSelectedFloorId);
+    setMapTransferFloorNameInput('');
+    setMapTransferFile(null);
+    if (mapTransferFileInputRef.current) {
+      mapTransferFileInputRef.current.value = '';
+    }
+  };
+
+  const resolveImportFloorId = async (): Promise<number> => {
+    const selectedLocationId = Number(mapTransferLocationId);
+    if (!Number.isFinite(selectedLocationId)) {
+      throw new Error('Select a location before importing');
+    }
+
+    const selectedFloorId = Number(mapTransferFloorId);
+    if (Number.isFinite(selectedFloorId) && mapTransferFloorId) {
+      // User selected an existing floor from the dropdown.
+      return selectedFloorId;
+    }
+
+    const typedFloorName = mapTransferFloorNameInput.trim();
+    if (!typedFloorName) {
+      throw new Error('Select a floor or write a floor name to import');
+    }
+
+    const normalizedTyped = typedFloorName.toLowerCase();
+    const existingFloor = adminFloors.find(
+      (floor) =>
+        floor.id_location === selectedLocationId &&
+        floor.floor_name.trim().toLowerCase() === normalizedTyped,
+    );
+
+    if (existingFloor) {
+      // If the typed floor already exists in this location, reuse it.
+      return existingFloor.id_floor;
+    }
+
+    // Create the floor on the fly when importing to a new floor name.
+    const createdFloor = await apiService.createFloor({
+      floor_name: typedFloorName,
+      id_location: selectedLocationId,
+    });
+
+    setAdminFloors((prev) => [...prev, createdFloor]);
+    return createdFloor.id_floor;
+  };
+
+  const clampPercent = (value: number, fallback: number) => {
+    const numberValue = Number.isFinite(value) ? value : fallback;
+    return Math.max(0, Math.min(100, numberValue));
+  };
+
+  const toStationPayloadFromUnknown = (
+    stations: unknown,
+    floorId: number,
+  ): MapStationSavePayload[] => {
+    if (!Array.isArray(stations)) return [];
+
+    return stations
+      .map((entry): MapStationSavePayload | null => {
+        if (typeof entry !== 'object' || entry === null) return null;
+        const candidate = entry as Partial<MapStationSavePayload> & { id?: string };
+        const idStation = String(candidate.id_station ?? candidate.id ?? '').trim();
+        if (!idStation) return null;
+
+        return {
+          id_station: idStation,
+          id_zone: floorId,
+          pos_x: clampPercent(Number(candidate.pos_x), 0),
+          pos_y: clampPercent(Number(candidate.pos_y), 0),
+          rotation: Math.max(0, Math.min(360, Number(candidate.rotation) || 0)),
+          width: clampPercent(Number(candidate.width), 8),
+          height: clampPercent(Number(candidate.height), 4),
+        };
+      })
+      .filter((value): value is MapStationSavePayload => value !== null);
+  };
+
+  const toDecorationPayloadFromUnknown = (decorations: unknown): MapDecorationSavePayload[] => {
+    if (!Array.isArray(decorations)) return [];
+
+    return decorations
+      .map((entry): MapDecorationSavePayload | null => {
+        if (typeof entry !== 'object' || entry === null) return null;
+        const candidate = entry as Partial<MapDecorationSavePayload>;
+        const decorationType = String(candidate.decoration_type ?? '').trim();
+        if (!decorationType) return null;
+
+        return {
+          decoration_type: decorationType.toUpperCase(),
+          label: candidate.label ?? null,
+          pos_x: clampPercent(Number(candidate.pos_x), 0),
+          pos_y: clampPercent(Number(candidate.pos_y), 0),
+          width: clampPercent(Number(candidate.width), 10),
+          height: clampPercent(Number(candidate.height), 10),
+          rotation: Math.max(0, Math.min(360, Number(candidate.rotation) || 0)),
+          color: candidate.color ?? null,
+        };
+      })
+      .filter((value): value is MapDecorationSavePayload => value !== null);
+  };
+
+  const handleImportMapData = async () => {
+    if (!mapTransferLocationId) {
+      toast.error('Select location and floor to import the map');
+      return;
+    }
+
+    if (!mapTransferFile) {
+      toast.error('Select a JSON file to import');
+      return;
+    }
+
+    try {
+      setProcessingMapTransfer(true);
+      const selectedFloorId = await resolveImportFloorId();
+      const fileContent = await mapTransferFile.text();
+      const parsed = JSON.parse(fileContent) as Partial<MapTransferFile> & {
+        map?: {
+          stations?: unknown;
+          decorations?: unknown;
+        };
+      };
+
+      const importedStations = toStationPayloadFromUnknown(
+        parsed.stations ?? parsed.map?.stations,
+        selectedFloorId,
+      );
+      const importedDecorations = toDecorationPayloadFromUnknown(
+        parsed.decorations ?? parsed.map?.decorations,
+      );
+
+      if (importedStations.length === 0) {
+        throw new Error('The file has no valid stations to import');
+      }
+
+      const existingMap = await apiService.getMapByZone(selectedFloorId);
+      const importedStationIds = new Set(importedStations.map((station) => station.id_station));
+      // Desks not present in the import file are cleared from this map (moved out of canvas).
+      const removedStationsPayload: MapStationSavePayload[] = existingMap.stations
+        .filter((station) => !importedStationIds.has(station.id_station))
+        .map((station) => ({
+          id_station: station.id_station,
+          id_zone: selectedFloorId,
+          pos_x: 0,
+          pos_y: 0,
+          rotation: station.rotation ?? 0,
+          width: station.width ?? 8,
+          height: station.height ?? 4,
+        }));
+
+      const stationPayload = [...importedStations, ...removedStationsPayload];
+
+      // Save stations and decorations in DB as one import operation.
+      const stationResult = await apiService.saveMapStations(stationPayload);
+      const decorationResult = await apiService.saveMapDecorations(selectedFloorId, importedDecorations);
+
+      setCurrentZoneId(selectedFloorId);
+      setAdminSelectedLocationId(mapTransferLocationId);
+  setAdminSelectedFloorId(String(selectedFloorId));
+      setActiveMode('view');
+      setMapTransferDialogOpen(false);
+
+      toast.success('Map imported successfully', {
+        description: `${stationResult.updated} stations and ${decorationResult.saved} objects processed`,
+      });
+    } catch (error) {
+      toast.error((error as Error).message || 'Could not import the selected map file');
+    } finally {
+      setProcessingMapTransfer(false);
+    }
+  };
+
+  const handleExportMapData = async () => {
+    const selectedFloorId = Number(mapTransferFloorId);
+
+    if (!mapTransferLocationId || !mapTransferFloorId || !Number.isFinite(selectedFloorId)) {
+      toast.error('Select location and floor to export the map');
+      return;
+    }
+
+    try {
+      setProcessingMapTransfer(true);
+      const mapData = await apiService.getMapByZone(selectedFloorId);
+      const locationName =
+        adminLocations.find((location) => String(location.id_location) === mapTransferLocationId)?.location_name ||
+        'location';
+      const floorName =
+        adminFloors.find((floor) => String(floor.id_floor) === mapTransferFloorId)?.floor_name ||
+        `floor-${mapTransferFloorId}`;
+
+      const exportPayload: MapTransferFile = {
+        version: 1,
+        exported_at: new Date().toISOString(),
+        location: {
+          id: Number(mapTransferLocationId),
+          name: locationName,
+        },
+        floor: {
+          id: selectedFloorId,
+          name: floorName,
+        },
+        stations: mapData.stations.map((station) => ({
+          id_station: station.id_station,
+          id_zone: selectedFloorId,
+          pos_x: station.pos_x,
+          pos_y: station.pos_y,
+          rotation: station.rotation,
+          width: station.width,
+          height: station.height,
+        })),
+        decorations: mapData.decorations.map((decoration) => ({
+          decoration_type: decoration.decoration_type,
+          label: decoration.label ?? null,
+          pos_x: decoration.pos_x,
+          pos_y: decoration.pos_y,
+          width: decoration.width,
+          height: decoration.height,
+          rotation: decoration.rotation,
+          color: decoration.color ?? null,
+        })),
+      };
+
+      // Export a portable JSON with full map state for the selected floor.
+      const sanitizedLocation = locationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const sanitizedFloor = floorName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `map-${sanitizedLocation || 'location'}-${sanitizedFloor || 'floor'}-${timestamp}.json`;
+
+      const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      setMapTransferDialogOpen(false);
+      toast.success('Map exported successfully', {
+        description: `File downloaded with ${exportPayload.stations.length} stations and ${exportPayload.decorations.length} objects`,
+      });
+    } catch (error) {
+      toast.error((error as Error).message || 'Could not export the selected map');
+    } finally {
+      setProcessingMapTransfer(false);
+    }
+  };
+
   const getStatusBadgeClass = (status: string) => {
     const s = normalizeTicketStatus(status);
     if (s === 'resolved') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
@@ -1506,6 +1790,207 @@ export default function OfficeMap() {
     </Dialog>
   );
 
+<<<<<<< Updated upstream
+=======
+  const noteLabelDialog = (
+    <Dialog
+      open={Boolean(pendingNoteDrop)}
+      onOpenChange={(open) => {
+        if (!open) handleCancelNoteDrop();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Name your text box</DialogTitle>
+          <DialogDescription>
+            Write the label to display and save as map decoration.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <label htmlFor="noteLabelInput" className="text-sm font-medium text-slate-700">
+            Text
+          </label>
+          <input
+            id="noteLabelInput"
+            type="text"
+            value={pendingNoteLabel}
+            onChange={(e) => setPendingNoteLabel(e.target.value)}
+            placeholder="Example: Reception"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={handleCancelNoteDrop}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleConfirmNoteDrop}>
+            Add
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const mapTransferDialog = (
+    <Dialog
+      open={mapTransferDialogOpen}
+      onOpenChange={(open) => {
+        setMapTransferDialogOpen(open);
+        if (!open) {
+          setMapTransferFloorNameInput('');
+          setMapTransferFile(null);
+          if (mapTransferFileInputRef.current) {
+            mapTransferFileInputRef.current.value = '';
+          }
+        }
+      }}
+    >
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{mapTransferMode === 'import' ? 'Import map' : 'Export map'}</DialogTitle>
+          <DialogDescription>
+            {mapTransferMode === 'import'
+              ? 'Select location, floor and a JSON file to import and save automatically to database.'
+              : 'Select location and floor to export the complete map data.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="mapTransferLocation" className="text-sm font-medium text-slate-700">
+              Location
+            </label>
+            <Select
+              value={mapTransferLocationId}
+              onValueChange={(value) => {
+                setMapTransferLocationId(value);
+                setMapTransferFloorId('');
+                setMapTransferFloorNameInput('');
+              }}
+              disabled={processingMapTransfer}
+            >
+              <SelectTrigger id="mapTransferLocation" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectValue placeholder="Select a location" />
+              </SelectTrigger>
+              <SelectContent>
+                {adminLocations.map((location) => (
+                  <SelectItem key={location.id_location} value={String(location.id_location)}>
+                    {location.location_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="mapTransferFloor" className="text-sm font-medium text-slate-700">
+              Floor
+            </label>
+            <Select
+              value={mapTransferFloorId}
+              onValueChange={(value) => {
+                setMapTransferFloorId(value);
+                if (mapTransferMode === 'import') {
+                  setMapTransferFloorNameInput('');
+                }
+              }}
+              disabled={!mapTransferLocationId || processingMapTransfer}
+            >
+              <SelectTrigger id="mapTransferFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectValue
+                  placeholder={
+                    !mapTransferLocationId
+                      ? 'Select a location first'
+                      : mapTransferMode === 'import'
+                        ? 'Select an existing floor (optional)'
+                        : 'Select a floor'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {mapTransferAvailableFloors.map((floor) => (
+                  <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
+                    {floor.floor_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {mapTransferMode === 'import' && (
+              <>
+                <p className="text-xs text-slate-500">
+                  Optional: if the floor does not exist, write it below and it will be created automatically.
+                </p>
+                <input
+                  id="mapTransferFloorName"
+                  type="text"
+                  value={mapTransferFloorNameInput}
+                  onChange={(event) => {
+                    setMapTransferFloorNameInput(event.target.value);
+                    if (event.target.value.trim().length > 0) {
+                      setMapTransferFloorId('');
+                    }
+                  }}
+                  placeholder="Write floor name (example: Floor 5)"
+                  disabled={!mapTransferLocationId || processingMapTransfer}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </>
+            )}
+          </div>
+
+          {mapTransferMode === 'import' && (
+            <div className="space-y-2">
+              <label htmlFor="mapTransferFile" className="text-sm font-medium text-slate-700">
+                Map JSON file
+              </label>
+              <input
+                ref={mapTransferFileInputRef}
+                id="mapTransferFile"
+                type="file"
+                accept="application/json,.json"
+                onChange={(event) => {
+                  const selected = event.target.files?.[0] ?? null;
+                  setMapTransferFile(selected);
+                }}
+                disabled={processingMapTransfer}
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-slate-500">
+                Use a file exported from this module to preserve stations and map objects.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setMapTransferDialogOpen(false)}
+            disabled={processingMapTransfer}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={processingMapTransfer}
+            onClick={mapTransferMode === 'import' ? handleImportMapData : handleExportMapData}
+          >
+            {processingMapTransfer
+              ? mapTransferMode === 'import'
+                ? 'Importing...'
+                : 'Exporting...'
+              : mapTransferMode === 'import'
+                ? 'Import and save'
+                : 'Export map'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+>>>>>>> Stashed changes
   if (isViewOnly) {
     return (
       <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
@@ -1986,29 +2471,52 @@ export default function OfficeMap() {
       />
       
       <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm p-5 space-y-5">
-        <div className="max-w-md space-y-2">
-          <label htmlFor="adminLocationFilter" className="text-sm font-medium text-slate-700">
-            Filter by Location
-          </label>
-          <Select
-            value={adminSelectedLocationId}
-            onValueChange={(value) => {
-              setAdminSelectedLocationId(value);
-              setAdminSelectedFloorId('');
-            }}
-            disabled={loadingAdminMetadata}
-          >
-            <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
-              <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
-            </SelectTrigger>
-            <SelectContent>
-              {adminLocations.map((location) => (
-                <SelectItem key={location.id_location} value={String(location.id_location)}>
-                  {location.location_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="max-w-md space-y-2">
+            <label htmlFor="adminLocationFilter" className="text-sm font-medium text-slate-700">
+              Filter by Location
+            </label>
+            <Select
+              value={adminSelectedLocationId}
+              onValueChange={(value) => {
+                setAdminSelectedLocationId(value);
+                setAdminSelectedFloorId('');
+              }}
+              disabled={loadingAdminMetadata}
+            >
+              <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
+              </SelectTrigger>
+              <SelectContent>
+                {adminLocations.map((location) => (
+                  <SelectItem key={location.id_location} value={String(location.id_location)}>
+                    {location.location_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openMapTransferDialog('import')}
+              disabled={loadingAdminMetadata || adminLocations.length === 0}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Import map
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openMapTransferDialog('export')}
+              disabled={loadingAdminMetadata || adminLocations.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export map
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
@@ -2051,6 +2559,8 @@ export default function OfficeMap() {
         <div className="flex-1 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center">
           <p className="text-slate-400 text-base font-medium">Select a floor tab to open the map</p>
         </div>
+
+        {mapTransferDialog}
       </div>
     </div>
   );

@@ -102,6 +102,7 @@ export function TicketProvider({ children }: { children: ReactNode }) {
         ticket.moved_by != null
           ? usersById.get(String(ticket.moved_by)) || `User ${ticket.moved_by}`
           : undefined,
+      categoryDetail: ticket.category_detail ?? undefined,
       createdAt: new Date(ticket.created_at),
       updatedAt: new Date(ticket.created_at),
       comments: [],

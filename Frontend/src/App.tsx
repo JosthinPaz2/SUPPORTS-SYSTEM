@@ -15,11 +15,13 @@ function App() {
     <AuthProvider>
       <TicketProvider>
         <DeskLayoutProvider>
-          <Toaster // componentes de la notificacion como colores, tiempo, posicion y si se muestra el boton de cerrar
+          <Toaster
             position="top-right"
-            richColors 
-            closeButton 
-            duration={3000} 
+            offset={{ top: 86, right: 18 }}
+            richColors
+            closeButton
+            duration={4200}
+            visibleToasts={4}
           />
           <BrowserRouter>
             <Routes>
