@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col relative">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm w-full relative z-[9999]">
+      <header className="backdrop-blur-md border-b border-slate-200/50 shadow-sm w-full">
         <div className="w-full px-4 md:px-8 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>

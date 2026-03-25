@@ -104,7 +104,7 @@ export default function EmployeeDashboard() {
         <div style={{position:'absolute',borderRadius:'50%',filter:'blur(80px)',width:400,height:400,top:'20%',left:'60%',background:'rgba(99,102,241,0.08)',animation:'floatBg3 20s ease-in-out infinite alternate'}}/>
         <style>{`@keyframes floatBg0{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,30px) scale(1.1)}}@keyframes floatBg1{from{transform:translate(0,0) scale(1)}to{transform:translate(-50px,40px) scale(1.15)}}@keyframes floatBg2{from{transform:translate(0,0) scale(1)}to{transform:translate(30px,-40px) scale(1.05)}}@keyframes floatBg3{from{transform:translate(0,0) scale(1)}to{transform:translate(-30px,20px) scale(1.08)}}`}</style>
       </div>
-      <header className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 w-full relative z-[9999]">
+      <header className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 w-full relative z-500">
         {/* 2. Eliminado max-w-7xl para diseño fluido */}
         <div className="w-full px-4 md:px-8 py-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -128,44 +128,84 @@ export default function EmployeeDashboard() {
                 </Button>
 
               {/* Boton principal con menu: mantiene funcionalidad antigua con UI mejorada. */}
-            <div
-                  className={`absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white/95 backdrop-blur p-2 shadow-xl transition-all duration-300 ${isCreateMenuOpen ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'}`}
-                  role="menu"
-                  aria-label="Create ticket options"
-                >
-                {/* Opcion 1: desde mapa (viewOnly=true) */}
-                  <button
-                    type="button"
-                    onClick={openMapTicketFlow}
-                    className="w-full text-left rounded-xl px-3 py-3 transition-colors duration-200 hover:bg-sky-50"
-                    role="menuitem"
-                  >
-                    <span className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-sky-100 p-2 text-sky-700">
-                        <Map className="w-4 h-4" />
-                      </span>
-                      <span>
-                        <span className="block text-sm font-semibold text-slate-900">From Office Map</span>
-                        <span className="block text-xs text-slate-600">Choose desk/location and report the issue from the map.</span>
-                      </span>
-                    </span>
-                  </button>
+        <div
+                className={`absolute right-0 z-50 mt-2 w-72 origin-top-right rounded-2xl 
+                border border-slate-700/80 bg-slate-900/90 backdrop-blur-md p-2 
+                shadow-2xl shadow-black/50 transition-all duration-300 
+                ${isCreateMenuOpen 
+                  ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
+                  : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'}`}
+                role="menu"
+                aria-label="Create ticket options"
+              >
 
-                {/* Opcion 2: desde formulario rapido (modal TicketForm) */}
-                  <button
-                    type="button"
-                    onClick={openFormTicketFlow}
-                    className="mt-1 w-full text-left rounded-xl px-3 py-3 transition-colors duration-200 hover:bg-indigo-50"
-                    role="menuitem"
-                  >
-                    <span className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-indigo-100 p-2 text-indigo-700">
-                        <FilePlus2 className="w-4 h-4" />
-                      </span>
+                {/* OPCIÓN 1 */}
+                <button
+                  type="button"
+                  onClick={openMapTicketFlow}
+                  className="group w-full text-left rounded-xl px-3 py-3 transition-all duration-300
+                            bg-transparent 
+                            hover:bg-slate-800/70 
+                            border border-transparent hover:border-slate-600/60
+                            hover:shadow-md hover:shadow-slate-900/50"
+                  role="menuitem"
+                >
+                  <span className="flex items-start gap-3">
+      
+                  {/* ICON */}
+                  <span className="mt-0.5 inline-flex items-center justify-center rounded-lg 
+                                   bg-sky-500/10 text-sky-400 
+                                   group-hover:bg-sky-500/20 group-hover:text-sky-300
+                                   transition-all duration-300 p-2">
+                    <Map className="w-4 h-4" />
+                  </span>
+
+                  {/* TEXT */}
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-200 
+                                    group-hover:text-white transition-colors duration-300">
+                      From Office Map
+                    </span>
+                    <span className="block text-xs text-slate-400 
+                                    group-hover:text-slate-300 transition-colors duration-300">
+                      Choose desk/location and report the issue from the map.
+                    </span>
+                  </span>
+                </span>
+              </button>
+
+                {/* OPCIÓN 2 */}
+                <button
+                  type="button"
+                  onClick={openFormTicketFlow}
+                  className="group mt-1 w-full text-left rounded-xl px-3 py-3 transition-all duration-300
+                             bg-transparent 
+                             hover:bg-slate-800/70 
+                             border border-transparent hover:border-slate-600/60
+                             hover:shadow-md hover:shadow-slate-900/50"
+                  role="menuitem"
+                >
+                <span className="flex items-start gap-3">
+
+                {/* ICON */}
+                <span className="mt-0.5 inline-flex items-center justify-center rounded-lg 
+                                bg-indigo-500/10 text-indigo-400 
+                                group-hover:bg-indigo-500/20 group-hover:text-indigo-300
+                                transition-all duration-300 p-2">
+                  <FilePlus2 className="w-4 h-4" />
+                </span>
+
+                      {/* TEXT */}
                       <span>
-                        <span className="block text-sm font-semibold text-slate-900">Quick Form</span>
-                        <span className="block text-xs text-slate-600">Open the classic form to create the ticket manually.</span>
-                      </span>
+                        <span className="block text-sm font-semibold text-slate-200 
+                                        group-hover:text-white transition-colors duration-300">
+                          Quick Form
+                        </span>
+                        <span className="block text-xs text-slate-400 
+                                        group-hover:text-slate-300 transition-colors duration-300">
+                          Open the classic form to create the ticket manually.
+                        </span>
+                      </span>               
                     </span>
                   </button>
                 </div>

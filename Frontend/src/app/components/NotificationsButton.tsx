@@ -288,63 +288,77 @@ export default function NotificationsButton() {
       {open && (
         <>
           {/* VISTA DESKTOP */}
-          <div className="hidden md:block absolute right-0 mt-2 w-80 z-50">
-            <div className="rounded-xl shadow-lg overflow-hidden border border-gray-200 bg-white">
-              <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Notifications
-                </h3>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="p-1 rounded-full transition hover:bg-gray-200"
-                >
-                  <X className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
+          <div className="hidden md:block absolute right-0 mt-2 w-80 z-[9999]">
+          <div className="rounded-2xl shadow-2xl overflow-hidden 
+                          border border-slate-700/80 
+                          bg-slate-900/90 backdrop-blur-md">
 
-              <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
-                {notifications.length === 0 ? (
-                  <li className="p-4 text-sm text-center text-gray-500">
-                    No notifications
-                  </li>
-                ) : (
-                  notifications.map((n) => (
-                    <NotificationListItem
-                      key={n.id}
-                      notification={n}
-                      onOpen={handleOpenNotification}
-                      onDelete={handleDelete}
-                    />
-                  ))
-                )}
-              </ul>
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-4 py-3 
+                            border-b border-slate-700/60 
+                            bg-slate-800/60">
+              <h3 className="text-sm font-semibold text-slate-200">
+                Notifications
+              </h3>
 
-              <div className="p-4 flex items-center justify-center gap-3 border-t border-gray-100">
-                <button
-                  onClick={handleMarkAllAsRead}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                    unreadCount === 0
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
-                  disabled={unreadCount === 0}
-                >
-                  Mark all as read
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                    notifications.length === 0
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  }`}
-                  disabled={notifications.length === 0}
-                >
-                  Clear all
-                </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1.5 rounded-full transition 
+                          hover:bg-slate-700 text-slate-400 hover:text-white"
+             >
+               <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* LISTA */}
+            <ul className="max-h-64 overflow-auto divide-y divide-slate-700/50">
+              {notifications.length === 0 ? (
+                <li className="p-4 text-sm text-center text-slate-400">
+                  No notifications
+                </li>
+              ) : (
+               notifications.map((n) => (
+                  <NotificationListItem
+                    key={n.id}
+                    notification={n}
+                    onOpen={handleOpenNotification}
+                    onDelete={handleDelete}
+                  />
+                ))
+             )}
+            </ul>
+
+           {/* FOOTER */}
+            <div className="p-4 flex items-center justify-center gap-3 
+                            border-t border-slate-700/60">
+              {/* MARK ALL */}
+              <button
+                onClick={handleMarkAllAsRead}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  unreadCount === 0
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-900/30"
+                }`}
+                disabled={unreadCount === 0}
+              >
+                Mark all as read
+              </button>
+
+                  {/* CLEAR ALL */}
+                  <button
+                    onClick={handleClearAll}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      notifications.length === 0
+                        ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                        : "bg-slate-800 hover:bg-slate-700 text-slate-300"
+                    }`}
+                    disabled={notifications.length === 0}
+                  >
+                    Clear all
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
           {/* VISTA MOBILE */}
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 md:hidden p-4 backdrop-blur-sm">

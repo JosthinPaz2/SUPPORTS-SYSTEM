@@ -226,7 +226,6 @@ const getLayerTextColor = (layer: DeskItem): string => {
  * @param props - Propiedades del componente conteniendo datos y handlers
  * @returns JSX.Element - Componente canvas con elementos SVG
  */
-import { useTheme } from '../../context/ThemeContext';
 
 export default function MapCanvas({
   items,

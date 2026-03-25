@@ -980,7 +980,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   disabled={submittingAuthorizationDecision}
                   className="bg-amber-500 hover:bg-amber-600 text-black"
                 >
-                  Pre-approved + specs
+                 In Process
                 </Button>
               </div>
             </div>
