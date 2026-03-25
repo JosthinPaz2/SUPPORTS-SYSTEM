@@ -132,7 +132,7 @@ export default function MapSidebar({
       {/* Encabezado del sidebar: pestañas y búsqueda */}
       <CardHeader>
         {/* Contenedor de pestañas con estilo de toggle */}
-<div className="flex p-1 bg-muted rounded-xl">
+        <div className="flex p-1 bg-muted rounded-xl">
           {/* Botón de pestaña Inventory */}
           <button
             onClick={() => setActiveTab('inventory')}
@@ -140,7 +140,7 @@ export default function MapSidebar({
               activeTab === 'inventory' ? 'bg-white shadow text-blue-600' : 'text-slate-400'
             }`}
           >
-            <LayoutGrid size={14} /> INVENTORY
+            <LayoutGrid size={14} /> INVENTORY 
           </button>
           {/* Botón de pestaña Objects */}
           <button

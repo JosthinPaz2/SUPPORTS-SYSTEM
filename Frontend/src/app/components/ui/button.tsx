@@ -24,7 +24,7 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
 
         // Botón de acción destructiva (ej. eliminar)
-destructive:
+        destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20",
 
         // Botón con borde
