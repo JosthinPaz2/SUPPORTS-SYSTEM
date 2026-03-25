@@ -229,13 +229,17 @@ export default function TicketForm({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-[9999]">
         <DialogHeader>
-          <DialogTitle>Create New Ticket</DialogTitle>
+          <DialogTitle className="text-xl md:text-2xl font-bold text-slate-100 leading-tight">
+            Create New Ticket
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="title">Issue Title *</Label>
+            <Label htmlFor="title" className="text-slate-300 text-sm font-medium">
+              Issue Title *
+            </Label>
             <Input
               id="title"
               value={title}
@@ -246,48 +250,60 @@ export default function TicketForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Detailed Description *</Label>
+            <Label htmlFor="description" className="text-slate-600 text-sm font-medium">
+              Detailed Description *
+            </Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the problem in as much detail as possible..."
               rows={5}
+              className="bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:ring-teal-500/20 resize-none"
               required
             />
           </div>
 
           {hideStationSelectors ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="rounded-lg border border-slate-700 bg-slate-900/30 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                 Selected Station
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-slate-500">Location</p>
-                  <p className="text-sm font-medium text-slate-800">{presetLocationName || '-'}</p>
+                  <p className="text-sm font-medium text-slate-200">{presetLocationName || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Floor</p>
-                  <p className="text-sm font-medium text-slate-800">{presetFloorName || '-'}</p>
+                  <p className="text-sm font-medium text-slate-200">{presetFloorName || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Desk</p>
-                  <p className="text-sm font-medium text-slate-800">{presetStationId || '-'}</p>
+                  <p className="text-sm font-medium text-slate-200">{presetStationId || '-'}</p>
                 </div>
               </div>
             </div>
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="siteLocation">Select Location</Label>
+                <Label htmlFor="siteLocation" className="text-slate-300 text-sm font-medium">
+                  Select Location
+                </Label>
                 <Select value={selectedLocationId} onValueChange={handleLocationChange}>
-                  <SelectTrigger id="siteLocation">
+                  <SelectTrigger 
+                    id="siteLocation"
+                    className="bg-slate-900/50 border-slate-700 text-slate-100 focus:border-teal-500 focus:ring-teal-500/20 "
+                  >
                     <SelectValue placeholder={loadingMetadata ? 'Loading locations...' : 'Select location'} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-900 border-slate-700 z-[11000]">
                     {locations.map((loc) => (
-                      <SelectItem key={loc.id_location} value={String(loc.id_location)}>
+                      <SelectItem 
+                        key={loc.id_location} 
+                        value={String(loc.id_location)}
+                        className="text-slate-100 focus:bg-slate-800 focus:text-teal-400"
+                      >
                         {loc.location_name}
                       </SelectItem>
                     ))}
@@ -296,18 +312,27 @@ export default function TicketForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="floor">Select Floor</Label>
+                <Label htmlFor="floor" className="text-slate-300 text-sm font-medium">
+                  Select Floor
+                </Label>
                 <Select
                   value={selectedFloorId}
                   onValueChange={handleFloorChange}
                   disabled={!selectedLocationId}
                 >
-                  <SelectTrigger id="floor">
+                  <SelectTrigger 
+                    id="floor"
+                    className="bg-slate-900/50 border-slate-700 text-slate-100 focus:border-teal-500 focus:ring-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <SelectValue placeholder={!selectedLocationId ? 'Select location first' : 'Select floor'} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-900 border-slate-700 z-[11000]">
                     {availableFloors.map((floor) => (
-                      <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
+                      <SelectItem 
+                        key={floor.id_floor} 
+                        value={String(floor.id_floor)}
+                        className="text-slate-100 focus:bg-slate-800 focus:text-teal-400"
+                      >
                         {floor.floor_name}
                       </SelectItem>
                     ))}
@@ -316,20 +341,29 @@ export default function TicketForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Desk Location</Label>
+                <Label htmlFor="location" className="text-slate-300 text-sm font-medium">
+                  Desk Location
+                </Label>
                 <Select value={location} onValueChange={setLocation} disabled={!selectedFloorId}>
-                  <SelectTrigger id="location">
+                  <SelectTrigger 
+                    id="location"
+                    className="bg-slate-900/50 border-slate-700 text-slate-100 focus:border-teal-500 focus:ring-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <SelectValue placeholder={!selectedFloorId ? 'Select floor first' : 'Select your desk'} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-900 border-slate-700 z-[11000]">
                     {availableStations.map((station) => (
-                      <SelectItem key={station.id_station} value={station.id_station}>
+                      <SelectItem 
+                        key={station.id_station} 
+                        value={station.id_station}
+                        className="text-slate-100 focus:bg-slate-800 focus:text-teal-400"
+                      >
                         {station.id_station}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   Select the desk where the issue occurs (filtered by location and floor)
                 </p>
               </div>
@@ -337,14 +371,23 @@ export default function TicketForm({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
+            <Label htmlFor="category" className="text-slate-300 text-sm font-medium">
+              Category *
+            </Label>
             <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-              <SelectTrigger id="category">
+              <SelectTrigger 
+                id="category"
+                className="bg-slate-900/50 border-slate-700 text-slate-100 focus:border-teal-500 focus:ring-teal-500/20"
+              >
                 <SelectValue placeholder={loadingMetadata ? 'Loading categories...' : 'Select category'} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-900 border-slate-700 z-[11000]">
                 {categories.map((category) => (
-                  <SelectItem key={category.id_category} value={String(category.id_category)}>
+                  <SelectItem 
+                    key={category.id_category} 
+                    value={String(category.id_category)}
+                    className="text-slate-100 focus:bg-slate-800 focus:text-teal-400"
+                  >
                     {category.category_name}
                   </SelectItem>
                 ))}
@@ -354,22 +397,34 @@ export default function TicketForm({
 
           {isOtherCategory && (
             <div className="space-y-2">
-              <Label htmlFor="otherCategory">What is "Other"? *</Label>
+              <Label htmlFor="otherCategory" className="text-slate-300 text-sm font-medium">
+                What is "Other"? *
+              </Label>
               <Input
                 id="otherCategory"
                 value={otherCategoryDetail}
                 onChange={(e) => setOtherCategoryDetail(e.target.value)}
                 placeholder="Describe the specific category"
+                className="bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:ring-teal-500/20"
                 required
               />
             </div>
           )}
 
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              className="bg-slate-900/50 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100 hover:border-slate-600"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button 
+              type="submit" 
+              disabled={submitting}
+              className="bg-teal-600 hover:bg-teal-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-500/20"
+            >
               {submitting ? 'Creating...' : 'Create Ticket'}
             </Button>
           </div>
