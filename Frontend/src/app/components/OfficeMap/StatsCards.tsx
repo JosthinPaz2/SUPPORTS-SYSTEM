@@ -54,33 +54,33 @@ export default function StatsCards({ totalDesks, reports, noIssues }: StatsCards
       <Card>
         {/* Encabezado de la tarjeta con título */}
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
+        <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Total Desks
           </CardTitle>
         </CardHeader>
         {/* Contenido con el número grande en color gris oscuro */}
         <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{totalDesks}</div>
+          <div className="text-3xl font-bold text-foreground">{totalDesks}</div>
         </CardContent>
       </Card>
 
       {/* Tarjeta 2: Escritorios con reportes activos */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
             With Active Reports
           </CardTitle>
         </CardHeader>
         {/* Contenido con el número en rojo para indicar alerta/problema */}
         <CardContent>
-          <div className="text-3xl font-bold text-red-600">{reports}</div>
+          <div className="text-3xl font-bold text-destructive">{reports}</div>
         </CardContent>
       </Card>
 
       {/* Tarjeta 3: Escritorios sin problemas */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-600">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
             No Issues
           </CardTitle>
         </CardHeader>

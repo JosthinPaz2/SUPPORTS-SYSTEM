@@ -149,25 +149,25 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[96vw] max-w-[96vw] lg:max-w-375 max-h-[92vh] overflow-hidden p-0">
           <DialogHeader>
-            <div className="px-6 pt-6 pb-3 border-b bg-linear-to-r from-slate-50 to-blue-50">
+            <div className="px-6 pt-6 pb-3 border-b bg-gradient-to-r from-background/80 to-card/80">
               <DialogTitle className="text-xl">User Management</DialogTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                View account data and update user roles (admins only)
-              </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  View account data and update user roles (admins only)
+                </p>
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 px-4 sm:px-6 pb-6 bg-slate-50/60">
+          <div className="space-y-4 px-4 sm:px-6 pb-6 bg-muted/60">
             <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-              <div className="relative w-full lg:max-w-md">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by name, email, role, failed attempts or recovery code"
-                  className="pl-9"
-                />
-              </div>
+                  <div className="relative w-full lg:max-w-md">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Search by name, email, role, failed attempts or recovery code"
+                      className="pl-9"
+                    />
+                  </div>
 
               <Button variant="outline" onClick={handleCopyVisibleRows} className="w-full lg:w-auto">
                 <Copy className="w-4 h-4" />
@@ -176,40 +176,40 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-lg border bg-white px-4 py-3 shadow-sm">
-                <p className="text-xs text-gray-500">Total Users</p>
-                <p className="text-xl font-semibold text-gray-900">{filteredUsers.length}</p>
+              <div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
+                <p className="text-xs text-muted-foreground">Total Users</p>
+                <p className="text-xl font-semibold text-foreground">{filteredUsers.length}</p>
               </div>
-              <div className="rounded-lg border bg-white px-4 py-3 shadow-sm">
-                <p className="text-xs text-gray-500">Blocked Users</p>
-                <p className="text-xl font-semibold text-red-600">
+              <div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
+                <p className="text-xs text-muted-foreground">Blocked Users</p>
+                <p className="text-xl font-semibold text-foreground">
                   {filteredUsers.filter((user) => getAccountStatus(user.locked_until).blocked).length}
                 </p>
               </div>
-              <div className="rounded-lg border bg-white px-4 py-3 shadow-sm">
-                <p className="text-xs text-gray-500">Failed Attempts (Total)</p>
-                <p className="text-xl font-semibold text-amber-600">
+              <div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
+                <p className="text-xs text-muted-foreground">Failed Attempts (Total)</p>
+                <p className="text-xl font-semibold text-foreground">
                   {filteredUsers.reduce((acc, user) => acc + (user.failed_login_attempts ?? 0), 0)}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-lg border shadow-sm bg-white">
+            <div className="rounded-lg border shadow-sm bg-card">
               <div className="overflow-x-auto overflow-y-auto max-h-[58vh]">
-              <table className="w-full min-w-250 text-xs sm:text-sm">
-                <thead className="bg-slate-100 text-left sticky top-0 z-10">
-                  <tr>
-                    <th className="px-2 py-2 font-semibold">Full Name</th>
-                    <th className="px-2 py-2 font-semibold">Institutional Email</th>
-                    <th className="px-2 py-2 font-semibold">Current Role</th>
-                    <th className="px-2 py-2 font-semibold">Status</th>
-                    <th className="px-2 py-2 font-semibold">Recovery Code</th>
-                    <th className="px-2 py-2 font-semibold">Code Expiration</th>
-                    <th className="px-2 py-2 font-semibold">Failed Attempts</th>
-                    <th className="px-2 py-2 font-semibold">Last Failed Login</th>
-                    <th className="px-2 py-2 font-semibold">Locked Until</th>
-                  </tr>
-                </thead>
+                <table className="w-full min-w-250 text-foreground text-xs sm:text-sm">
+                  <thead className="bg-muted text-foreground font-semibold text-left sticky top-0 z-10">
+                    <tr>
+                      <th className="px-2 py-2">Full Name</th>
+                      <th className="px-2 py-2">Institutional Email</th>
+                      <th className="px-2 py-2">Current Role</th>
+                      <th className="px-2 py-2">Status</th>
+                      <th className="px-2 py-2">Recovery Code</th>
+                      <th className="px-2 py-2">Code Expiration</th>
+                      <th className="px-2 py-2">Failed Attempts</th>
+                      <th className="px-2 py-2">Last Failed Login</th>
+                      <th className="px-2 py-2">Locked Until</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {loading ? (
                     <tr>
@@ -229,7 +229,13 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                       return (
                       <tr
                         key={user.id_user}
-                        className={`border-t ${status.blocked ? 'bg-red-50/40' : index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}`}
+                        className={`border-t ${
+status.blocked
+                          ? 'bg-red-50/40'
+                          : index % 2 === 0
+                          ? 'bg-background'
+                          : 'bg-muted/50'
+                      }`}
                       >
                         <td className="px-2 py-1.5 align-top">
                           <button

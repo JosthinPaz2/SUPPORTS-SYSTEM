@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../context/TicketContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { apiService, UserListItemDto, CommentDto, ChangeHistoryDto } from '../utils/api';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
@@ -11,7 +11,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
 import { Ticket, TicketStatus, TicketCategory, Comment } from '../types/ticket';
-import { Clock, User, Tag, AlertCircle, MessageSquare, MapPin, Reply, X, History, CalendarClock, Laptop } from 'lucide-react';
+import { Clock, User, Tag, AlertCircle, MessageSquare, MapPin, Reply, X, History, CalendarClock, Laptop, Save, ShieldCheck } from 'lucide-react';
 import { formatBogotaDateTime } from '../utils/datetime';
 
 interface TicketDetailsModalProps {
@@ -50,6 +50,154 @@ const priorityLabels = {
   high: 'High',
 };
 
+const hardwareComponentLabels: Record<string, string> = {
+  teclado: 'Teclado ESENSES Basico USB',
+  mouse: 'Mouse Alambrico HP Optico negro 100',
+  ethernet: 'Ethernet 3.0 LAN a USB',
+  'cable-vga': 'Cable Display Port a VGA 18',
+  'cable-vga-vga': 'Cable Display VGA a VGA 18',
+  extension: 'Extension de Cable electrico',
+  'cable-hdmi': 'Cable Display Port a HDMI 18',
+};
+
+const assetStatusLabels: Record<string, string> = {
+  repair: 'Needs Repair',
+  replace: 'Needs Replacement',
+  tested: 'Operational',
+  maintenance: 'Missing',
+};
+
+const authorizationDecisionLabels: Record<string, string> = {
+  approved: 'Accepted change',
+  rejected: 'Not accepted',
+  preapproved_more_specs: 'Pre-approved, needs more specifications',
+};
+
+function parseCategoryDetailToMap(rawDetail?: string): Map<string, string> {
+  if (!rawDetail) {
+    return new Map<string, string>();
+  }
+
+  const trimmed = rawDetail.trim();
+  if (!trimmed) {
+    return new Map<string, string>();
+  }
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const map = new Map<string, string>();
+      for (const [key, value] of Object.entries(parsed)) {
+        if (typeof value === 'string') {
+          map.set(key, value);
+        }
+      }
+      return map;
+    } catch {
+      return new Map<string, string>();
+    }
+  }
+
+  const map = new Map<string, string>();
+  for (const part of trimmed.split(';').map((entry) => entry.trim()).filter(Boolean)) {
+    const separatorIndex = part.indexOf(':');
+    if (separatorIndex < 0) {
+      continue;
+    }
+
+    const key = part.slice(0, separatorIndex).trim();
+    const value = part.slice(separatorIndex + 1).trim();
+    if (key) {
+      map.set(key, value);
+    }
+  }
+
+  return map;
+}
+
+function serializeCategoryDetail(map: Map<string, string>): string {
+  return Array.from(map.entries())
+    .map(([key, value]) => `${key}:${value}`)
+    .join(';');
+}
+
+function mergeCategoryDetail(rawDetail: string | undefined, updates: Record<string, string | undefined>): string {
+  const detailMap = parseCategoryDetailToMap(rawDetail);
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (!value) {
+      detailMap.delete(key);
+      continue;
+    }
+    detailMap.set(key, value);
+  }
+
+  return serializeCategoryDetail(detailMap);
+}
+
+function parseHardwareCategoryDetail(rawDetail?: string): { component: string; status: string } {
+  if (!rawDetail) {
+    return { component: '', status: '' };
+  }
+
+  const trimmed = rawDetail.trim();
+
+  // Supports JSON payloads and the current key:value;key:value format.
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed) as {
+        hardware_component?: string;
+        asset_status?: string;
+      };
+      return {
+        component: parsed.hardware_component ?? '',
+        status: parsed.asset_status ?? '',
+      };
+    } catch {
+      return { component: '', status: '' };
+    }
+  }
+
+  const entries = trimmed
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const separatorIndex = part.indexOf(':');
+      if (separatorIndex < 0) {
+        return ['', ''];
+      }
+      return [part.slice(0, separatorIndex).trim(), part.slice(separatorIndex + 1).trim()];
+    });
+
+  const detailMap = new Map(entries as Array<[string, string]>);
+  return {
+    component: detailMap.get('hardware_component') ?? '',
+    status: detailMap.get('asset_status') ?? '',
+  };
+}
+
+function buildDescriptionWithHardware(baseDescription: string, component: string, status: string): string {
+  const deviceTypeLabel = hardwareComponentLabels[component] ?? component;
+  const assetStatusLabel = assetStatusLabels[status] ?? status;
+
+  const hardwareBlock = [
+    '[Hardware Details]',
+    `Device Type: ${deviceTypeLabel}`,
+    `Asset Condition: ${assetStatusLabel}`,
+    '[/Hardware Details]',
+  ].join('\n');
+
+  const existingBlockRegex = /\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g;
+  const cleanBase = (baseDescription ?? '').trim();
+
+  if (existingBlockRegex.test(cleanBase)) {
+    return cleanBase.replace(existingBlockRegex, hardwareBlock).trim();
+  }
+
+  return cleanBase ? `${cleanBase}\n\n${hardwareBlock}` : hardwareBlock;
+}
+
 export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketDetailsModalProps) {
   const { user } = useAuth();
   const { updateTicket } = useTickets();
@@ -75,6 +223,15 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
   const [hardwareComponent, setHardwareComponent] = useState<string>('');
   const [assetStatus, setAssetStatus] = useState<string>('');
+  const [savingHardwareDetails, setSavingHardwareDetails] = useState(false);
+  const [showAuthorizationModal, setShowAuthorizationModal] = useState(false);
+  const [authorizationInternalComment, setAuthorizationInternalComment] = useState('');
+  const [submittingAuthorizationDecision, setSubmittingAuthorizationDecision] = useState(false);
+
+  const canManageHardwareDetails = isAdmin && Number(user?.id) !== 1;
+  const isSupremeAdmin = isAdmin && Number(user?.id) === 1;
+  const canShowHardwareSaveButton =
+    canManageHardwareDetails && hardwareComponent.trim() !== '' && assetStatus.trim() !== '';
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -89,7 +246,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
         setPrimaryTechId(fresh.primary_technician ? String(fresh.primary_technician) : '');
         setSecondaryTechId(fresh.secondary_technician ? String(fresh.secondary_technician) : '');
       } catch {
-      
+        toast.error('Could not load technicians');
       } finally {
         setLoadingTechs(false);
       }
@@ -133,12 +290,23 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           );
         }
       } catch {
+        toast.error('Could not load comments');
       } finally {
         setLoadingComments(false);
       }
     };
     loadComments();
   }, [ticket.id, isAdmin]);
+
+  useEffect(() => {
+    if (ticket.category !== 'hardware') {
+      return;
+    }
+
+    const parsed = parseHardwareCategoryDetail(ticket.categoryDetail);
+    setHardwareComponent(parsed.component);
+    setAssetStatus(parsed.status);
+  }, [ticket.id, ticket.category, ticket.categoryDetail]);
 
   const handleStatusChange = (newStatus: TicketStatus) => {
     updateTicket(ticket.id, { status: newStatus });
@@ -213,6 +381,126 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
+  const handleSaveHardwareDetails = async () => {
+    if (!canShowHardwareSaveButton) {
+      return;
+    }
+
+    setSavingHardwareDetails(true);
+    try {
+      const savedDetail = mergeCategoryDetail(ticket.categoryDetail, {
+        hardware_component: hardwareComponent,
+        asset_status: assetStatus,
+      });
+      const descriptionWithHardware = buildDescriptionWithHardware(
+        ticket.description ?? '',
+        hardwareComponent,
+        assetStatus,
+      );
+      const updatedTicket = await apiService.updateTicket(Number(ticket.id), {
+        category_detail: savedDetail,
+        description: descriptionWithHardware,
+        moved_by: user?.id ? Number(user.id) : undefined,
+      });
+
+      const parsedFromDb = parseHardwareCategoryDetail(updatedTicket.category_detail ?? undefined);
+      setHardwareComponent(parsedFromDb.component || hardwareComponent);
+      setAssetStatus(parsedFromDb.status || assetStatus);
+
+      if (updatedTicket.category_detail) {
+        toast.success('Hardware information saved in ticket');
+      } else {
+        toast.warning('Saved, but no hardware detail came back from server');
+      }
+    } catch (error) {
+      toast.error((error as Error).message || 'Could not save hardware information');
+    } finally {
+      setSavingHardwareDetails(false);
+    }
+  };
+
+  const handleAuthorizationDecision = async (
+    decision: 'approved' | 'rejected' | 'preapproved_more_specs',
+  ) => {
+    if (!isSupremeAdmin || !user?.id) {
+      return;
+    }
+
+    setSubmittingAuthorizationDecision(true);
+    try {
+      const decisionLabel = authorizationDecisionLabels[decision];
+      const updatedDetail = mergeCategoryDetail(ticket.categoryDetail, {
+        authorization_decision: decision,
+        authorization_by: String(user.id),
+        authorization_updated_at: new Date().toISOString(),
+      });
+
+      await apiService.updateTicket(Number(ticket.id), {
+        category_detail: updatedDetail,
+        moved_by: Number(user.id),
+      });
+
+      const commentPrefix = `[Authorization] ${decisionLabel}`;
+      const decisionComment = authorizationInternalComment.trim()
+        ? `${commentPrefix}\n${authorizationInternalComment.trim()}`
+        : commentPrefix;
+
+      const savedComment = await apiService.createComment({
+        id_ticket: Number(ticket.id),
+        id_user: Number(user.id),
+        content: decisionComment,
+        internal_note: true,
+      });
+
+      const newComment: Comment = {
+        id: String(savedComment.id_comment),
+        ticketId: String(savedComment.id_ticket),
+        userId: String(savedComment.id_user),
+        userName: usersById.get(savedComment.id_user) ?? user.name ?? `User #${savedComment.id_user}`,
+        content: savedComment.content,
+        isInternal: savedComment.internal_note ?? false,
+        createdAt: new Date(savedComment.created_at),
+      };
+      setLocalComments((prev) => [...prev, newComment]);
+
+      let publicDecisionMessage: string | undefined;
+      if (decision === 'approved') {
+        publicDecisionMessage = 'Cambio autorizado, proximamente se hara.';
+      }
+      if (decision === 'rejected') {
+        publicDecisionMessage = 'No se acepto el cambio, por politicas de IT.';
+      }
+
+      if (publicDecisionMessage) {
+        const savedPublicComment = await apiService.createComment({
+          id_ticket: Number(ticket.id),
+          id_user: Number(user.id),
+          content: publicDecisionMessage,
+          internal_note: false,
+        });
+
+        const newPublicComment: Comment = {
+          id: String(savedPublicComment.id_comment),
+          ticketId: String(savedPublicComment.id_ticket),
+          userId: String(savedPublicComment.id_user),
+          userName: usersById.get(savedPublicComment.id_user) ?? user.name ?? `User #${savedPublicComment.id_user}`,
+          content: savedPublicComment.content,
+          isInternal: savedPublicComment.internal_note ?? false,
+          createdAt: new Date(savedPublicComment.created_at),
+        };
+        setLocalComments((prev) => [...prev, newPublicComment]);
+      }
+
+      setAuthorizationInternalComment('');
+      setShowAuthorizationModal(false);
+      toast.success('Authorization decision saved');
+    } catch (error) {
+      toast.error((error as Error).message || 'Could not save authorization decision');
+    } finally {
+      setSubmittingAuthorizationDecision(false);
+    }
+  };
+
   const publicComments = localComments.filter((c) => {
     if (c.isInternal) return false;
     return isAdmin || String(user?.id) === String(ticket.createdBy);
@@ -222,7 +510,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-sm text-card-foreground border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span>{ticket.title}</span>
@@ -243,7 +531,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               <div className="font-medium">{categoryLabels[ticket.category]}</div>
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <AlertCircle className="w-4 h-4" />
                 Priority
               </div>
@@ -252,14 +540,14 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               </Badge>
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="w-4 h-4" />
                 Created by
               </div>
               <div className="font-medium">{ticket.createdByName}</div>
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="w-4 h-4" />
                 Date & Time
               </div>
@@ -271,7 +559,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
           {ticket.location && (
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4" />
                 Desk Location
               </div>
@@ -322,7 +610,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-emerald-700">Device Type</Label>
-                    <Select value={hardwareComponent} onValueChange={setHardwareComponent} disabled={!isAdmin}>
+                    <Select value={hardwareComponent} onValueChange={setHardwareComponent} disabled={!canManageHardwareDetails}>
                       <SelectTrigger className="bg-emerald-50 border-emerald-200">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
@@ -339,7 +627,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   </div>
                   <div className="space-y-2">
                     <Label className="text-teal-700">Asset Condition</Label>
-                    <Select value={assetStatus} onValueChange={setAssetStatus} disabled={!isAdmin}>
+                    <Select value={assetStatus} onValueChange={setAssetStatus} disabled={!canManageHardwareDetails}>
                       <SelectTrigger className="bg-teal-50 border-teal-200">
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
@@ -352,6 +640,31 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     </Select>
                   </div>
                 </div>
+
+                {canShowHardwareSaveButton && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSaveHardwareDetails}
+                      disabled={savingHardwareDetails}
+                      className="group gap-2 bg-black hover:bg-neutral-900 active:scale-[0.98] transition-all duration-200 text-emerald-300 border border-emerald-600/70 shadow-[0_0_0_1px_rgba(16,185,129,0.2)] hover:shadow-[0_0_0_2px_rgba(16,185,129,0.35)]"
+                    >
+                      <Save className={`w-4 h-4 ${savingHardwareDetails ? 'animate-spin' : 'group-hover:-translate-y-0.5 transition-transform'}`} />
+                      {savingHardwareDetails ? 'Saving...' : 'Save hardware data'}
+                    </Button>
+                  </div>
+                )}
+
+                {isSupremeAdmin && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => setShowAuthorizationModal(true)}
+                      className="gap-2 bg-black hover:bg-neutral-900 text-emerald-300 border border-emerald-600/70"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      Authorize change
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -474,7 +787,14 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               {replyingTo && (
                 <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md px-3 py-2 text-sm">
                   <span className="text-blue-700"><span className="font-medium">Replying to {replyingTo.userName}:</span> {replyingTo.content}</span>
-                  <button onClick={() => setReplyingTo(null)} className="text-blue-400"><X className="w-4 h-4" /></button>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="text-blue-400"
+                    aria-label="Cancel reply"
+                    title="Cancel reply"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
               <Label>Add {isAdmin && isInternalNote ? 'Internal Note' : 'Comment'}</Label>
@@ -509,7 +829,14 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   <History className="w-4 h-4 text-gray-600" />
                   History - Desk {ticket.location || 'N/A'}
                 </div>
-                <button onClick={() => setShowHistory(false)} className="text-gray-400"><X className="w-4 h-4" /></button>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="text-gray-400"
+                  aria-label="Close history"
+                  title="Close history"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
               <div className="divide-y max-h-80 overflow-y-auto">
                 {loadingHistory ? <p className="text-center py-6 text-sm">Loading...</p> : 
@@ -541,6 +868,77 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           </div>
         </div>
       </DialogContent>
+
+      {isSupremeAdmin && (
+        <Dialog open={showAuthorizationModal} onOpenChange={setShowAuthorizationModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                Authorize change
+              </DialogTitle>
+              <DialogDescription>
+                Review internal notes and choose the authorization result for this ticket.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm text-gray-700">Internal notes (general view)</Label>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+                  {internalComments.length === 0 ? (
+                    <p className="text-sm text-gray-500">No internal notes yet.</p>
+                  ) : (
+                    internalComments.map((note) => (
+                      <div key={note.id} className="rounded-md border border-amber-100 bg-white p-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-amber-700">{note.userName}</span>
+                          <span className="text-[11px] text-gray-500">{formatBogotaDateTime(note.createdAt)}</span>
+                        </div>
+                        <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Internal comment for decision</Label>
+                <Textarea
+                  value={authorizationInternalComment}
+                  onChange={(event) => setAuthorizationInternalComment(event.target.value)}
+                  placeholder="Add internal context for this authorization..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Button
+                  onClick={() => handleAuthorizationDecision('approved')}
+                  disabled={submittingAuthorizationDecision}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Accept change
+                </Button>
+                <Button
+                  onClick={() => handleAuthorizationDecision('rejected')}
+                  disabled={submittingAuthorizationDecision}
+                  className="bg-rose-600 hover:bg-rose-700"
+                >
+                  Do not accept
+                </Button>
+                <Button
+                  onClick={() => handleAuthorizationDecision('preapproved_more_specs')}
+                  disabled={submittingAuthorizationDecision}
+                  className="bg-amber-500 hover:bg-amber-600 text-black"
+                >
+                  Pre-approved + specs
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }

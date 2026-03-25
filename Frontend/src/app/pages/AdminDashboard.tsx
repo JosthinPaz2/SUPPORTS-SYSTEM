@@ -58,27 +58,27 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
-      <header className="bg-white border-b shadow-sm w-full">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col relative">
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm w-full relative z-[9999]">
         <div className="w-full px-4 md:px-8 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
                 Welcome, {user?.name}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-teal-600 font-medium">
                 {isIT ? 'IT Admin Panel' : 'Dashboard'}
               </p>
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-1">
               <NotificationsButton />
               <UsersManagementButton canEditRoles={isIT} />
               <DownloadButtons tickets={tickets} />
               <Button 
                 variant="outline" 
                 onClick={logout}
-                className="group flex items-center transition-all duration-300 hover:bg-red-50 hover:text-red-600 overflow-hidden"
+                className="group flex items-center transition-all duration-300 hover:bg-red-50 hover:text-red-700 border-gray-300 text-gray-700 overflow-hidden shadow-sm hover:shadow-md"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out group-hover:max-w-xs group-hover:ml-2">
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="w-full flex-grow p-4 md:p-8">
+      <main className="w-full flex-grow p-4 md:p-8 relative z-10">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -99,8 +99,8 @@ export default function AdminDashboard() {
                 key={tab.id}
                 variant={activeTab === tab.id ? 'default' : 'outline'}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 whitespace-nowrap flex-shrink-0 transition-all ${
-                  activeTab === tab.id ? 'bg-teal-600 text-white' : 'text-gray-600'
+                className={`flex items-center gap-2 whitespace-nowrap flex-shrink-0 transition-all shadow-sm ${
+                  activeTab === tab.id ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-lg' : 'text-slate-700 border-slate-200 hover:bg-slate-100 hover:shadow-md'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
           })}
         </div>
 
-        <Card className="w-full border-none shadow-md bg-white overflow-hidden">
+        <Card className="w-full border border-slate-200 shadow-sm bg-white overflow-hidden">
           <CardContent className="p-0 sm:p-4 md:p-6 w-full">
             <div className="w-full overflow-x-auto">
               {renderContent()}
@@ -130,3 +130,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

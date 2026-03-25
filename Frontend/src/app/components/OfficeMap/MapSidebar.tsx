@@ -128,11 +128,11 @@ export default function MapSidebar({
 
   return (
     // Contenedor principal: Card con ancho fijo de 320px, flex column y overflow oculto
-    <Card className="w-80 flex flex-col overflow-hidden">
+    <Card className="w-80 flex flex-col overflow-hidden bg-card border-border">
       {/* Encabezado del sidebar: pestañas y búsqueda */}
       <CardHeader>
         {/* Contenedor de pestañas con estilo de toggle */}
-        <div className="flex p-1 bg-slate-100 rounded-xl">
+<div className="flex p-1 bg-muted rounded-xl">
           {/* Botón de pestaña Inventory */}
           <button
             onClick={() => setActiveTab('inventory')}
@@ -161,7 +161,7 @@ export default function MapSidebar({
             placeholder="Search item..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 border rounded-md text-sm"
+            className="w-full pl-9 pr-4 py-2 bg-input border-border rounded-md text-sm text-foreground placeholder:text-muted-foreground"
           />
         </div>
       </CardHeader>
@@ -175,7 +175,7 @@ export default function MapSidebar({
             // Habilitar arrastre del elemento
             draggable
             onDragStart={(e) => handleDragStart(e, item)}
-            className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-grab hover:border-blue-300"
+            className="flex items-center justify-between p-3 bg-card rounded-lg shadow-sm cursor-grab hover:border-ring hover:bg-accent border-border"
           >
             {/* Sección izquierda: icono de arrastre e ID */}
             <div className="flex items-center gap-2">
@@ -216,7 +216,8 @@ export default function MapSidebar({
           className="hidden"
         />
         <Button
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
+          className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+          variant="destructive"
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-4 h-4 mr-2" /> Import CSV

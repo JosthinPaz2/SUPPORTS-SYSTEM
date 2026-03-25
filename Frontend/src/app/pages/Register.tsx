@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 import { Lock, Mail, User, CheckCircle, XCircle} from 'lucide-react';
 import { toast } from 'sonner';
-import BackgroundCircles from '../components/ui/BackgroundCircles';
+import AnimatedBackground from '../components/ui/AnimatedBackground';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -103,8 +103,8 @@ return (
           </span>
         </div>
       </div>
-      <BackgroundCircles />
-      <div className="w-full max-w-md">
+      <AnimatedBackground />
+      <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-20 h-20 bg-teal-500 rounded-full flex items-center justify-center mb-4">
             <User className="w-10 h-10 text-white" />
@@ -113,7 +113,7 @@ return (
           <p className="text-teal-600">Fill in the form to create a new account</p>
         </div>
 
-        <Card className="bg-gray-900 shadow-xl">
+        <Card className="bg-slate-900 border-teal-500 shadow-xl w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-white">Register</CardTitle>
             <CardDescription className="text-teal-200">Enter your details</CardDescription>

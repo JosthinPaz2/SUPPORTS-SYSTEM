@@ -50,11 +50,11 @@ export default function TicketCard({ ticket, onClick }: TicketCardProps) {
             </Badge>
           </div>
 
-          <p className="text-xs text-gray-600 line-clamp-2">
+          <p className="text-xs text-muted-foreground line-clamp-2">
             {ticket.description}
           </p>
 
-          <div className="space-y-2 text-xs text-gray-500">
+          <div className="space-y-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Tag className="w-3 h-3" />
               <span>{categoryLabels[ticket.category]}</span>

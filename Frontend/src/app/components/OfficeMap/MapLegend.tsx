@@ -186,43 +186,45 @@ export default function MapLegend({
 
   return (
     <>
-      <Card className="relative overflow-visible z-40 shadow-md border border-gray-200">
+      <Card className="relative overflow-visible z-40 shadow-md border border-border bg-white">
         <CardContent className="flex flex-wrap items-center gap-6 py-4 pr-12">
-          
-          {/* Indicadores existentes */}
+
+          {/* Indicadores */}
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">No issues</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">With active reports</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-400 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">Management / Store area</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 border border-gray-300 rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-gray-700">Entrance area</span>
-          </div>
-          
-          <div className="flex items-center gap-2 border-l pl-4">
-            <User className="w-4 h-4 text-blue-600" />
-            <span className="text-sm text-gray-500">Click on any desk to view details</span>
+            <div className="w-4 h-4 bg-green-500 border border-border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-foreground">No issues</span>
           </div>
 
-          {/* --- MENÚ DESPLEGABLE MEJORADO --- */}
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-500 border border-border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-foreground">With active reports</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-400 border border-border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-foreground">Management / Store area</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 border border-border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-foreground">Entrance area</span>
+          </div>
+
+          <div className="flex items-center gap-2 border-l border-border pl-4">
+            <User className="w-4 h-4 text-blue-500" />
+            <span className="text-sm text-muted-foreground">
+              Click on any desk to view details
+            </span>
+          </div>
+
+          {/* MENÚ */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2" ref={menuRef}>
             <button 
               onClick={() => setIsOpen(!isOpen)}
               className={`p-2 rounded-full transition-all duration-300 ${
                 isOpen 
-                  ? 'bg-blue-600 text-white shadow-lg scale-110' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-blue-100'
+                  ? 'bg-blue-600 text-white shadow-lg scale-110'
+                  : 'bg-muted text-foreground hover:bg-blue-500/20'
               }`}
               title="Options menu"
             >
@@ -230,19 +232,20 @@ export default function MapLegend({
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-9999 py-2 border border-gray-200 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl z-50 py-2 border border-border bg-popover backdrop-blur-md">
+
                 {!viewOnly && (
                   <>
                     <button 
-                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 gap-3 transition-colors duration-150"
+                      className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-blue-500/10 gap-3 transition-all"
                       onClick={handleAddMap}
                     >
                       <Plus size={18} className="text-blue-500 shrink-0" /> 
                       <span>Add Map</span>
                     </button>
-                    
+
                     <button 
-                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-green-50 gap-3 transition-colors duration-150"
+                      className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-green-500/10 gap-3 transition-all"
                       onClick={handleEditMap}
                     >
                       <Edit2 size={18} className="text-green-500 shrink-0" /> 
@@ -252,17 +255,17 @@ export default function MapLegend({
                 )}
 
                 <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 gap-3 transition-colors duration-150"
+                  className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-purple-500/10 gap-3 transition-all"
                   onClick={handleViewMap}
-                >
+               >
                   <Eye size={18} className="text-purple-500 shrink-0" /> 
                   <span>View Map</span>
                 </button>
 
-                <div className="border-t border-gray-200 my-1"></div>
+                <div className="border-t border-border my-1"></div>
 
                 <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-red-50 gap-3 transition-colors duration-150"
+                  className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-red-500/10 gap-3 transition-all"
                   onClick={() => {
                     setIsOpen(false);
                     onBackToMenu?.();

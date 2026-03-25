@@ -270,42 +270,55 @@ export default function ReportsPanel() {
       </div>
 
       {/* Tickets Recientes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Most Recent Tickets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentTickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
-                <div className="flex-1">
-                  <h4 className="font-medium">{ticket.title}</h4>
-                  <p className="text-sm text-gray-600">
-                    {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 capitalize">
-                    {ticket.category}
-                  </span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    ticket.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    ticket.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {ticket.status === 'pending' ? 'Pending' :
-                     ticket.status === 'in-progress' ? 'In Progress' :
-                     'Resolved'}
-                  </span>
-                </div>
-              </div>
-            ))}
+<Card className="bg-card text-foreground">
+  <CardHeader>
+    <CardTitle>Most Recent Tickets</CardTitle>
+  </CardHeader>
+
+  <CardContent>
+    <div className="space-y-4">
+      {recentTickets.map((ticket) => (
+        <div
+          key={ticket.id}
+          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border"
+        >
+          <div className="flex-1">
+            <h4 className="font-medium text-foreground">
+              {ticket.title}
+            </h4>
+
+            <p className="text-sm text-muted-foreground">
+              {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
+            </p>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground capitalize">
+              {ticket.category}
+            </span>
+
+            <span
+              className={`px-2 py-1 rounded text-xs font-medium ${
+ticket.status === 'pending'
+                  ? 'bg-amber-500/20 text-amber-700'
+                  : ticket.status === 'in-progress'
+                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+              }`}
+            >
+              {ticket.status === 'pending'
+                ? 'Pending'
+                : ticket.status === 'in-progress'
+                ? 'In Progress'
+                : 'Resolved'}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
+
       {/* Resolved Tickets by Technician */}
       <Card>
         <CardHeader>

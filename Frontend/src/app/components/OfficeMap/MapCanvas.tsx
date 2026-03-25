@@ -226,6 +226,8 @@ const getLayerTextColor = (layer: DeskItem): string => {
  * @param props - Propiedades del componente conteniendo datos y handlers
  * @returns JSX.Element - Componente canvas con elementos SVG
  */
+import { useTheme } from '../../context/ThemeContext';
+
 export default function MapCanvas({
   items,
   bgLayers,
@@ -316,7 +318,7 @@ export default function MapCanvas({
 
   return (
     // Contenedor principal: Card que ocupa el espacio restante (flex-1)
-    <Card className="flex-1 relative overflow-hidden bg-white shadow-inner">
+<Card className="flex-1 relative overflow-hidden bg-card shadow-inner border-border">
       
       {/* Badges superiores derechos: contadores de elementos */}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
@@ -399,7 +401,7 @@ export default function MapCanvas({
             <defs>
               {/* Patrón de cuadrícula de puntos */}
               <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="2" cy="2" r="1.5" fill="#64748B" />
+
               </pattern>
             </defs>
             
@@ -570,7 +572,7 @@ export default function MapCanvas({
                 y={item.height / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill="white"
+                fill="var(--foreground, white)"
                 fontSize={Math.max(9, Math.min(14, item.width / (item.id.length * 0.6)))}
                 fontWeight="bold"
                 clipPath={`url(#canvas-clip-${item.id})`}

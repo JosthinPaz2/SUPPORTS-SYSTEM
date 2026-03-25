@@ -168,7 +168,7 @@ export default function NotificationsButton() {
             } else {
               toast.success("New notification", {
                 description: item.title,
-                duration: 4000,
+                duration: 4500,
               });
             }
           }
@@ -265,14 +265,14 @@ export default function NotificationsButton() {
 
   return (
     <div className="relative" ref={ref}>
+      {/* BOTÓN CAMPANA */}
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}
-        className="p-2 rounded-md bg-gray-50 hover:bg-gray-100 transition relative"
-        aria-haspopup="true"
+        className="p-2 rounded-md transition border border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400/30"
         aria-label="Notifications"
       >
-        <Bell className="w-5 h-5 text-gray-600" />
+        <Bell className="w-5 h-5 text-yellow-600" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-semibold">
             {unreadCount}
@@ -280,34 +280,31 @@ export default function NotificationsButton() {
         )}
 
         <span 
-          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-            isSyncing ? 'bg-yellow-500' : 'bg-green-500'
-          }`}
+          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${isSyncing ? 'bg-yellow-500' : 'bg-green-500'}`}
           title={isSyncing ? "Syncing" : "Synced"}
         />
       </button>
 
       {open && (
         <>
-          {/* Desktop view */}
+          {/* VISTA DESKTOP */}
           <div className="hidden md:block absolute right-0 mt-2 w-80 z-50">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-              <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+            <div className="rounded-xl shadow-lg overflow-hidden border border-gray-200 bg-white">
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-800">
                   Notifications
                 </h3>
                 <button
                   onClick={() => setOpen(false)}
-                  aria-label="Close notifications"
-                  className="p-1 rounded-full hover:bg-gray-200 transition"
+                  className="p-1 rounded-full transition hover:bg-gray-200"
                 >
                   <X className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
 
-              <ul className="max-h-64 overflow-auto divide-y">
+              <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
                 {notifications.length === 0 ? (
-                  <li className="p-4 text-sm text-gray-500 text-center">
+                  <li className="p-4 text-sm text-center text-gray-500">
                     No notifications
                   </li>
                 ) : (
@@ -322,13 +319,13 @@ export default function NotificationsButton() {
                 )}
               </ul>
 
-              <div className="p-4 flex items-center justify-center gap-3 border-t">
+              <div className="p-4 flex items-center justify-center gap-3 border-t border-gray-100">
                 <button
                   onClick={handleMarkAllAsRead}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                     unreadCount === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                      ? "bg-gray-100 text-gray-400"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                   disabled={unreadCount === 0}
                 >
@@ -338,7 +335,7 @@ export default function NotificationsButton() {
                   onClick={handleClearAll}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                     notifications.length === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      ? "bg-gray-100 text-gray-400"
                       : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                   }`}
                   disabled={notifications.length === 0}
@@ -349,63 +346,22 @@ export default function NotificationsButton() {
             </div>
           </div>
 
-          {/* Mobile view */}
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 md:hidden p-4">
-            <div className="bg-white w-full max-w-sm rounded-xl shadow-lg overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+          {/* VISTA MOBILE */}
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 md:hidden p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-xl shadow-xl overflow-hidden bg-white">
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-800">
                   Notifications
                 </h3>
-                <button
-                  onClick={() => setOpen(false)}
-                  aria-label="Close notifications"
-                  className="p-1 rounded-full hover:bg-gray-200 transition"
-                >
-                  <X className="w-4 h-4 text-gray-600" />
+                <button onClick={() => setOpen(false)} className="p-1 rounded-full hover:bg-gray-200">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-
-              <ul className="max-h-80 overflow-auto divide-y">
-                {notifications.length === 0 ? (
-                  <li className="p-4 text-sm text-gray-500 text-center">
-                    No notifications
-                  </li>
-                ) : (
-                  notifications.map((n) => (
-                    <NotificationListItem
-                      key={n.id}
-                      notification={n}
-                      onOpen={handleOpenNotification}
-                      onDelete={handleDelete}
-                    />
-                  ))
-                )}
+              <ul className="max-h-80 overflow-auto divide-y divide-gray-100">
+                {notifications.map((n) => (
+                  <NotificationListItem key={n.id} notification={n} onOpen={handleOpenNotification} onDelete={handleDelete} />
+                ))}
               </ul>
-
-              <div className="p-4 flex items-center justify-center gap-3 border-t">
-                <button
-                  onClick={handleMarkAllAsRead}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                    unreadCount === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-50 hover:bg-blue-100 text-blue-700"
-                  }`}
-                  disabled={unreadCount === 0}
-                >
-                  Mark all as read
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                    notifications.length === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  }`}
-                  disabled={notifications.length === 0}
-                >
-                  Clear all
-                </button>
-              </div>
             </div>
           </div>
         </>
@@ -413,3 +369,4 @@ export default function NotificationsButton() {
     </div>
   );
 }
+
