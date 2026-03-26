@@ -433,6 +433,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
         authorization_decision: decision,
         authorization_by: String(user.id),
         authorization_updated_at: new Date().toISOString(),
+        asset_status: assetStatus,
       });
 
       await apiService.updateTicket(Number(ticket.id), {
@@ -635,7 +636,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                         <SelectItem value="repair">Needs Repair</SelectItem>
                         <SelectItem value="replace">Needs Replacement</SelectItem>
                         <SelectItem value="tested">Operational</SelectItem>
-                        <SelectItem value="maintenance">Missing</SelectItem>
+                        <SelectItem value="Missing">Missing</SelectItem>
+                        <SelectItem value="Damage">Damage</SelectItem>
+                        <SelectItem value="Return">Return</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
