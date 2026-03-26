@@ -510,9 +510,12 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-sm text-card-foreground border-border">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex-wrap items-center justify-between gap-3 
+                                text-xs text-slate-400
+                                rounded-xl bg-slate-900/80 backdrop-blur-md 
+                                px-4 py-3 z-[9999]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="text-xl md:text-2xl font-bold text-white leading-tight flex items-center gap-4">
             <span>{ticket.title}</span>
             <Badge className={statusColors[ticket.status]}>
               {statusLabels[ticket.status]}
@@ -522,16 +525,20 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
         <div className="space-y-6">
           {/* Main Information */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
                 <Tag className="w-4 h-4" />
                 Category
               </div>
               <div className="font-medium">{categoryLabels[ticket.category]}</div>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
                 Priority
               </div>
@@ -539,15 +546,17 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 {priorityLabels[ticket.priority]}
               </Badge>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Created by
               </div>
               <div className="font-medium">{ticket.createdByName}</div>
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Date & Time
               </div>
@@ -558,18 +567,20 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           </div>
 
           {ticket.location && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
                 Desk Location
               </div>
-              <div className="font-medium">{ticket.location}</div>
+              <div className="!text-white text-sm font-medium flex items-center gap-2">{ticket.location}</div>
             </div>
           )}
 
           <div>
-            <h3 className="font-semibold mb-2">Description</h3>
-            <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
+            <h3 className="!text-white text-sm font-medium flex items-center gap-2">Description</h3>
+            <p className="!bg-slate-800 !text-slate-100 !border-slate-700 placeholder:!text-slate-500 focus:!border-teal-500 focus:!ring-teal-500/20 rounded-md p-3 whitespace-pre-wrap">
               {ticket.description}
             </p>
           </div>
@@ -761,7 +772,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               {loadingComments ? (
                 <p className="text-gray-500 text-center py-4">Loading comments…</p>
               ) : tabComments.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No comments yet</p>
+                <p className="text-white text-center py-4">No comments yet</p>
               ) : (
                 tabComments.map((c) => (
                   <div key={c.id} className={`p-4 rounded-lg ${c.isInternal ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
@@ -797,13 +808,15 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   </button>
                 </div>
               )}
-              <Label>Add {isAdmin && isInternalNote ? 'Internal Note' : 'Comment'}</Label>
+              <Label  className="!text-white">
+                Add {isAdmin && isInternalNote ? 'Internal Note' : 'Comment'}</Label>
               <Textarea
                 ref={textareaRef}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Write your comment..."
                 rows={3}
+                className="!bg-slate-900 !text-slate-100 !border-slate-700 placeholder:!text-white focus:!border-teal-500 focus:!ring-teal-500/20"
               />
               <div className="flex items-center justify-between">
                 {isAdmin ? (

@@ -1754,6 +1754,11 @@ export default function OfficeMap() {
       return;
     }
 
+    if (user.id_role === 1) {
+      toast.error('Admins can only view the map. Ticket creation is available for employees.');
+      return;
+    }
+
     setSelectedDeskId(null);
     setSelectedDeskForTicket(stationId);
     setShowDeskTicketForm(true);
@@ -1872,7 +1877,7 @@ export default function OfficeMap() {
 
         {/* Footer */}
         <div className="shrink-0 px-6 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-          {isViewOnly && selectedDeskId && (
+          {isViewOnly && user?.id_role !== 1 && selectedDeskId && (
             <Button
               type="button"
               disabled={stationReportLimitReached}
@@ -2532,7 +2537,7 @@ export default function OfficeMap() {
 
           {deskStatusDialog}
           {deskTicketDetailsDialog}
-          {showDeskTicketForm && selectedDeskForTicket && user?.id && (
+          {showDeskTicketForm && selectedDeskForTicket && user?.id && user.id_role !== 1 && (
             <TicketForm
               onClose={() => {
                 setShowDeskTicketForm(false);
@@ -2827,7 +2832,7 @@ export default function OfficeMap() {
         {deskStatusDialog}
         {deskTicketDetailsDialog}
 
-        {showDeskTicketForm && selectedDeskForTicket && user?.id && (
+        {showDeskTicketForm && selectedDeskForTicket && user?.id && user.id_role !== 1 && (
           <TicketForm
             onClose={() => {
               setShowDeskTicketForm(false);
