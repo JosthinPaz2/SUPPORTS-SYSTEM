@@ -628,7 +628,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectTrigger className="bg-slate-800/50 border-emerald-500/30 text-slate-200 focus:ring-emerald-500/40">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[9999]">
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Básico USB</SelectItem>
                         <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP Óptico negro 100</SelectItem>
                         <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
@@ -645,7 +645,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectTrigger className="bg-slate-800/50 border-teal-500/30 text-slate-200 focus:ring-teal-500/40">
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[9999]">
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
                         <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
                         <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>
@@ -693,32 +693,28 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                               bg-slate-900/80 backdrop-blur-md shadow-lg">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="!text-slate-200 font-medium">Change Status</Label>
+                    <Label className='!text-white'>Change Status</Label>
                     <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
-                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 focus:ring-blue-500/40">
+                      <SelectTrigger>
                         <SelectValue />
-                      </SelectTrigger>
+                        </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="pending" className="focus:bg-amber-500/10 focus:text-amber-400">Pending</SelectItem>
-                        <SelectItem value="in-progress" className="focus:bg-blue-500/10 focus:text-blue-400">In Progress</SelectItem>
-                        <SelectItem value="resolved" className="focus:bg-emerald-500/10 focus:text-emerald-400">Resolved</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="!text-slate-200 font-medium">Primary Technician</Label>
+                    <Label className='!text-white'>Primary Technician</Label>
                     <Select value={primaryTechId} onValueChange={setPrimaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
+                      <SelectTrigger>
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign primary'} />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
+                        <SelectItem value="none">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem 
-                            key={tech.id_user} 
-                            value={String(tech.id_user)}
-                            className="focus:bg-blue-500/10 focus:text-blue-400"
-                          >
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
                             {tech.full_name}
                           </SelectItem>
                         ))}
@@ -730,13 +726,13 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   <div className="space-y-2">
                     <Label className='!text-white'>Secondary Technician</Label>
                     <Select value={secondaryTechId} onValueChange={setSecondaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
+                      <SelectTrigger>
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign secondary'} />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
+                        <SelectItem value="none">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)} className="focus:bg-blue-500/10 focus:text-blue-400">
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
                             {tech.full_name}
                           </SelectItem>
                         ))}
@@ -1008,38 +1004,32 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
       </DialogContent>
 
       {isSupremeAdmin && (
-        <Dialog 
-            open={showAuthorizationModal}
-            onOpenChange={setShowAuthorizationModal}
-            >
-          
-          <DialogContent className="max-w-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700 text-slate-100 z-[9999]">
+        <Dialog open={showAuthorizationModal} onOpenChange={setShowAuthorizationModal}>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 Authorize change
               </DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription>
                 Review internal notes and choose the authorization result for this ticket.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <div>
-                <Label className="!text-slate-300">Internal notes (general view)</Label>
+                <Label className="text-sm text-gray-700">Internal notes (general view)</Label>
                 <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-2">
                   {internalComments.length === 0 ? (
-                    <p className="text-sm text-slate-500">No internal notes yet.</p>
+                    <p className="text-sm text-gray-500">No internal notes yet.</p>
                   ) : (
                     internalComments.map((note) => (
                       <div key={note.id} className="rounded-md border border-amber-100 bg-white p-2.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-semibold text-amber-700">{note.userName}</span>
-                          <span className="text-[11px] text-slate-500">{formatBogotaDateTime(note.createdAt)}</span>
+                          <span className="text-[11px] text-gray-500">{formatBogotaDateTime(note.createdAt)}</span>
                         </div>
-                        <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap">
-                          {note.content}
-                        </p>
+                        <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{note.content}</p>
                       </div>
                     ))
                   )}
@@ -1047,13 +1037,12 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               </div>
 
               <div className="space-y-2">
-                <Label className="!text-slate-300">Internal comment for decision</Label>
+                <Label>Internal comment for decision</Label>
                 <Textarea
                   value={authorizationInternalComment}
                   onChange={(event) => setAuthorizationInternalComment(event.target.value)}
                   placeholder="Add internal context for this authorization..."
                   rows={3}
-                  className='bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-2 focus:ring-cyan-500'
                 />
               </div>
 
@@ -1061,21 +1050,21 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 <Button
                   onClick={() => handleAuthorizationDecision('approved')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                  className="bg-emerald-600 hover:bg-emerald-700"
                 >
                   Accept change
                 </Button>
                 <Button
                   onClick={() => handleAuthorizationDecision('rejected')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-rose-600 hover:bg-rose-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                  className="bg-rose-600 hover:bg-rose-700"
                 >
                   Do not accept
                 </Button>
                 <Button
                   onClick={() => handleAuthorizationDecision('preapproved_more_specs')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-amber-500 hover:bg-amber-600 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                  className="bg-amber-500 hover:bg-amber-600 text-black"
                 >
                  In Process
                 </Button>
