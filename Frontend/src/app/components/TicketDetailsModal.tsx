@@ -33,15 +33,15 @@ const categoryLabels: Record<TicketCategory, string> = {
 };
 
 const statusColors: Record<TicketStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  'in-progress': 'bg-blue-100 text-blue-800',
-  resolved: 'bg-green-100 text-green-800',
+  pending: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+  'in-progress': 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+  resolved: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
 };
 
 const priorityColors = {
-  low: 'bg-gray-100 text-gray-800',
-  medium: 'bg-orange-100 text-orange-800',
-  high: 'bg-red-100 text-red-800',
+  low: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+  medium: 'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+  high: 'bg-red-500/10 text-red-400 border border-red-500/20',
 };
 
 const priorityLabels = {
@@ -530,7 +530,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   border border-slate-700/60 
                   bg-slate-900/70 backdrop-blur-sm">
               <div className="!text-white text-sm font-medium flex items-center gap-2">
-                <Tag className="w-4 h-4" />
+                <Tag className="w-4 h-4 text-emerald-400" />
                 Category
               </div>
               <div className="font-medium">{categoryLabels[ticket.category]}</div>
@@ -539,7 +539,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   border border-slate-700/60 
                   bg-slate-900/70 backdrop-blur-sm">
               <div className="!text-white text-sm font-medium flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
+                <AlertCircle className="w-4 h-4 text-emerald-400" />
                 Priority
               </div>
               <Badge className={priorityColors[ticket.priority]}>
@@ -550,14 +550,14 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   border border-slate-700/60 
                   bg-slate-900/70 backdrop-blur-sm">
               <div className="!text-white text-sm font-medium flex items-center gap-2">
-                <User className="w-4 h-4" />
+                <User className="w-4 h-4 text-emerald-400" />
                 Created by
               </div>
               <div className="font-medium">{ticket.createdByName}</div>
             </div>
             <div className="space-y-1">
               <div className="!text-white text-sm font-medium flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-4 h-4 text-emerald-400" />
                 Date & Time
               </div>
               <div className="font-medium text-sm">
@@ -568,10 +568,10 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
           {ticket.location && (
             <div className="space-y-1.5 p-3 rounded-xl 
-                  border border-slate-700/60 
-                  bg-slate-900/70 backdrop-blur-sm">
+                            border border-slate-700/60 
+                            bg-slate-900/70 backdrop-blur-sm">
               <div className="!text-white text-sm font-medium flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-4 h-4 text-emerald-400" />
                 Desk Location
               </div>
               <div className="!text-white text-sm font-medium flex items-center gap-2">{ticket.location}</div>
@@ -613,10 +613,13 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           {ticket.category === 'hardware' && (
             <>
               <Separator />
-              <div className="space-y-4">
+              <div className="space-y-5 
+                              p-4 rounded-2xl 
+                              border border-slate-700/70 
+                              bg-slate-900/80 backdrop-blur-md shadow-lg">
                 <div className="flex items-center gap-2">
-                  <Laptop className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-semibold text-emerald-900">Hardware Information</h3>
+                  <Laptop className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-semibold text-emerald-500">Hardware Information</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -625,7 +628,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectTrigger className="bg-emerald-50 border-emerald-200">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="teclado">Teclado ESENSES Básico USB</SelectItem>
                         <SelectItem value="mouse">Mouse Álambrico HP Óptico negro 100</SelectItem>
                         <SelectItem value="ethernet">Ethernet 3.0 LAN a USB</SelectItem>
@@ -647,6 +650,8 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                         <SelectItem value="replace">Needs Replacement</SelectItem>
                         <SelectItem value="tested">Operational</SelectItem>
                         <SelectItem value="maintenance">Missing</SelectItem>
+                        <SelectItem value="Damage">Damage</SelectItem>
+                        <SelectItem value="Return">Return</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -684,13 +689,18 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           {isAdmin && (
             <>
               <Separator />
-              <div className="space-y-4">
+              <div className="space-y-5 
+                              p-4 rounded-2xl 
+                              border border-slate-700/70 
+                              bg-slate-900/80 backdrop-blur-md shadow-lg">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Change Status</Label>
+                    <Label className='!text-white'>Change Status</Label>
                     <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger>
+                        <SelectValue />
+                        </SelectTrigger>
+                      <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in-progress">In Progress</SelectItem>
                         <SelectItem value="resolved">Resolved</SelectItem>
@@ -698,12 +708,12 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Primary Technician</Label>
+                    <Label className='!text-white'>Primary Technician</Label>
                     <Select value={primaryTechId} onValueChange={setPrimaryTechId} disabled={loadingTechs}>
                       <SelectTrigger>
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign primary'} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="none">— None —</SelectItem>
                         {technicians.map((tech) => (
                           <SelectItem key={tech.id_user} value={String(tech.id_user)}>
@@ -716,12 +726,12 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 </div>
                 <div className="grid grid-cols-[1fr_auto] items-end gap-4">
                   <div className="space-y-2">
-                    <Label>Secondary Technician</Label>
+                    <Label className='!text-white'>Secondary Technician</Label>
                     <Select value={secondaryTechId} onValueChange={setSecondaryTechId} disabled={loadingTechs}>
                       <SelectTrigger>
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign secondary'} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="none">— None —</SelectItem>
                         {technicians.map((tech) => (
                           <SelectItem key={tech.id_user} value={String(tech.id_user)}>
@@ -731,7 +741,15 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleSaveAssignments} disabled={savingTechs || loadingTechs}>
+                  <Button
+                   onClick={handleSaveAssignments}
+                  disabled={savingTechs || loadingTechs}
+                  className='h-11 px-4 rounded-xl
+                             bg-slate-800 border border-slate-700 
+                             text-slate-200
+                             hover:bg-slate-700 hover:text-white
+                             active:scale-[0.98]
+                             transition-all duration-200 shadow-sm'>
                     {savingTechs ? 'Saving…' : 'Save assignments'}
                   </Button>
                 </div>
@@ -744,14 +762,16 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           {/* Comments Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="w-5 h-5 text-gray-600" />
-              <h3 className="font-semibold">Comments</h3>
+              <MessageSquare className="w-5 h-5 text-emerald-400" />
+              <h3 className="font-semibold text-slate-100">Comments</h3>
             </div>
-            <div className="flex border-b mb-4">
+            <div className="flex border-b border-slate-700 mb-4">
               <button
                 onClick={() => setActiveTab('comments')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'comments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
+                  activeTab === 'comments' 
+                  ? 'border-blue-500 text-blue-600' 
+                  : 'border-transparent text-slate-400 hover:text-blue-500'
                 }`}
               >
                 Public <span className="ml-1.5 bg-gray-100 px-1.5 py-0.5 rounded-full">{publicComments.length}</span>
@@ -760,7 +780,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 <button
                   onClick={() => setActiveTab('internal')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'internal' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500'
+                    activeTab === 'internal' 
+                    ? 'border-amber-500 text-amber-600' 
+                    : 'border-transparent text-slate-400 hover:text-amber-500'
                   }`}
                 >
                   Internal Notes <span className="ml-1.5 bg-amber-100 px-1.5 py-0.5 rounded-full">{internalComments.length}</span>
@@ -769,30 +791,74 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
 
             <div className="space-y-4 mb-4">
-              {loadingComments ? (
-                <p className="text-gray-500 text-center py-4">Loading comments…</p>
-              ) : tabComments.length === 0 ? (
-                <p className="text-white text-center py-4">No comments yet</p>
-              ) : (
-                tabComments.map((c) => (
-                  <div key={c.id} className={`p-4 rounded-lg ${c.isInternal ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{c.userName}</span>
-                        {c.isInternal && <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Internal note</Badge>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{formatBogotaDateTime(c.createdAt)}</span>
-                        <button onClick={() => handleReply(c)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500">
-                          <Reply className="w-3.5 h-3.5" /> Reply
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-gray-700 text-sm">{c.content}</p>
-                  </div>
-                ))
-              )}
-            </div>
+
+  {/* LOADING */}
+  {loadingComments ? (
+    <p className="text-slate-400 text-center py-4">
+      Loading comments…
+    </p>
+
+  ) : tabComments.length === 0 ? (
+
+    <p className="text-slate-500 text-center py-4">
+      No comments yet
+    </p>
+
+  ) : (
+
+    tabComments.map((c) => (
+      <div
+        key={c.id}
+        className={`p-4 rounded-xl border transition-all duration-300
+          ${
+            c.isInternal
+              ? 'bg-amber-900/20 border-amber-700/40'
+              : 'bg-slate-800/40 border-slate-700/60'
+          }
+          hover:border-slate-500 hover:shadow-md`}
+      >
+
+        {/* HEADER */}
+        <div className="flex items-start justify-between mb-2">
+
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-emerald-500">
+              {c.userName}
+            </span>
+
+            {c.isInternal && (
+              <Badge
+                variant="outline"
+                className="text-xs border-amber-500/60 text-amber-300 bg-amber-900/30"
+              >
+                Internal note
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">
+              {formatBogotaDateTime(c.createdAt)}
+            </span>
+
+            <button
+              onClick={() => handleReply(c)}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-400"
+            >
+              <Reply className="w-3.5 h-3.5" />
+              Reply
+            </button>
+          </div>
+        </div>
+
+        {/* CONTENT */}
+        <p className="text-slate-300 text-sm leading-relaxed">
+          {c.content}
+        </p>
+      </div>
+    ))
+  )}
+</div>
 
             <div className="space-y-3 border-t pt-4">
               {replyingTo && (
@@ -825,7 +891,11 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     <span>Internal note</span>
                   </label>
                 ) : <span />}
-                <Button onClick={handleAddComment} disabled={!comment.trim() || submittingComment}>
+                <Button 
+                onClick={handleAddComment} 
+                disabled={!comment.trim() || submittingComment}
+                className='h-11 px-4 rounded-xl
+                           bg-slate-800 border border-slate-700'>
                   {submittingComment ? 'Saving…' : 'Add Comment'}
                 </Button>
               </div>
@@ -836,48 +906,101 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
           {/* History Panel */}
           {isAdmin && showHistory && (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b">
-                <div className="flex items-center gap-2 font-semibold text-sm">
-                  <History className="w-4 h-4 text-gray-600" />
-                  History - Desk {ticket.location || 'N/A'}
-                </div>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="text-gray-400"
-                  aria-label="Close history"
-                  title="Close history"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="divide-y max-h-80 overflow-y-auto">
-                {loadingHistory ? <p className="text-center py-6 text-sm">Loading...</p> : 
-                  changeHistory.map((h) => (
-                    <div key={h.id_change} className="px-4 py-4 space-y-2">
-                      <div className="flex justify-between items-start">
-                        <span className="font-semibold text-sm">{h.ticket_title}</span>
-                        <Badge variant="outline">{h.ticket_status}</Badge>
-                      </div>
-                      <p className="text-xs text-gray-600">{h.change_description}</p>
-                      <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                        <span className="flex items-center gap-1"><User className="w-3 h-3"/> {usersById.get(h.action_user)}</span>
-                        <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3"/> {formatBogotaDateTime(h.created_at)}</span>
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
+           <div className="border border-slate-700/60 rounded-xl overflow-hidden bg-slate-900/60 backdrop-blur-md shadow-lg">
+
+  {/* HEADER */}
+  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60 bg-slate-800/60">
+    
+    <div className="flex items-center gap-2 font-semibold text-sm text-slate-100">
+      <History className="w-4 h-4 text-cyan-400" />
+      History - Desk {ticket.location || 'N/A'}
+    </div>
+
+    <button
+      onClick={() => setShowHistory(false)}
+      className="text-slate-400 hover:text-white transition-colors"
+      aria-label="Close history"
+      title="Close history"
+    >
+      <X className="w-4 h-4" />
+    </button>
+
+  </div>
+
+  {/* CONTENT */}
+  <div className="divide-y divide-slate-700/60 max-h-80 overflow-y-auto">
+
+    {loadingHistory ? (
+      <p className="text-center py-6 text-sm text-slate-400">
+        Loading...
+      </p>
+    ) : (
+
+      changeHistory.map((h) => (
+        <div
+          key={h.id_change}
+          className="px-4 py-4 space-y-2 transition-all duration-300 hover:bg-slate-800/40"
+        >
+
+          {/* TITLE + STATUS */}
+          <div className="flex justify-between items-start">
+
+            <span className="font-semibold text-sm text-slate-100">
+              {h.ticket_title}
+            </span>
+
+            <Badge
+              variant="outline"
+             className={priorityColors[ticket.priority]}>
+              {h.ticket_status}
+            </Badge>
+
+          </div>
+
+          {/* DESCRIPTION */}
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {h.change_description}
+          </p>
+
+          {/* META */}
+          <div className="flex items-center gap-3 text-[10px] text-slate-500">
+
+            <span className="flex items-center gap-1">
+              <User className="w-3 h-3 text-slate-400" />
+              {usersById.get(h.action_user)}
+            </span>
+
+            <span className="flex items-center gap-1">
+              <CalendarClock className="w-3 h-3 text-slate-400" />
+              {formatBogotaDateTime(h.created_at)}
+            </span>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
           )}
 
           <div className="flex justify-between items-center">
             {isAdmin ? (
-              <Button variant="outline" onClick={handleOpenHistory} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={handleOpenHistory}
+                className="bg-teal-600 hover:bg-teal-700
+                           text-white font-medium disabled:opacity-50
+                           disabled:cursor-not-allowed shadow-lg shadow-teal-500/20">
                 <History className="w-4 h-4" /> Change History
               </Button>
             ) : <span />}
-            <Button variant="outline" onClick={onClose}>Close</Button>
+              <Button 
+                variant="outline" 
+                onClick={onClose}
+                className='bg-slate-900/50 border-slate-700
+                          text-slate-300 hover:bg-slate-800
+                          hover:text-slate-100 hover:border-slate-600'
+            >Close
+              </Button>
           </div>
         </div>
       </DialogContent>

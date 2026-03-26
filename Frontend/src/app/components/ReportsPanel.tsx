@@ -299,13 +299,13 @@ export default function ReportsPanel() {
 
             <span
               className={`px-2 py-1 rounded text-xs font-medium ${
-ticket.status === 'pending'
+              ticket.status === 'pending'
                   ? 'bg-amber-500/20 text-amber-700'
                   : ticket.status === 'in-progress'
                   ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
                   : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
               }`}
-            >
+              >
               {ticket.status === 'pending'
                 ? 'Pending'
                 : ticket.status === 'in-progress'
