@@ -419,88 +419,116 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     }
   };
 
-  const handleAuthorizationDecision = async (
-    decision: 'approved' | 'rejected' | 'preapproved_more_specs',
-  ) => {
-    if (!isSupremeAdmin || !user?.id) {
-      return;
+ const handleAuthorizationDecision = async (
+  decision: 'approved' | 'rejected' | 'preapproved_more_specs',
+) => {
+  if (!isSupremeAdmin || !user?.id) {
+    return;
+  }
+
+  setSubmittingAuthorizationDecision(true);
+  try {
+    const decisionLabel = authorizationDecisionLabels[decision];
+    
+    // ✅ FIX: Construir updates solo con valores válidos (no vacíos)
+    const updates: Record<string, string> = {
+      authorization_decision: decision,
+      authorization_by: String(user.id),
+      authorization_updated_at: new Date().toISOString(),
+    };
+    
+    // Solo agregar asset_status si tiene valor real
+    if (assetStatus && assetStatus.trim() !== '') {
+      updates.asset_status = assetStatus;
+      console.log('[DEBUG] Incluyendo asset_status:', assetStatus);
+    } else {
+      console.warn('[DEBUG] assetStatus está vacío, no se incluirá en category_detail');
+    }
+    
+    // Solo agregar hardware_component si tiene valor real
+    if (hardwareComponent && hardwareComponent.trim() !== '') {
+      updates.hardware_component = hardwareComponent;
+      console.log('[DEBUG] Incluyendo hardware_component:', hardwareComponent);
+    } else {
+      console.warn('[DEBUG] hardwareComponent está vacío, no se incluirá en category_detail');
     }
 
-    setSubmittingAuthorizationDecision(true);
-    try {
-      const decisionLabel = authorizationDecisionLabels[decision];
-      const updatedDetail = mergeCategoryDetail(ticket.categoryDetail, {
-        authorization_decision: decision,
-        authorization_by: String(user.id),
-        authorization_updated_at: new Date().toISOString(),
-        asset_status: assetStatus,
-      });
+    const updatedDetail = mergeCategoryDetail(ticket.categoryDetail, updates);
+    
+    // 🔍 Logs de debug para verificar qué se envía
+    console.log('[DEBUG] === handleAuthorizationDecision ===');
+    console.log('[DEBUG] ticket.categoryDetail original:', ticket.categoryDetail);
+    console.log('[DEBUG] updates:', updates);
+    console.log('[DEBUG] updatedDetail final:', updatedDetail);
+    console.log('[DEBUG] ===================================');
 
-      await apiService.updateTicket(Number(ticket.id), {
-        category_detail: updatedDetail,
-        moved_by: Number(user.id),
-      });
+    await apiService.updateTicket(Number(ticket.id), {
+      category_detail: updatedDetail,
+      moved_by: Number(user.id),
+    });
 
-      const commentPrefix = `[Authorization] ${decisionLabel}`;
-      const decisionComment = authorizationInternalComment.trim()
-        ? `${commentPrefix}\n${authorizationInternalComment.trim()}`
-        : commentPrefix;
+    const commentPrefix = `[Authorization] ${decisionLabel}`;
+    const decisionComment = authorizationInternalComment.trim()
+      ? `${commentPrefix}\n${authorizationInternalComment.trim()}`
+      : commentPrefix;
 
-      const savedComment = await apiService.createComment({
+    const savedComment = await apiService.createComment({
+      id_ticket: Number(ticket.id),
+      id_user: Number(user.id),
+      content: decisionComment,
+      internal_note: true,
+    });
+
+    const newComment: Comment = {
+      id: String(savedComment.id_comment),
+      ticketId: String(savedComment.id_ticket),
+      userId: String(savedComment.id_user),
+      userName: usersById.get(savedComment.id_user) ?? user.name ?? `User #${savedComment.id_user}`,
+      content: savedComment.content,
+      isInternal: savedComment.internal_note ?? false,
+      createdAt: new Date(savedComment.created_at),
+    };
+    setLocalComments((prev) => [...prev, newComment]);
+
+    let publicDecisionMessage: string | undefined;
+    if (decision === 'approved') {
+      publicDecisionMessage = 'Cambio autorizado, proximamente se hara.';
+    }
+    if (decision === 'rejected') {
+      publicDecisionMessage = 'No se acepto el cambio, por politicas de IT.';
+    }
+
+    if (publicDecisionMessage) {
+      const savedPublicComment = await apiService.createComment({
         id_ticket: Number(ticket.id),
         id_user: Number(user.id),
-        content: decisionComment,
-        internal_note: true,
+        content: publicDecisionMessage,
+        internal_note: false,
       });
 
-      const newComment: Comment = {
-        id: String(savedComment.id_comment),
-        ticketId: String(savedComment.id_ticket),
-        userId: String(savedComment.id_user),
-        userName: usersById.get(savedComment.id_user) ?? user.name ?? `User #${savedComment.id_user}`,
-        content: savedComment.content,
-        isInternal: savedComment.internal_note ?? false,
-        createdAt: new Date(savedComment.created_at),
+      const newPublicComment: Comment = {
+        id: String(savedPublicComment.id_comment),
+        ticketId: String(savedPublicComment.id_ticket),
+        userId: String(savedPublicComment.id_user),
+        userName: usersById.get(savedPublicComment.id_user) ?? user.name ?? `User #${savedPublicComment.id_user}`,
+        content: savedPublicComment.content,
+        isInternal: savedPublicComment.internal_note ?? false,
+        createdAt: new Date(savedPublicComment.created_at),
       };
-      setLocalComments((prev) => [...prev, newComment]);
-
-      let publicDecisionMessage: string | undefined;
-      if (decision === 'approved') {
-        publicDecisionMessage = 'Cambio autorizado, proximamente se hara.';
-      }
-      if (decision === 'rejected') {
-        publicDecisionMessage = 'No se acepto el cambio, por politicas de IT.';
-      }
-
-      if (publicDecisionMessage) {
-        const savedPublicComment = await apiService.createComment({
-          id_ticket: Number(ticket.id),
-          id_user: Number(user.id),
-          content: publicDecisionMessage,
-          internal_note: false,
-        });
-
-        const newPublicComment: Comment = {
-          id: String(savedPublicComment.id_comment),
-          ticketId: String(savedPublicComment.id_ticket),
-          userId: String(savedPublicComment.id_user),
-          userName: usersById.get(savedPublicComment.id_user) ?? user.name ?? `User #${savedPublicComment.id_user}`,
-          content: savedPublicComment.content,
-          isInternal: savedPublicComment.internal_note ?? false,
-          createdAt: new Date(savedPublicComment.created_at),
-        };
-        setLocalComments((prev) => [...prev, newPublicComment]);
-      }
-
-      setAuthorizationInternalComment('');
-      setShowAuthorizationModal(false);
-      toast.success('Authorization decision saved');
-    } catch (error) {
-      toast.error((error as Error).message || 'Could not save authorization decision');
-    } finally {
-      setSubmittingAuthorizationDecision(false);
+      setLocalComments((prev) => [...prev, newPublicComment]);
     }
-  };
+
+    setAuthorizationInternalComment('');
+    setShowAuthorizationModal(false);
+    toast.success('Authorization decision saved');
+    
+  } catch (error) {
+    console.error('[ERROR] handleAuthorizationDecision:', error);
+    toast.error((error as Error).message || 'Could not save authorization decision');
+  } finally {
+    setSubmittingAuthorizationDecision(false);
+  }
+};
 
   const publicComments = localComments.filter((c) => {
     if (c.isInternal) return false;

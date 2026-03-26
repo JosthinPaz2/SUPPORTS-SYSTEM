@@ -12,6 +12,7 @@ class TicketBase(BaseModel):
     id_station: Optional[str] = None
     priority: Optional[str] = Field(None, pattern="^(LOW|MEDIUM|HIGH|URGENT|low|medium|high|urgent)$")
     category_detail: Optional[str] = None
+    created_by: int
 
 class TicketCreate(TicketBase):
     pass

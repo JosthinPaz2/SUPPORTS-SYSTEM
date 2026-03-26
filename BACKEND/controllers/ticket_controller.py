@@ -223,8 +223,6 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
 
 @router.post("/", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
 def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
-    created_by_value = 1
-
     if ticket.id_station:
         active_reports = db.query(Ticket).filter(
             Ticket.id_station == ticket.id_station,
@@ -244,7 +242,7 @@ def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
         id_station=ticket.id_station,
         priority=ticket.priority,
         category_detail=ticket.category_detail,
-        created_by=created_by_value,
+        created_by=ticket.created_by,
     )
     db.add(db_ticket)
     db.flush()
@@ -291,13 +289,10 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{ticket_id}", response_model=TicketOut)
 def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(get_db)):
-    print(f"\n{'='*70}")
-    print(f"[TICKETS] PUT /tickets/{ticket_id} RECIBIDO")
-    print(f"{'='*70}")
-    print(f"  • category_detail recibido: {ticket.category_detail}")
-    print(f"  • moved_by: {getattr(ticket, 'moved_by', None)}")
-    print(f"{'='*70}")
-    
+
+    print(f"\n[DEBUG] update_ticket llamado para ID: {ticket_id}")
+    print(f"  • category_detail: {ticket.category_detail}")
+
     db_ticket = db.query(Ticket).filter(Ticket.id_ticket == ticket_id).first()
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -316,23 +311,35 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
     normalized_status = _normalize_status(ticket.status) if ticket.status else previous_status
     role_one_user_ids = _get_role_one_user_ids(db)
 
-    if ticket.category_detail and ticket.category_detail != db_ticket.category_detail:
+    # ============================================
+    # ✅ HOOK FIX: Evaluar autorización SIN depender de que category_detail "cambie"
+    # ============================================
+    effective_category_detail = ticket.category_detail or db_ticket.category_detail
+    
+    if effective_category_detail:
         try:
-            parsed = _parse_category_detail(ticket.category_detail)
+            parsed = _parse_category_detail(effective_category_detail)
             auth_decision = parsed.get('authorization_decision')
             auth_by = parsed.get('authorization_by')
             auth_by_str = str(auth_by) if auth_by is not None else None
             asset_condition = parsed.get('asset_status')
             
+            # Fallback: si asset_condition no viene en parsed, buscar en db_ticket
             if not asset_condition or asset_condition == 'None':
                 db_parsed = _parse_category_detail(db_ticket.category_detail)
                 asset_condition = db_parsed.get('asset_status')
             
+            # Normalizar a formato estándar (case-insensitive)
+            if asset_condition:
+                asset_condition = asset_condition.capitalize()
+            
+            # Ejecutar sincronización si es aprobación válida de id=1
             if auth_decision == 'approved' and auth_by_str == '1':
-                if asset_condition in ['Return', 'Damage', 'Missing']:
+                if asset_condition and asset_condition.lower() in ['return', 'damage', 'missing']:
                     asset_item = _get_asset_item_from_ticket(db_ticket)
                     
                     if asset_item and db_ticket.id_station:
+                        # Evitar sincronizar múltiples veces
                         existing_sync = db.query(ChangeHistory).filter(
                             ChangeHistory.id_ticket == db_ticket.id_ticket,
                             ChangeHistory.change_description.like(f"Inventory sync: {asset_condition}%")
@@ -361,6 +368,9 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
                                 ))
         except Exception as e:
             logger.warning(f"Error en hook de autorización: {str(e)}")
+    # ============================================
+    # FIN Hook fix
+    # ============================================
 
     if ticket.status and normalized_status != previous_status:
         db.add(ChangeHistory(
@@ -405,7 +415,8 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
             f"Ticket #{db_ticket.id_ticket} technician assignment was updated",
             exclude_user_id=assignment_actor_user,
             action_type="open_ticket", severity="info",
-            id_ticket=db_ticket.id_ticket, id_station=db_ticket.id_station,
+            id_ticket=db_ticket.id_ticket,
+            id_station=db_ticket.id_station,
         )
 
     if normalized_status == "resolved" and previous_status != "resolved":
