@@ -27,9 +27,7 @@ export default function TicketForm({
   userId,
   userName,
   presetLocationId,
-  presetLocationName,
   presetFloorId,
-  presetFloorName,
   presetStationId,
   hideStationSelectors = false,
 }: TicketFormProps) {
@@ -231,13 +229,13 @@ export default function TicketForm({
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-[9999]">
         <DialogHeader>
-          <DialogTitle className="text-xl md:text-2xl font-bold text-slate-100 leading-tight">
+          <DialogTitle className="text-xl md:text-2xl font-bold text-white leading-tight">
             Create New Ticket
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-slate-300 text-sm font-medium">
+          <div className="space-y-2 ">
+            <Label htmlFor="title" className="!text-white text-sm font-medium">
               Issue Title *
             </Label>
             <Input
@@ -246,11 +244,12 @@ export default function TicketForm({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="E.g., Computer won't turn on"
               required
+              className="!bg-slate-900 !text-slate-100 !border-slate-700 placeholder:!text-slate-500 focus:!border-teal-500 focus:!ring-teal-500/20"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-slate-600 text-sm font-medium">
+            <Label htmlFor="description" className="!text-white text-sm font-medium">
               Detailed Description *
             </Label>
             <Textarea
@@ -264,30 +263,8 @@ export default function TicketForm({
             />
           </div>
 
-          {hideStationSelectors ? (
-            <div className="rounded-lg border border-slate-700 bg-slate-900/30 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Selected Station
-              </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-slate-500">Location</p>
-                  <p className="text-sm font-medium text-slate-200">{presetLocationName || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Floor</p>
-                  <p className="text-sm font-medium text-slate-200">{presetFloorName || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Desk</p>
-                  <p className="text-sm font-medium text-slate-200">{presetStationId || '-'}</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
               <div className="space-y-2">
-                <Label htmlFor="siteLocation" className="text-slate-300 text-sm font-medium">
+                <Label htmlFor="siteLocation" className="!text-white text-sm font-medium">
                   Select Location
                 </Label>
                 <Select value={selectedLocationId} onValueChange={handleLocationChange}>
@@ -312,7 +289,7 @@ export default function TicketForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="floor" className="text-slate-300 text-sm font-medium">
+                <Label htmlFor="floor" className="!text-white text-sm font-medium">
                   Select Floor
                 </Label>
                 <Select
@@ -341,7 +318,7 @@ export default function TicketForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location" className="text-slate-300 text-sm font-medium">
+                <Label htmlFor="location" className="!text-white text-sm font-medium">
                   Desk Location
                 </Label>
                 <Select value={location} onValueChange={setLocation} disabled={!selectedFloorId}>
@@ -367,11 +344,10 @@ export default function TicketForm({
                   Select the desk where the issue occurs (filtered by location and floor)
                 </p>
               </div>
-            </>
-          )}
+        
 
           <div className="space-y-2">
-            <Label htmlFor="category" className="text-slate-300 text-sm font-medium">
+            <Label htmlFor="category" className="!text-white text-sm font-medium">
               Category *
             </Label>
             <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>

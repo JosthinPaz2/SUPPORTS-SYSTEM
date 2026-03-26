@@ -1,0 +1,25 @@
+{
+  "name": "support-system-testeos",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "cy:open": "cypress open --env blockExternalApi=true",
+    "cy:open:local": "cypress open --env blockExternalApi=true",
+    "cy:open:slow": "cypress open --env slowMode=true,slowMs=2500,slowSuiteStartMs=3000",
+    "cy:run": "cypress run --env blockExternalApi=true",
+    "cy:run:local": "cypress run --env blockExternalApi=true",
+    "cy:run:slow": "cypress run --env slowMode=true,slowMs=2500,slowSuiteStartMs=3000",
+    "cy:run:api": "cypress run --spec cypress/e2e/backend-api-complete.cy.ts",
+    "cy:run:front": "cypress run --spec \"cypress/e2e/auth.cy.ts,cypress/e2e/protected-routes.cy.ts,cypress/e2e/employee-dashboard.cy.ts,cypress/e2e/admin-dashboard.cy.ts\"",
+    "cy:run:headed": "cypress run --headed --browser chrome",
+    "test:e2e": "start-server-and-test \"npm --prefix ../Frontend run dev -- --host 127.0.0.1 --port 5173\" http://127.0.0.1:5173 \"cypress run\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "cypress": "^14.5.4",
+    "cypress-slow-down": "^1.4.0",
+    "start-server-and-test": "^2.0.8",
+    "typescript": "^5.8.3"
+  }
+}

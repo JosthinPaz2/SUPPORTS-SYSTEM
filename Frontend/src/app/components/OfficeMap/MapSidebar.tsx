@@ -139,7 +139,7 @@ export default function MapSidebar({
               activeTab === 'inventory' ? 'bg-teal-900/40 shadow border border-teal-500/50 text-teal-400' : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            <LayoutGrid size={14} /> INVENTORY
+            <LayoutGrid size={14} /> INVENTORY 
           </button>
           {/* Botón de pestaña Objects */}
           <button
