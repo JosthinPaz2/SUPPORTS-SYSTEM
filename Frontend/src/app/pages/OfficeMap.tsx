@@ -2011,10 +2011,10 @@ export default function OfficeMap() {
         }
       }}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg bg-gray-900 border-gray-700 text-gray-200 shadow-2xl">
         <DialogHeader>
-          <DialogTitle>{mapTransferMode === 'import' ? 'Import map' : 'Export map'}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white">{mapTransferMode === 'import' ? 'Import map' : 'Export map'}</DialogTitle>
+          <DialogDescription className="text-gray-400">
             {mapTransferMode === 'import'
               ? 'Select location, floor and a JSON file to import and save automatically to database.'
               : 'Select location and floor to export the complete map data.'}
@@ -2023,7 +2023,7 @@ export default function OfficeMap() {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="mapTransferLocation" className="text-sm font-medium text-slate-700">
+            <label htmlFor="mapTransferLocation" className="text-sm font-medium text-gray-300">
               Location
             </label>
             <Select
@@ -2035,10 +2035,10 @@ export default function OfficeMap() {
               }}
               disabled={processingMapTransfer}
             >
-              <SelectTrigger id="mapTransferLocation" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="mapTransferLocation" className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 shadow-none focus:ring-teal-500">
                 <SelectValue placeholder="Select a location" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {adminLocations.map((location) => (
                   <SelectItem key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
@@ -2049,7 +2049,7 @@ export default function OfficeMap() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="mapTransferFloor" className="text-sm font-medium text-slate-700">
+            <label htmlFor="mapTransferFloor" className="text-sm font-medium text-gray-300">
               Floor
             </label>
             <Select
@@ -2062,7 +2062,7 @@ export default function OfficeMap() {
               }}
               disabled={!mapTransferLocationId || processingMapTransfer}
             >
-              <SelectTrigger id="mapTransferFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="mapTransferFloor" className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 shadow-none focus:ring-teal-500">
                 <SelectValue
                   placeholder={
                     !mapTransferLocationId
@@ -2073,7 +2073,7 @@ export default function OfficeMap() {
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {mapTransferAvailableFloors.map((floor) => (
                   <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
                     {floor.floor_name}
@@ -2083,7 +2083,7 @@ export default function OfficeMap() {
             </Select>
             {mapTransferMode === 'import' && (
               <>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-gray-400">
                   Optional: if the floor does not exist, write it below and it will be created automatically.
                 </p>
                 <input
@@ -2098,7 +2098,7 @@ export default function OfficeMap() {
                   }}
                   placeholder="Write floor name (example: Floor 5)"
                   disabled={!mapTransferLocationId || processingMapTransfer}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus-visible:ring-teal-500"
                 />
               </>
             )}
@@ -2106,7 +2106,7 @@ export default function OfficeMap() {
 
           {mapTransferMode === 'import' && (
             <div className="space-y-2">
-              <label htmlFor="mapTransferFile" className="text-sm font-medium text-slate-700">
+              <label htmlFor="mapTransferFile" className="text-sm font-medium text-gray-300">
                 Map JSON file
               </label>
               <input
@@ -2119,9 +2119,9 @@ export default function OfficeMap() {
                   setMapTransferFile(selected);
                 }}
                 disabled={processingMapTransfer}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus-visible:ring-teal-500"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-gray-400">
                 Use a file exported from this module to preserve stations and map objects.
               </p>
             </div>
@@ -2134,6 +2134,7 @@ export default function OfficeMap() {
             variant="outline"
             onClick={() => setMapTransferDialogOpen(false)}
             disabled={processingMapTransfer}
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
           >
             Cancel
           </Button>
@@ -2141,6 +2142,7 @@ export default function OfficeMap() {
             type="button"
             disabled={processingMapTransfer}
             onClick={mapTransferMode === 'import' ? handleImportMapData : handleExportMapData}
+            className="bg-teal-600 text-white hover:bg-teal-700 border-none"
           >
             {processingMapTransfer
               ? mapTransferMode === 'import'
@@ -2157,30 +2159,30 @@ export default function OfficeMap() {
 
   if (isViewOnly) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
+      <div className="min-h-screen p-6 text-gray-200" onMouseUp={handleMouseUp}>
         <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-7xl flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
-              <p className="text-sm text-gray-600">Read-only office layout view</p>
+              <h1 className="text-2xl font-bold text-white">Office Map</h1>
+              <p className="text-sm text-gray-400">Read-only office layout view</p>
             </div>
-            <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
+            <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800" onClick={handleBackToMenu}>Back</Button>
           </div>
 
           <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <Card className="border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+            <Card className="border-gray-700/50 bg-gray-900/60 shadow-xl backdrop-blur-sm">
               <CardContent className="pt-6 space-y-5">
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
                     Map Filter
                   </p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-gray-400">
                     Choose the office area you want to inspect.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-700">
+                  <label htmlFor="employeeViewLocation" className="text-sm font-medium text-gray-300">
                     Location
                   </label>
                   <Select
@@ -2193,11 +2195,11 @@ export default function OfficeMap() {
                   >
                     <SelectTrigger
                       id="employeeViewLocation"
-                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                      className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500"
                     >
                       <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
                       {viewLocations.map((location) => (
                         <SelectItem key={location.id_location} value={String(location.id_location)}>
                           {location.location_name}
@@ -2208,7 +2210,7 @@ export default function OfficeMap() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-700">
+                  <label htmlFor="employeeViewFloor" className="text-sm font-medium text-gray-300">
                     Floor
                   </label>
                   <Select
@@ -2218,11 +2220,11 @@ export default function OfficeMap() {
                   >
                     <SelectTrigger
                       id="employeeViewFloor"
-                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                      className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500"
                     >
                       <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
                       {availableViewFloors.map((floor) => (
                         <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
                           {floor.floor_name}
@@ -2463,7 +2465,7 @@ export default function OfficeMap() {
   // Si el modo es 'view', mostrar solo el canvas sin sidebars
   if (activeMode === 'view') {
     return (
-      <div className="p-6 bg-gray-50 min-h-screen select-none flex flex-col gap-4"
+      <div className="p-6 min-h-screen select-none flex flex-col gap-4 text-gray-200"
            onMouseUp={handleMouseUp}>
 
         {/* Header simple */}
@@ -2482,9 +2484,9 @@ export default function OfficeMap() {
           />
         </div>
 
-        <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <div className="shrink-0 rounded-xl border border-gray-700/50 bg-gray-900/60 backdrop-blur-sm shadow-xl p-3 space-y-3">
           <div className="max-w-md">
-            <label htmlFor="adminViewLocationFilter" className="text-sm font-medium text-slate-700">
+            <label htmlFor="adminViewLocationFilter" className="text-sm font-medium text-gray-400">
               Filter by Location
             </label>
             <Select
@@ -2497,10 +2499,10 @@ export default function OfficeMap() {
               }}
               disabled={loadingAdminMetadata}
             >
-              <SelectTrigger id="adminViewLocationFilter" className="mt-2 h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="adminViewLocationFilter" className="mt-2 h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                 <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {adminLocations.map((location) => (
                   <SelectItem key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
@@ -2510,11 +2512,11 @@ export default function OfficeMap() {
             </Select>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+          <div className="rounded-lg border border-gray-700/50 bg-gray-800/50 p-2">
             {adminSelectedLocationId ? (
               adminAvailableFloors.length > 0 ? (
                 <div className="overflow-x-auto pb-1">
-                  <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-300">
+                  <div className="inline-flex min-w-full items-end gap-1 border-b border-gray-700">
                     {adminAvailableFloors.map((floor) => {
                       const floorId = String(floor.id_floor);
                       const isActive = adminSelectedFloorId === floorId;
@@ -2529,8 +2531,8 @@ export default function OfficeMap() {
                           }}
                           className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
                             isActive
-                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                              ? 'bg-teal-900/40 text-teal-400 border-teal-500/50'
+                              : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-gray-200'
                           }`}
                         >
                           {floor.floor_name}
@@ -2540,10 +2542,10 @@ export default function OfficeMap() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 px-2 py-1">This location has no floors created yet.</p>
+                <p className="text-sm text-gray-400 px-2 py-1">This location has no floors created yet.</p>
               )
             ) : (
-              <p className="text-sm text-slate-500 px-2 py-1">Select a location to load floor tabs.</p>
+              <p className="text-sm text-gray-400 px-2 py-1">Select a location to load floor tabs.</p>
             )}
           </div>
         </div>
@@ -2753,7 +2755,7 @@ export default function OfficeMap() {
   // Si el modo es 'add' o 'edit', mostrar interfaz completa de mapeo
   if (activeMode === 'add' || activeMode === 'edit') {
     return (
-      <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
+      <div className="space-y-6 p-6 min-h-screen select-none text-gray-200"
            onMouseUp={handleMouseUp}>
 
         {/* Header */}
@@ -2778,6 +2780,7 @@ export default function OfficeMap() {
           <Button
             type="button"
             variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
             onClick={handleSelectAllPlaced}
             disabled={items.length + bgLayers.length === 0}
           >
@@ -2786,6 +2789,7 @@ export default function OfficeMap() {
           <Button
             type="button"
             variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
             onClick={() => {
               setSelectedId(null);
               setSelectedIds([]);
@@ -2795,8 +2799,8 @@ export default function OfficeMap() {
           >
             Clear selection
           </Button>
-          {loadingMap && <span className="text-sm text-slate-500">Loading map...</span>}
-          <Button onClick={handleSaveMap} disabled={savingMap}>
+          {loadingMap && <span className="text-sm text-gray-400">Loading map...</span>}
+          <Button onClick={handleSaveMap} disabled={savingMap} className="bg-teal-600 text-white hover:bg-teal-700 border-none">
             {savingMap ? 'Saving...' : 'Save'}
           </Button>
         </div>
@@ -2919,7 +2923,7 @@ export default function OfficeMap() {
 
   // Si el modo es 'select', mostrar solo el menú de opciones y el canvas en blanco
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col p-6 space-y-6">
+    <div className="min-h-screen flex flex-col p-6 space-y-6 text-gray-200">
       <OfficeMapHeader />
       <MapLegend
         onModeChange={handleModeChange}
@@ -2929,10 +2933,10 @@ export default function OfficeMap() {
         autoOpenViewModal={autoOpenViewSelector}
       />
       
-      <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm p-5 space-y-5">
+      <div className="flex-1 bg-gray-900/60 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-xl p-5 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="max-w-md space-y-2">
-            <label htmlFor="adminLocationFilter" className="text-sm font-medium text-slate-700">
+            <label htmlFor="adminLocationFilter" className="text-sm font-medium text-gray-300">
               Filter by Location
             </label>
             <Select
@@ -2943,10 +2947,10 @@ export default function OfficeMap() {
               }}
               disabled={loadingAdminMetadata}
             >
-              <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 shadow-none focus:ring-teal-500">
                 <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {adminLocations.map((location) => (
                   <SelectItem key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
@@ -2959,18 +2963,20 @@ export default function OfficeMap() {
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               onClick={() => openMapTransferDialog('import')}
               disabled={loadingAdminMetadata || adminLocations.length === 0}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
             >
               <Upload className="mr-2 h-4 w-4" />
               Import map
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               onClick={() => openMapTransferDialog('export')}
               disabled={loadingAdminMetadata || adminLocations.length === 0}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
             >
               <Download className="mr-2 h-4 w-4" />
               Export map
@@ -2978,11 +2984,11 @@ export default function OfficeMap() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+        <div className="rounded-xl border border-gray-700/50 bg-gray-800/50 p-3">
           {adminSelectedLocationId ? (
             adminAvailableFloors.length > 0 ? (
               <div className="overflow-x-auto pb-1">
-                <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-300">
+                <div className="inline-flex min-w-full items-end gap-1 border-b border-gray-700">
                   {adminAvailableFloors.map((floor) => {
                     const floorId = String(floor.id_floor);
                     const isActive = adminSelectedFloorId === floorId;
@@ -2999,8 +3005,8 @@ export default function OfficeMap() {
                         }}
                         className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
                           isActive
-                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                            ? 'bg-teal-900/40 text-teal-400 border-teal-500/50'
+                            : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-gray-200'
                         }`}
                       >
                         {floor.floor_name}
@@ -3010,15 +3016,15 @@ export default function OfficeMap() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">This location has no floors created yet.</p>
+              <p className="text-sm text-gray-500">This location has no floors created yet.</p>
             )
           ) : (
-            <p className="text-sm text-slate-500">Select a location to load floor tabs.</p>
+            <p className="text-sm text-gray-500">Select a location to load floor tabs.</p>
           )}
         </div>
 
-        <div className="flex-1 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center">
-          <p className="text-slate-400 text-base font-medium">Select a floor tab to open the map</p>
+        <div className="flex-1 rounded-xl border-2 border-dashed border-gray-700 bg-gray-800/30 flex items-center justify-center min-h-[400px]">
+          <p className="text-gray-500 text-base font-medium">Select a floor tab to open the map</p>
         </div>
         {mapTransferDialog}
       </div>

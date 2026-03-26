@@ -40,12 +40,12 @@ export default function OfficeMapHeader({
 }: OfficeMapHeaderProps) {
 
   return (
-    // Contenedor principal con estilos de Tailwind: flexbox, padding, fondo blanco, borde y sombra
-    <div className="flex items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
+    // Contenedor principal con estilos de Tailwind: flexbox, padding, fondo oscuro translúcido, borde y sombra
+    <div className="flex items-center justify-between bg-gray-900/60 backdrop-blur-sm p-4 rounded-lg border border-gray-700/50 shadow-xl">
       {/* Sección izquierda: Título y subtítulo */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-        <p className="text-sm text-gray-500">{subtitle}</p>
+        <h1 className="text-xl font-bold text-gray-200">{title}</h1>
+        <p className="text-sm text-gray-400">{subtitle}</p>
       </div>
     </div>
   );

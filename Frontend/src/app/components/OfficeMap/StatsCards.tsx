@@ -51,42 +51,42 @@ export default function StatsCards({ totalDesks, reports, noIssues }: StatsCards
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       
       {/* Tarjeta 1: Total de escritorios */}
-      <Card>
+      <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
         {/* Encabezado de la tarjeta con título */}
         <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-400">
             Total Desks
           </CardTitle>
         </CardHeader>
         {/* Contenido con el número grande en color gris oscuro */}
         <CardContent>
-          <div className="text-3xl font-bold text-foreground">{totalDesks}</div>
+          <div className="text-3xl font-bold text-gray-200">{totalDesks}</div>
         </CardContent>
       </Card>
 
       {/* Tarjeta 2: Escritorios con reportes activos */}
-      <Card>
+      <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-400">
             With Active Reports
           </CardTitle>
         </CardHeader>
         {/* Contenido con el número en rojo para indicar alerta/problema */}
         <CardContent>
-          <div className="text-3xl font-bold text-destructive">{reports}</div>
+          <div className="text-3xl font-bold text-red-500">{reports}</div>
         </CardContent>
       </Card>
 
       {/* Tarjeta 3: Escritorios sin problemas */}
-      <Card>
+      <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider text-gray-400">
             No Issues
           </CardTitle>
         </CardHeader>
         {/* Contenido con el número en verde para indicar estado correcto */}
         <CardContent>
-          <div className="text-3xl font-bold text-green-600">{noIssues}</div>
+          <div className="text-3xl font-bold text-emerald-400">{noIssues}</div>
         </CardContent>
       </Card>
     </div>

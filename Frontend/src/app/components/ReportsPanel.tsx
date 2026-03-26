@@ -122,48 +122,48 @@ export default function ReportsPanel() {
     <div className="space-y-6">
       {/* Resumen General */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-gray-400">
               Total Tickets
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{tickets.length}</div>
+            <div className="text-3xl font-bold text-white">{tickets.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl border-t-4 border-t-amber-500">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-gray-400">
               Pending
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">
+            <div className="text-3xl font-bold text-amber-400">
               {byStatus.pending}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl border-t-4 border-t-blue-500">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-gray-400">
               In Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-3xl font-bold text-blue-400">
               {byStatus['in-progress']}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl border-t-4 border-t-emerald-500">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-gray-400">
               Resolved
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-emerald-400">
               {byStatus.resolved}
             </div>
           </CardContent>
@@ -173,9 +173,9 @@ export default function ReportsPanel() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Distribución por Estado */}
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
           <CardHeader>
-            <CardTitle>Distribution by Status</CardTitle>
+            <CardTitle className="text-gray-200">Distribution by Status</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -189,21 +189,22 @@ export default function ReportsPanel() {
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="none"
                 >
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }} itemStyle={{ color: '#e5e7eb' }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Distribución por Categoría */}
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
           <CardHeader>
-            <CardTitle>Distribution by Category</CardTitle>
+            <CardTitle className="text-gray-200">Distribution by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -217,52 +218,53 @@ export default function ReportsPanel() {
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="none"
                 >
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }} itemStyle={{ color: '#e5e7eb' }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Tickets por Prioridad */}
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
           <CardHeader>
-            <CardTitle>Tickets by Priority</CardTitle>
+            <CardTitle className="text-gray-200">Tickets by Priority</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={priorityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Tickets" fill="#3b82f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="name" stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
+                <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
+                <Tooltip cursor={{ fill: '#374151' }} contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }} />
+                <Legend wrapperStyle={{ color: '#d1d5db' }} />
+                <Bar dataKey="Tickets" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Estado por Categoría */}
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
           <CardHeader>
-            <CardTitle>Status by Category</CardTitle>
+            <CardTitle className="text-gray-200">Status by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={statusCategoryData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Pending" fill={COLORS.pending} />
-                <Bar dataKey="In Progress" fill={COLORS['in-progress']} />
-                <Bar dataKey="Resolved" fill={COLORS.resolved} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="category" stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
+                <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
+                <Tooltip cursor={{ fill: '#374151' }} contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }} />
+                <Legend wrapperStyle={{ color: '#d1d5db' }} />
+                <Bar dataKey="Pending" fill={COLORS.pending} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="In Progress" fill={COLORS['in-progress']} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Resolved" fill={COLORS.resolved} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -270,77 +272,78 @@ export default function ReportsPanel() {
       </div>
 
       {/* Tickets Recientes */}
-<Card className="bg-card text-foreground">
-  <CardHeader>
-    <CardTitle>Most Recent Tickets</CardTitle>
-  </CardHeader>
+      <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-gray-200">Most Recent Tickets</CardTitle>
+        </CardHeader>
 
-  <CardContent>
-    <div className="space-y-4">
-      {recentTickets.map((ticket) => (
-        <div
-          key={ticket.id}
-          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border"
-        >
-          <div className="flex-1">
-            <h4 className="font-medium text-foreground">
-              {ticket.title}
-            </h4>
+        <CardContent>
+          <div className="space-y-4">
+            {recentTickets.map((ticket) => (
+              <div
+                key={ticket.id}
+                className="flex items-center justify-between p-4 bg-gray-800/80 rounded-lg border border-gray-700 hover:border-gray-500 transition-colors"
+              >
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-200">
+                    {ticket.title}
+                  </h4>
 
-            <p className="text-sm text-muted-foreground">
-              {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
-            </p>
+                  <p className="text-sm text-gray-400">
+                    {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-teal-400 capitalize">
+                    {ticket.category}
+                  </span>
+
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold ${
+                      ticket.status === 'pending'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                        : ticket.status === 'in-progress'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                    }`}
+                  >
+                    {ticket.status === 'pending'
+                      ? 'Pending'
+                      : ticket.status === 'in-progress'
+                      ? 'In Progress'
+                      : 'Resolved'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground capitalize">
-              {ticket.category}
-            </span>
-
-            <span
-              className={`px-2 py-1 rounded text-xs font-medium ${
-ticket.status === 'pending'
-                  ? 'bg-amber-500/20 text-amber-700'
-                  : ticket.status === 'in-progress'
-                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
-                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-              }`}
-            >
-              {ticket.status === 'pending'
-                ? 'Pending'
-                : ticket.status === 'in-progress'
-                ? 'In Progress'
-                : 'Resolved'}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  </CardContent>
-</Card>
+        </CardContent>
+      </Card>
 
       {/* Resolved Tickets by Technician */}
-      <Card>
+      <Card className="bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
         <CardHeader>
-          <CardTitle>Resolved Reports by Technician</CardTitle>
+          <CardTitle className="text-gray-200">Resolved Reports by Technician</CardTitle>
         </CardHeader>
         <CardContent>
           {techData.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-8">No data available</p>
+            <p className="text-gray-500 text-sm text-center py-8">No data available</p>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={techData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis
                   dataKey="name"
                   angle={-35}
                   textAnchor="end"
                   interval={0}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: '#9ca3af' }}
+                  stroke="#9ca3af"
                 />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend verticalAlign="top" />
+                <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} allowDecimals={false} />
+                <Tooltip cursor={{ fill: '#374151' }} contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }} />
+                <Legend wrapperStyle={{ color: '#d1d5db' }} verticalAlign="top" />
                 <Bar dataKey="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
