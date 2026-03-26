@@ -590,22 +590,22 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             <>
               <Separator />
               <div>
-                <h3 className="font-semibold mb-3">Technicians Attending</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                    <div className="text-xs text-blue-700 font-medium">First Technician</div>
-                    <div className="text-sm font-semibold text-blue-900 mt-1">
-                      {viewerPrimaryTechName ?? 'Not assigned'}
-                    </div>
+              <h3 className="font-semibold mb-3 text-slate-200">Technicians Attending</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-slate-800/40 border border-blue-500/30 rounded-lg p-3 shadow-sm">
+                  <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">First Technician</div>
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                    {viewerPrimaryTechName ?? 'Not assigned'}
                   </div>
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3">
-                    <div className="text-xs text-indigo-700 font-medium">Second Technician</div>
-                    <div className="text-sm font-semibold text-indigo-900 mt-1">
-                      {viewerSecondaryTechName ?? 'Not assigned'}
-                    </div>
+                </div>
+                <div className="bg-slate-800/40 border border-indigo-500/30 rounded-lg p-3 shadow-sm">
+                  <div className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">Second Technician</div>
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                    {viewerSecondaryTechName ?? 'Not assigned'}
                   </div>
                 </div>
               </div>
+            </div>
             </>
           )}
 
@@ -623,40 +623,39 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-emerald-700">Device Type</Label>
+                    <Label className="text-emerald-400 font-medium">Device Type</Label>
                     <Select value={hardwareComponent} onValueChange={setHardwareComponent} disabled={!canManageHardwareDetails}>
-                      <SelectTrigger className="bg-emerald-50 border-emerald-200">
+                      <SelectTrigger className="bg-slate-800/50 border-emerald-500/30 text-slate-200 focus:ring-emerald-500/40">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="teclado">Teclado ESENSES Básico USB</SelectItem>
-                        <SelectItem value="mouse">Mouse Álambrico HP Óptico negro 100</SelectItem>
-                        <SelectItem value="ethernet">Ethernet 3.0 LAN a USB</SelectItem>
-                        <SelectItem value="cable-vga">Cable Display Port a VGA 18</SelectItem>
-                        <SelectItem value="cable-vga-vga">Cable Display VGA a VGA 18</SelectItem>
-                        <SelectItem value="extension">Extensión de Cable eléctrico</SelectItem>
-                        <SelectItem value="cable-hdmi">Cable Display Port a HDMI 18</SelectItem>
+                        <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Básico USB</SelectItem>
+                        <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP Óptico negro 100</SelectItem>
+                        <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
+                        <SelectItem value="cable-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a VGA 18</SelectItem>
+                        <SelectItem value="cable-vga-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display VGA a VGA 18</SelectItem>
+                        <SelectItem value="extension" className="focus:bg-emerald-500/10 focus:text-emerald-400">Extensión de Cable eléctrico</SelectItem>
+                        <SelectItem value="cable-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a HDMI 18</SelectItem>
                       </SelectContent>
-                    </Select>
+                   </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-teal-700">Asset Condition</Label>
+                    <Label className="text-teal-400 font-medium">Asset Condition</Label>
                     <Select value={assetStatus} onValueChange={setAssetStatus} disabled={!canManageHardwareDetails}>
-                      <SelectTrigger className="bg-teal-50 border-teal-200">
+                      <SelectTrigger className="bg-slate-800/50 border-teal-500/30 text-slate-200 focus:ring-teal-500/40">
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="repair">Needs Repair</SelectItem>
-                        <SelectItem value="replace">Needs Replacement</SelectItem>
-                        <SelectItem value="tested">Operational</SelectItem>
-                        <SelectItem value="maintenance">Missing</SelectItem>
-                        <SelectItem value="Damage">Damage</SelectItem>
-                        <SelectItem value="Return">Return</SelectItem>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
+                        <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
+                        <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>
+                        <SelectItem value="maintenance" className="focus:bg-teal-500/10 focus:text-teal-400">Missing</SelectItem>
+                        <SelectItem value="Damage" className="focus:bg-teal-500/10 focus:text-teal-400">Damage</SelectItem>
+                        <SelectItem value="Return" className="focus:bg-teal-500/10 focus:text-teal-400">Return</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-
                 {canShowHardwareSaveButton && (
                   <div className="flex justify-end">
                     <Button
@@ -669,7 +668,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     </Button>
                   </div>
                 )}
-
                 {isSupremeAdmin && (
                   <div className="flex justify-end">
                     <Button
