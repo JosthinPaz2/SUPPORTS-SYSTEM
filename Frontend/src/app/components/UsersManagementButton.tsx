@@ -233,7 +233,7 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[96vw] max-w-[96vw] lg:max-w-375 max-h-[92vh] overflow-hidden p-0 border-gray-700/50 bg-gray-900/95 shadow-2xl backdrop-blur-md text-gray-200">
+        <DialogContent className="w-[96vw] max-w-[96vw] lg:max-w-375 max-h-[92vh] overflow-hidden p-0 border-gray-700/50 bg-gray-900/95 shadow-2xl backdrop-blur-md text-gray-200 z-500">
           <DialogHeader>
             <div className="px-6 pt-6 pb-4 border-b border-gray-700/50 bg-gray-900/50 backdrop-blur-sm">
               <DialogTitle className="text-xl font-bold tracking-tight text-white">User Management</DialogTitle>

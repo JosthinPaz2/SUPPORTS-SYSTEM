@@ -70,7 +70,7 @@ export default function AdminDashboard() {
         <style>{`@keyframes floatBg0{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,30px) scale(1.1)}}@keyframes floatBg1{from{transform:translate(0,0) scale(1)}to{transform:translate(-50px,40px) scale(1.15)}}@keyframes floatBg2{from{transform:translate(0,0) scale(1)}to{transform:translate(30px,-40px) scale(1.05)}}@keyframes floatBg3{from{transform:translate(0,0) scale(1)}to{transform:translate(-30px,20px) scale(1.08)}}`}</style>
       </div>
 
-      <header className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 w-full relative z-[500]">
+      <header className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 w-full relative z-500">
         <div className="w-full px-4 md:px-8 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
