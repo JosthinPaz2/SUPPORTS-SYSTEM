@@ -46,7 +46,7 @@ export default function TicketForm({
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [stations, setStations] = useState<StationOption[]>([]);
-  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [, setLoadingMetadata] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
