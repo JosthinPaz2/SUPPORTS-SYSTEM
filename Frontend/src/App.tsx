@@ -20,8 +20,8 @@ function App() {
             offset={{ top: 86, right: 18 }}
             richColors
             closeButton
-            duration={4200}
-            visibleToasts={4}
+            duration={1000}
+            visibleToasts={1}
           />
           <BrowserRouter>
             <Routes>

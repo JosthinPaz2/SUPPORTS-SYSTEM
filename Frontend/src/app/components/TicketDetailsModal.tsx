@@ -628,7 +628,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectTrigger className="bg-slate-800/50 border-emerald-500/30 text-slate-200 focus:ring-emerald-500/40">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[9999]">
                         <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Básico USB</SelectItem>
                         <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP Óptico negro 100</SelectItem>
                         <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
@@ -645,7 +645,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectTrigger className="bg-slate-800/50 border-teal-500/30 text-slate-200 focus:ring-teal-500/40">
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[9999]">
                         <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
                         <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
                         <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>
@@ -693,28 +693,32 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                               bg-slate-900/80 backdrop-blur-md shadow-lg">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className='!text-white'>Change Status</Label>
+                    <Label className="!text-slate-200 font-medium">Change Status</Label>
                     <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 focus:ring-blue-500/40">
                         <SelectValue />
-                        </SelectTrigger>
+                      </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="pending" className="focus:bg-amber-500/10 focus:text-amber-400">Pending</SelectItem>
+                        <SelectItem value="in-progress" className="focus:bg-blue-500/10 focus:text-blue-400">In Progress</SelectItem>
+                        <SelectItem value="resolved" className="focus:bg-emerald-500/10 focus:text-emerald-400">Resolved</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className='!text-white'>Primary Technician</Label>
+                    <Label className="!text-slate-200 font-medium">Primary Technician</Label>
                     <Select value={primaryTechId} onValueChange={setPrimaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign primary'} />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="none">— None —</SelectItem>
+                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
+                          <SelectItem 
+                            key={tech.id_user} 
+                            value={String(tech.id_user)}
+                            className="focus:bg-blue-500/10 focus:text-blue-400"
+                          >
                             {tech.full_name}
                           </SelectItem>
                         ))}
@@ -726,13 +730,13 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   <div className="space-y-2">
                     <Label className='!text-white'>Secondary Technician</Label>
                     <Select value={secondaryTechId} onValueChange={setSecondaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign secondary'} />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="none">— None —</SelectItem>
+                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)} className="focus:bg-blue-500/10 focus:text-blue-400">
                             {tech.full_name}
                           </SelectItem>
                         ))}
