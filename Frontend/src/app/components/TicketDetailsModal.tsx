@@ -695,26 +695,26 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   <div className="space-y-2">
                     <Label className='!text-white'>Change Status</Label>
                     <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 focus:ring-blue-500/40">
                         <SelectValue />
-                        </SelectTrigger>
+                      </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="pending" className="focus:bg-amber-500/10 focus:text-amber-400">Pending</SelectItem>
+                        <SelectItem value="in-progress" className="focus:bg-blue-500/10 focus:text-blue-400">In Progress</SelectItem>
+                        <SelectItem value="resolved" className="focus:bg-emerald-500/10 focus:text-emerald-400">Resolved</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className='!text-white'>Primary Technician</Label>
                     <Select value={primaryTechId} onValueChange={setPrimaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign primary'} />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="none">— None —</SelectItem>
+                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)} className="focus:bg-blue-500/10 focus:text-blue-400">
                             {tech.full_name}
                           </SelectItem>
                         ))}
@@ -726,13 +726,13 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   <div className="space-y-2">
                     <Label className='!text-white'>Secondary Technician</Label>
                     <Select value={secondaryTechId} onValueChange={setSecondaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign secondary'} />
                       </SelectTrigger>
                       <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="none">— None —</SelectItem>
+                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)} className="focus:bg-blue-500/10 focus:text-blue-400">
                             {tech.full_name}
                           </SelectItem>
                         ))}
@@ -1005,31 +1005,31 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
       {isSupremeAdmin && (
         <Dialog open={showAuthorizationModal} onOpenChange={setShowAuthorizationModal}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700/50 text-slate-100 shadow-2xl z-[9999]">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                Authorize change
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                Authorize Change
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-slate-400">
                 Review internal notes and choose the authorization result for this ticket.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-5 px-1">
               <div>
-                <Label className="text-sm text-gray-700">Internal notes (general view)</Label>
-                <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+                <Label className="!text-slate-300 font-medium">Internal notes (general view)</Label>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-3 custom-scrollbar">
                   {internalComments.length === 0 ? (
-                    <p className="text-sm text-gray-500">No internal notes yet.</p>
+                    <p className="text-sm text-slate-500 italic">No internal notes yet.</p>
                   ) : (
                     internalComments.map((note) => (
-                      <div key={note.id} className="rounded-md border border-amber-100 bg-white p-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-amber-700">{note.userName}</span>
-                          <span className="text-[11px] text-gray-500">{formatBogotaDateTime(note.createdAt)}</span>
+                      <div key={note.id} className="rounded-lg border border-amber-500/20 bg-slate-800/80 p-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2 border-b border-amber-500/10 pb-2 mb-2">
+                          <span className="text-xs font-semibold text-amber-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5"/> {note.userName}</span>
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3"/> {formatBogotaDateTime(note.createdAt)}</span>
                         </div>
-                        <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                        <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{note.content}</p>
                       </div>
                     ))
                   )}
@@ -1037,34 +1037,35 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               </div>
 
               <div className="space-y-2">
-                <Label>Internal comment for decision</Label>
+                <Label className="!text-slate-300 font-medium">Internal comment for decision</Label>
                 <Textarea
                   value={authorizationInternalComment}
                   onChange={(event) => setAuthorizationInternalComment(event.target.value)}
                   placeholder="Add internal context for this authorization..."
                   rows={3}
+                  className="bg-slate-800/50 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 shadow-inner rounded-xl"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
                 <Button
                   onClick={() => handleAuthorizationDecision('approved')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 shadow-md transition-all duration-300 rounded-xl font-medium"
                 >
                   Accept change
                 </Button>
                 <Button
                   onClick={() => handleAuthorizationDecision('rejected')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-rose-600 hover:bg-rose-700"
+                  className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 shadow-md transition-all duration-300 rounded-xl font-medium"
                 >
                   Do not accept
                 </Button>
                 <Button
                   onClick={() => handleAuthorizationDecision('preapproved_more_specs')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-amber-500 hover:bg-amber-600 text-black"
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 shadow-md transition-all duration-300 rounded-xl font-medium"
                 >
                  In Process
                 </Button>
