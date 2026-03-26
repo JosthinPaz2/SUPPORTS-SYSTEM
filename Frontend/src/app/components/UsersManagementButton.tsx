@@ -251,11 +251,11 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                       placeholder="Search by name, email, role, failed attempts or recovery code"
-                      className="pl-9 bg-gray-800/80 border-gray-700 text-gray-200 placeholder:text-gray-500 focus-visible:ring-teal-500 focus-visible:border-teal-500"
+                      className="pl-9 h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-400 placeholder:!text-gray-500 shadow-none focus-visible:ring-teal-500"
                     />
                   </div>
 
-              <Button variant="outline" onClick={handleCopyVisibleRows} className="w-full lg:w-auto border-gray-600 text-gray-300 hover:bg-gray-800 transition-colors">
+              <Button variant="default" onClick={handleCopyVisibleRows} className="w-full lg:w-auto border-gray-600 text-gray-300 hover:bg-gray-800 transition-colors">
                 <Copy className="w-4 h-4 mr-2" />
                 Copy visible table
               </Button>

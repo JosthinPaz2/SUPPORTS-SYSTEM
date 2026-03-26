@@ -307,12 +307,14 @@ export default function EmployeeDashboard() {
                       <tr key={ticket.id} className="hover:bg-gray-800 transition-colors">
                         <td className="px-6 py-4 font-medium text-gray-100">{ticket.title}</td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                            ${ticket.status === 'resolved' ? 'bg-green-100 text-green-800' : 
-                              ticket.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : 
-                              'bg-amber-100 text-amber-800'}`}>
+                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize border
+                          ${ticket.status === 'resolved' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+                            ticket.status === 'in-progress' 
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+                              'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                             {ticket.status.replace('-', ' ')}
-                          </span>
+                        </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-400">
                           {formatBogotaDate(ticket.createdAt)}

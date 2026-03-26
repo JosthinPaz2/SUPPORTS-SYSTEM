@@ -37,57 +37,66 @@ function NotificationListItem({
   onDelete: (id: number) => void;
 }) {
   const linkedTicketId = notification.ticketId ?? extractTicketIdFromMessage(notification.title);
+
+  
   const unreadClasses = notification.read
-    ? "bg-white hover:bg-gray-50"
+    ? "bg-[#1E293B] hover:bg-[#243146] border-l-4 border-transparent" 
     : notification.severity === "critical"
-      ? "bg-red-50 hover:bg-red-100 border-l-4 border-red-500"
-      : "bg-amber-50 hover:bg-amber-100 border-l-4 border-amber-400";
+      ? "bg-[#2D1B1E] hover:bg-[#3D2327] border-l-4 border-red-500"   
+      : "bg-[#2D281E] hover:bg-[#3D3524] border-l-4 border-amber-500"; 
 
   return (
     <li
       key={notification.id}
       onClick={() => onOpen(notification)}
-      className={`flex items-start gap-3 px-4 py-3 transition ${linkedTicketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
+      className={`flex items-start gap-3 px-4 py-3 transition border-b border-slate-800/50 ${linkedTicketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
     >
       <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
         notification.severity === "critical"
-          ? "bg-red-100"
+          ? "bg-red-500/10" 
           : notification.read
-            ? "bg-gray-100"
-            : "bg-amber-100"
+            ? "bg-slate-700/50"
+            : "bg-amber-500/10"
       }`}>
         <Bell
           className={`w-4 h-4 ${
             notification.severity === "critical"
-              ? "text-red-600"
+              ? "text-red-400"
               : notification.read
-                ? "text-gray-500"
-                : "text-amber-600"
+                ? "text-slate-400"
+                : "text-amber-400"
           }`}
         />
       </div>
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className={`text-sm ${notification.read ? "text-gray-700" : "font-semibold text-gray-900"}`}>
+          <p className={`text-sm ${notification.read ? "text-slate-400" : "font-semibold text-slate-100"}`}>
             {notification.title}
           </p>
-          {!notification.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+          {!notification.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />}
         </div>
-        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+        
+        
+        <p className="text-xs text-slate-500">{notification.time}</p>
         {linkedTicketId && (
-          <p className="text-[11px] mt-1 text-gray-500">Open the related ticket.</p>
+          <p className="text-xs font-semibold text-blue-400/80 hover:text-blue-400 underline-offset-2 hover:underline mt-1">
+            Open the related ticket.
+          </p>
         )}
       </div>
+
+      {/* BOTÓN ELIMINAR */}
       <button
         onClick={(event) => {
           event.stopPropagation();
           onDelete(notification.id);
         }}
         aria-label={`Delete notification ${notification.id}`}
-        className="ml-2 p-1.5 rounded-md hover:bg-red-50 transition flex items-center justify-center shrink-0"
+        className="ml-2 p-1.5 rounded-md hover:bg-red-500/10 transition flex items-center justify-center shrink-0 group/btn"
         title="Delete"
       >
-        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+        <Trash2 className="w-4 h-4 text-slate-500 group-hover/btn:text-red-400" />
       </button>
     </li>
   );
