@@ -32,14 +32,14 @@ import { Info } from 'lucide-react';
 export default function TipBox() {
   return (
     // Contenedor principal: fondo azul claro, borde azul, padding y layout flex
-    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex gap-4 items-center">
+    <div className="bg-accent border border-accent text-accent-foreground rounded-lg p-4 flex gap-4 items-center">
       {/* Contenedor del icono: círculo azul con icono blanco/azul */}
-      <div className="bg-blue-100 p-2 rounded-full">
-        <Info className="w-5 h-5 text-blue-600" />
+      <div className="bg-accent/50 p-2 rounded-full">
+        <Info className="w-5 h-5 text-accent-foreground" />
       </div>
       
       {/* Contenido de texto del consejo */}
-      <div className="text-xs text-blue-800">
+      <div className="text-xs">
         {/* Título del consejo */}
         <p className="font-bold mb-1">Tip 💡</p>
         {/* Descripción de las funcionalidades */}

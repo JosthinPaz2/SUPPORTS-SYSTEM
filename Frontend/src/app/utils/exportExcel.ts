@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { formatBogotaDateTime } from "./datetime";
 
 export type ExportColumn = {
   key: string;
@@ -33,7 +34,7 @@ export async function exportExcel(
   titleRow.height = 28;
 
   const generatedRow = worksheet.getRow(2);
-  generatedRow.getCell(1).value = `Generated: ${new Date().toLocaleString()}`;
+  generatedRow.getCell(1).value = `Generated: ${formatBogotaDateTime(new Date())}`;
   generatedRow.height = 20;
 
   const subtitleRow = worksheet.getRow(3);

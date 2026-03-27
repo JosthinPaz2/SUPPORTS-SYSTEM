@@ -57,6 +57,8 @@ interface DeskItem {
   placed: boolean;
   /** Indica si el elemento tiene reportes activos (opcional) */
   hasReport?: boolean;
+  /** Texto visible para algunos objetos decorativos */
+  labelText?: string;
 }
 
 /**
@@ -117,32 +119,33 @@ export default function MapSidebar({
         return 'w-7 h-4 rounded bg-yellow-400 border border-yellow-500';
       case 'entrance':
         return 'w-7 h-3 rounded bg-blue-500 border border-blue-600';
+      case 'note':
+        return 'w-7 h-5 rounded bg-[#E8D8B8] border border-[#D1BE97]';
       default:
         return 'w-7 h-4 rounded bg-emerald-500 border border-emerald-600';
     }
   };
 
   return (
-    // Contenedor principal: Card con ancho fijo de 320px, flex column y overflow oculto
-    <Card className="w-80 flex flex-col overflow-hidden">
+    <Card className="w-80 flex flex-col overflow-hidden bg-gray-900/60 backdrop-blur-sm border-gray-700/50 shadow-xl">
       {/* Encabezado del sidebar: pestañas y búsqueda */}
       <CardHeader>
         {/* Contenedor de pestañas con estilo de toggle */}
-        <div className="flex p-1 bg-slate-100 rounded-xl">
+        <div className="flex p-1 bg-gray-800/50 border border-gray-700 rounded-xl">
           {/* Botón de pestaña Inventory */}
           <button
             onClick={() => setActiveTab('inventory')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
-              activeTab === 'inventory' ? 'bg-white shadow text-blue-600' : 'text-slate-400'
+              activeTab === 'inventory' ? 'bg-teal-900/40 shadow border border-teal-500/50 text-teal-400' : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            <LayoutGrid size={14} /> INVENTORY
+            <LayoutGrid size={14} /> INVENTORY 
           </button>
           {/* Botón de pestaña Objects */}
           <button
             onClick={() => setActiveTab('objects')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all${
-              activeTab === 'objects' ? 'bg-white shadow text-blue-600' : 'text-slate-400'
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-bold rounded-lg transition-all ${
+              activeTab === 'objects' ? 'bg-teal-900/40 shadow border border-teal-500/50 text-teal-400' : 'text-gray-400 hover:text-gray-200'
             }`}
           >
             <Package size={14} /> OBJECTS
@@ -157,7 +160,7 @@ export default function MapSidebar({
             placeholder="Search item..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 border rounded-md text-sm"
+            className="w-full pl-9 pr-4 py-2 border border-gray-700 bg-gray-800 rounded-md text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
           />
         </div>
       </CardHeader>
@@ -171,12 +174,12 @@ export default function MapSidebar({
             // Habilitar arrastre del elemento
             draggable
             onDragStart={(e) => handleDragStart(e, item)}
-            className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-grab hover:border-blue-300"
+            className="flex items-center justify-between p-3 bg-gray-800/80 rounded-lg shadow-sm cursor-grab border border-gray-700 hover:border-teal-500/50 hover:bg-gray-700 transition"
           >
             {/* Sección izquierda: icono de arrastre e ID */}
             <div className="flex items-center gap-2">
-              <GripVertical className="w-4 h-4 text-gray-300" />
-              <span className="text-sm font-semibold">{item.id}</span>
+              <GripVertical className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-semibold text-gray-200">{item.id}</span>
             </div>
             <div className="flex items-center gap-2">
               {activeTab === 'objects' && (
@@ -189,7 +192,7 @@ export default function MapSidebar({
               {/* Botón de rotación del elemento */}
               <RotateCw
                 size={14}
-                className="text-gray-400 cursor-pointer"
+                className="text-gray-400 cursor-pointer hover:text-teal-400 transition"
                 onClick={(e) => {
                   e.stopPropagation(); // Prevenir propagación del evento
                   onRotateItem(item.id); // Ejecutar callback de rotación
@@ -200,7 +203,7 @@ export default function MapSidebar({
         ))}
       </CardContent>
       {/* Pie del sidebar: botón de importación CSV */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-gray-700/50">
         {/* Input file oculto que se activa al hacer clic en el botón */}
         <input
           type="file"
@@ -212,7 +215,8 @@ export default function MapSidebar({
           className="hidden"
         />
         <Button
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
+          className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20"
+          variant="outline"
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-4 h-4 mr-2" /> Import CSV

@@ -97,6 +97,8 @@ interface DeskItem {
   currentStatus?: string;
   /** Indica si es un objeto por defecto */
   isDefault?: boolean;
+  /** Texto visible para elementos decorativos */
+  labelText?: string;
 }
 
 /**
@@ -200,9 +202,21 @@ const getFillColor = (item: DeskItem): string => {
       return "#EAB308"; // Amarillo
     case 'entrance':
       return "#3B82F6"; // Azul
+    case 'note':
+      return "#E8D8B8"; // Beige
     default:
       return "#22C55E"; // Verde por defecto
   }
+};
+
+const getLayerDisplayText = (layer: DeskItem): string => {
+  if (layer.labelText) return layer.labelText;
+  return layer.id.split("-").slice(0, -1).join("-") || layer.id;
+};
+
+const getLayerTextColor = (layer: DeskItem): string => {
+  if (layer.type === 'note') return '#334155';
+  return 'white';
 };
 
 /**
@@ -212,6 +226,7 @@ const getFillColor = (item: DeskItem): string => {
  * @param props - Propiedades del componente conteniendo datos y handlers
  * @returns JSX.Element - Componente canvas con elementos SVG
  */
+
 export default function MapCanvas({
   items,
   bgLayers,
@@ -302,7 +317,7 @@ export default function MapCanvas({
 
   return (
     // Contenedor principal: Card que ocupa el espacio restante (flex-1)
-    <Card className="flex-1 relative overflow-hidden bg-white shadow-inner">
+<Card className="flex-1 relative overflow-hidden bg-card shadow-inner border-border">
       
       {/* Badges superiores derechos: contadores de elementos */}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
@@ -385,7 +400,7 @@ export default function MapCanvas({
             <defs>
               {/* Patrón de cuadrícula de puntos */}
               <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="2" cy="2" r="1.5" fill="#64748B" />
+
               </pattern>
             </defs>
             
@@ -411,7 +426,6 @@ export default function MapCanvas({
                     onMouseDown={isReadOnly ? undefined : (e) => {
                       e.stopPropagation();
                       if (e.button === 2) return;
-
                       if (!svgRef.current) return;
                       const container = svgRef.current.parentElement;
                       if (!container) return;
@@ -439,10 +453,10 @@ export default function MapCanvas({
                 y={layer.height / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill="white"
+                fill={getLayerTextColor(layer)}
                 className="text-xs font-bold pointer-events-none"
               >
-                {layer.id.split("-").slice(0, -1).join("-")}
+                {getLayerDisplayText(layer)}
               </text>
             )}
               
@@ -507,6 +521,12 @@ export default function MapCanvas({
           {items.map(item => (
             // Grupo SVG para cada elemento
             <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
+              {/* ClipPath individual para recortar texto dentro del bloque */}
+              <defs>
+                <clipPath id={`canvas-clip-${item.id}`}>
+                  <rect width={item.width} height={item.height} rx={8} />
+                </clipPath>
+              </defs>
               {/* Rectángulo del elemento: verde si OK, rojo si tiene reportes */}
               {(() => {
                 return (
@@ -545,14 +565,17 @@ export default function MapCanvas({
                   />
                 );
               })()}
-              {/* Texto con el ID del elemento centrado */}
+              {/* Texto con el ID: tamaño adaptivo al ancho del bloque, recortado con clipPath */}
               <text
                 x={item.width / 2}
                 y={item.height / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill="white"
-                className="text-[10px] font-bold pointer-events-none"
+                fill="var(--foreground, white)"
+                fontSize={Math.max(9, Math.min(14, item.width / (item.id.length * 0.6)))}
+                fontWeight="bold"
+                clipPath={`url(#canvas-clip-${item.id})`}
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
               >
                 {item.id}
               </text>
@@ -581,58 +604,6 @@ export default function MapCanvas({
                   >
                     ×
                   </text>
-                </>
-              )}
-
-              {/* Solo mostramos herramientas de edición si NO estamos en modo lectura */}
-              {selectedId === item.id && !isReadOnly && (
-                <>
-                  {/* Botón de eliminar (X) */}
-                  <circle
-                    cx={item.width - 6}
-                    cy={6}
-                    r={8}
-                    fill="#EF4444"
-                    className="cursor-pointer hover:fill-red-600 transition"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Evita seleccionar el fondo
-                      onDeleteItem?.(item.id);
-                    }}
-                  />
-                  <text
-                    x={item.width - 6}
-                    y={6}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="white"
-                    className="text-xs font-bold pointer-events-none select-none"
-                  >
-                    ×
-                  </text>
-
-                  {/* Handle de redimensionamiento (esquina inferior derecha) */}
-                  {item.type !== 'desk' && (
-                    <rect
-                      x={item.width - 8}
-                      y={item.height - 8}
-                      width={12}
-                      height={12}
-                      rx={2}
-                      fill="#3B82F6"
-                      stroke="white"
-                      className="cursor-se-resize"
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        if (!svgRef.current) return;
-                        const container = svgRef.current.parentElement;
-                        if (!container) return;
-                        const rect = container.getBoundingClientRect();
-                        const mouseX = (e.clientX - rect.left + container.scrollLeft) / scale;
-                        const mouseY = (e.clientY - rect.top + container.scrollTop) / scale;
-                        onResizeStart?.(item.id, mouseX, mouseY);
-                      }}
-                    />
-                  )}
                 </>
               )}
             </g>

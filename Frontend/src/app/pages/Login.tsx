@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Lock, AlertCircle, Mail, Eye, EyeOff, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import BackgroundCircles from '../components/ui/BackgroundCircles';
+import AnimatedBackground from '../components/ui/AnimatedBackground';
 
 
 type ModalState = 'forgot' | 'verify' | 'reset';
@@ -190,8 +190,8 @@ return (
         </div>
       </div>
       {/* Background */}
-      <BackgroundCircles />
-      <div className="w-full max-w-md">
+    <AnimatedBackground />
+      <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto w-20 h-20 bg-teal-500 rounded-full flex items-center justify-center mb-4">
             <Lock className="w-10 h-10 text-white" />
@@ -200,11 +200,11 @@ return (
             IT Support System
           </h1>
           <p className="text-teal-600">
-            Sign in to continue
+            Sign in to Continue
           </p>
         </div>
 
-        <Card className="bg-gray-900 shadow-xl">
+        <Card className="bg-slate-900 border-teal-500 shadow-xl w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-white">Sign In</CardTitle>
             <CardDescription className="text-teal-200">
@@ -269,7 +269,7 @@ return (
                   className="text-sm text-teal-400 hover:text-teal-300 hover:underline"
                   disabled={isLoading}
                 >
-                  Forgot your password?
+                  Forgot your Password?
                 </button>
               </div>
 
@@ -292,16 +292,16 @@ return (
 
       {/* Modal de Recuperación de Contraseña */}
       <Dialog open={modalState === 'forgot'} onOpenChange={closeModal}>
-        <DialogContent>
+        <DialogContent className="bg-slate-900 border-teal-500 shadow-xl w-full max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">Reset Password</DialogTitle>
-            <DialogDescription className="text-black">
+            <DialogDescription className="text-teal-200">
               Enter your institutional email address and we'll send you a recovery code
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="reset-email" className="text-teal-200">Institutional Email</Label>
+              <Label htmlFor="reset-email" className="text-teal-200 !text-white">Institutional Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-teal-400 w-4 h-4" />
                 <Input
@@ -334,16 +334,16 @@ return (
 
       {/* Modal de Verificación de Código */}
       <Dialog open={modalState === 'verify'} onOpenChange={closeModal}>
-        <DialogContent>
+        <DialogContent className="bg-slate-900 border-teal-500 shadow-xl w-full max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">Verify Code</DialogTitle>
-            <DialogDescription className="text-black">
+            <DialogDescription className="text-teal-200">
               Enter the 6-digit code sent to {resetEmail}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleVerifyCode} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="verification-code" className="text-teal-200">Verification Code</Label>
+              <Label htmlFor="verification-code" className="text-teal-200 !text-white">Verification Code</Label>
               <Input
                 id="verification-code"
                 type="text"
