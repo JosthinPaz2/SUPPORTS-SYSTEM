@@ -1783,7 +1783,7 @@ export default function OfficeMap() {
         </DialogHeader>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4">
           {loadingDeskTicket && (
             <div className="flex items-center justify-center py-10 text-slate-400 text-sm">
               Loading report details...
@@ -1894,7 +1894,7 @@ export default function OfficeMap() {
 
   const deskTicketDetailsDialog = (
     <Dialog open={Boolean(selectedDeskTicketDetail)} onOpenChange={(open) => !open && setSelectedDeskTicketDetail(null)}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span>Ticket #{selectedDeskTicketDetail?.id_ticket}</span>
@@ -2652,19 +2652,19 @@ export default function OfficeMap() {
           <div className="shrink-0 flex items-center justify-end gap-2">
             <button
               type="button"
-              className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              className="h-8 w-8 rounded-md border-2 border-teal-400 bg-gray-900 text-teal-400 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
               onClick={handleViewZoomOut}
               title="Zoom out"
               aria-label="Zoom out"
             >
               −
             </button>
-            <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+            <span className="text-xs font-medium text-white min-w-[3rem] text-center">
               {Math.round(viewScale * 100)}%
             </span>
             <button
               type="button"
-              className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              className="h-8 w-8 rounded-md border-2 border-teal-400 bg-gray-900 text-teal-400 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
               onClick={handleViewZoomIn}
               title="Zoom in"
               aria-label="Zoom in"
@@ -2674,7 +2674,7 @@ export default function OfficeMap() {
             {(viewScale !== 1 || viewPanOffset.x !== 0 || viewPanOffset.y !== 0) && (
               <button
                 type="button"
-                className="h-8 px-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs font-medium"
+                className="h-8 px-2 rounded-md border-2 border-teal-400 bg-gray-900 text-teal-400 hover:bg-teal-500/10 hover:text-teal-300 text-xs font-medium transition-all duration-200 shadow-md"
                 onClick={() => { setViewScale(1); setViewPanOffset({ x: 0, y: 0 }); }}
                 title="Reset view"
                 aria-label="Reset view"
@@ -2811,25 +2811,7 @@ export default function OfficeMap() {
         </div>
 
         {/* Leyenda de colores */}
-        {!loadingMap && currentZoneId && allPlaced.length > 0 && (
-          <div className="shrink-0 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700 text-sm">Legend:</span>
-            {[
-              { color: '#22C55E', label: 'No issues' },
-              { color: '#EF4444', label: 'With active reports' },
-              { color: '#6B7280', label: 'Zone' },
-              { color: 'rgba(156,163,175,0.5)', label: 'Wall', border: true },
-              { color: '#F59E0B', label: 'Store area' },
-              { color: '#EAB308', label: 'Management' },
-              { color: '#3B82F6', label: 'Entrance' },
-            ].map(({ color, label, border }) => (
-              <span key={label} className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-sm" style={{ background: color, border: border ? '1px solid #9CA3AF' : undefined }} />
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Leyenda inferior eliminada por solicitud */}
 
         {deskStatusDialog}
         {deskTicketDetailsDialog}
@@ -2878,7 +2860,7 @@ export default function OfficeMap() {
           <Button
             type="button"
             variant="outline"
-            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            className="border-2 border-teal-400 text-teal-400 bg-gray-900 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
             onClick={handleSelectAllPlaced}
             disabled={items.length + bgLayers.length === 0}
           >
@@ -2887,7 +2869,7 @@ export default function OfficeMap() {
           <Button
             type="button"
             variant="outline"
-            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            className="border-2 border-teal-400 text-teal-400 bg-gray-900 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
             onClick={() => {
               setSelectedId(null);
               setSelectedIds([]);
@@ -2946,7 +2928,7 @@ export default function OfficeMap() {
           <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
             <button
               type="button"
-              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              className="bg-gray-900 text-teal-400 border-2 border-teal-400 rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-teal-500/10 hover:text-teal-300 transition font-semibold text-lg"
               onClick={handleZoomIn}
               aria-label="Zoom in"
               title="Zoom in"
@@ -2955,7 +2937,7 @@ export default function OfficeMap() {
             </button>
             <button
               type="button"
-              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              className="bg-gray-900 text-teal-400 border-2 border-teal-400 rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-teal-500/10 hover:text-teal-300 transition font-semibold text-lg"
               onClick={handleZoomOut}
               aria-label="Zoom out"
               title="Zoom out"

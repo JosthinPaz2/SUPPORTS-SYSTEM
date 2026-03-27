@@ -13,12 +13,6 @@ interface UsersManagementButtonProps {
   canEditRoles: boolean;
 }
 
-type UserDraft = {
-  full_name: string;
-  institutional_email: string;
-  id_role: number;
-};
-
 const ROLE_OPTIONS = [
   { value: 1, label: 'Administrator' },
   { value: 2, label: 'Employee' },
@@ -43,24 +37,12 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
   const [users, setUsers] = useState<UserListItemDto[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
-  const [savingUserId, setSavingUserId] = useState<number | null>(null);
-  const [userDrafts, setUserDrafts] = useState<Record<number, UserDraft>>({});
 
   const loadUsers = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
       const list = await apiService.getUsers();
       setUsers(list);
-      setUserDrafts(
-        list.reduce<Record<number, UserDraft>>((acc, user) => {
-          acc[user.id_user] = {
-            full_name: user.full_name,
-            institutional_email: user.institutional_email,
-            id_role: user.id_role,
-          };
-          return acc;
-        }, {}),
-      );
     } catch (error) {
       if (showLoading) {
         toast.error((error as Error).message || 'Could not load users');
@@ -125,97 +107,18 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
     await copyText(lines.join('\n'), 'Visible table copied');
   };
 
-  const handleRoleChange = (userId: number, nextRoleId: number) => {
+  const handleRoleChange = async (userId: number, nextRoleId: number) => {
     if (!canEditRoles) {
       toast.error('Only administrators can change roles');
       return;
     }
 
-    setUserDrafts((prev) => {
-      const current = prev[userId];
-      if (!current) return prev;
-      return {
-        ...prev,
-        [userId]: {
-          ...current,
-          id_role: nextRoleId,
-        },
-      };
-    });
-  };
-
-  const handleDraftChange = (userId: number, field: 'full_name' | 'institutional_email', value: string) => {
-    setUserDrafts((prev) => {
-      const current = prev[userId];
-      if (!current) return prev;
-      return {
-        ...prev,
-        [userId]: {
-          ...current,
-          [field]: value,
-        },
-      };
-    });
-  };
-
-  const handleSaveUserChanges = async (userId: number) => {
-    if (!canEditRoles) {
-      toast.error('Only administrators can edit users');
-      return;
-    }
-
-    const original = users.find((user) => user.id_user === userId);
-    const draft = userDrafts[userId];
-
-    if (!original || !draft) return;
-
-    const payload: {
-      full_name?: string;
-      institutional_email?: string;
-      id_role?: number;
-    } = {};
-
-    const normalizedName = draft.full_name.trim();
-    const normalizedEmail = draft.institutional_email.trim();
-
-    if (!normalizedName) {
-      toast.error('Full name cannot be empty');
-      return;
-    }
-
-    if (!normalizedEmail) {
-      toast.error('Email cannot be empty');
-      return;
-    }
-
-    if (normalizedName !== original.full_name) payload.full_name = normalizedName;
-    if (normalizedEmail !== original.institutional_email) payload.institutional_email = normalizedEmail;
-    if (draft.id_role !== original.id_role) payload.id_role = draft.id_role;
-
-    if (Object.keys(payload).length === 0) {
-      toast.message('No changes to save');
-      return;
-    }
-
-    setSavingUserId(userId);
     try {
-      const updated = await apiService.updateUser(userId, payload);
-      setUsers((prev) =>
-        prev.map((user) => (user.id_user === userId ? updated : user)),
-      );
-      setUserDrafts((prev) => ({
-        ...prev,
-        [userId]: {
-          full_name: updated.full_name,
-          institutional_email: updated.institutional_email,
-          id_role: updated.id_role,
-        },
-      }));
-      toast.success('User updated successfully');
+      const updated = await apiService.updateUser(userId, { id_role: nextRoleId });
+      setUsers((prev) => prev.map((u) => (u.id_user === userId ? updated : u)));
+      toast.success('Role updated successfully');
     } catch (error) {
-      toast.error((error as Error).message || 'Could not update user');
-    } finally {
-      setSavingUserId(null);
+      toast.error((error as Error).message || 'Could not update role');
     }
   };
 
@@ -280,9 +183,17 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-700/50 shadow-xl bg-gray-800/30 backdrop-blur-sm overflow-hidden">
-              <div className="overflow-x-auto overflow-y-auto max-h-[58vh]">
-                <table className="w-full min-w-250 text-gray-200 text-xs sm:text-sm border-collapse">
+            <div className="mt-6 rounded-xl border border-gray-700/50 shadow-xl bg-gray-800/30 backdrop-blur-sm overflow-hidden">
+                  {/* Tabla de usuarios con scroll bonito */}
+                  <div
+                    style={{
+                      maxHeight: '48vh',
+                      overflowY: 'auto',
+                      borderRadius: '0.5rem',
+                    }}
+                    className="custom-scrollbar bg-gray-900/80 border border-gray-700/40 shadow-inner"
+                  >
+                <table className="w-full text-gray-200 text-sm border-separate border-spacing-0">
                   <thead className="bg-gray-800/80 text-gray-300 font-semibold text-left sticky top-0 z-10 backdrop-blur-md shadow-sm">
                     <tr>
                       <th className="px-3 py-3 tracking-wide">Full Name</th>
@@ -294,7 +205,6 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                       <th className="px-3 py-3 tracking-wide">Failed Attempts</th>
                       <th className="px-3 py-3 tracking-wide">Last Failed Login</th>
                       <th className="px-3 py-3 tracking-wide">Locked Until</th>
-                      <th className="px-3 py-3 tracking-wide text-center">Actions</th>
                     </tr>
                   </thead>
                 <tbody>
@@ -313,15 +223,6 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                   ) : (
                     filteredUsers.map((user, index) => {
                       const status = getAccountStatus(user.locked_until);
-                      const draft = userDrafts[user.id_user] ?? {
-                        full_name: user.full_name,
-                        institutional_email: user.institutional_email,
-                        id_role: user.id_role,
-                      };
-                      const hasPendingChanges =
-                        draft.full_name.trim() !== user.full_name ||
-                        draft.institutional_email.trim() !== user.institutional_email ||
-                        draft.id_role !== user.id_role;
                       return (
                       <tr
                         key={user.id_user}
@@ -333,27 +234,17 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                             : 'bg-gray-800/20'
                         }`}
                       >
-                        <td className="px-3 py-2 align-middle">
-                          <Input
-                            value={draft.full_name}
-                            onChange={(event) => handleDraftChange(user.id_user, 'full_name', event.target.value)}
-                            disabled={!canEditRoles || savingUserId === user.id_user}
-                            className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 placeholder:!text-gray-500 shadow-none focus-visible:ring-teal-500"
-                          />
+                        <td className="px-3 py-2 align-middle font-medium text-gray-200">
+                          {user.full_name}
                         </td>
-                        <td className="px-3 py-2 align-middle max-w-52">
-                          <Input
-                            value={draft.institutional_email}
-                            onChange={(event) => handleDraftChange(user.id_user, 'institutional_email', event.target.value)}
-                            disabled={!canEditRoles || savingUserId === user.id_user}
-                            className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 placeholder:!text-gray-500 shadow-none focus-visible:ring-teal-500"
-                          />
+                        <td className="px-3 pr-10 py-2 align-middle max-w-64 text-gray-300">
+                          {user.institutional_email}
                         </td>
-                        <td className="px-3 py-2 align-middle">
+                        <td className="px-3 py-2 align-middle min-w-160px">
                           <Select
-                            value={String(draft.id_role)}
+                            value={String(user.id_role)}
                             onValueChange={(value) => handleRoleChange(user.id_user, Number(value))}
-                            disabled={!canEditRoles || savingUserId === user.id_user}
+                            disabled={!canEditRoles}
                           >
                             <SelectTrigger
                               className="w-36 h-9 bg-gray-800/60 border-gray-600 text-gray-200 focus:ring-teal-500"
@@ -361,14 +252,14 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                             >
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
-                            <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
+                            <SelectContent className="bg-gray-800 border-gray-700 text-gray-200 z-900">
                               {ROLE_OPTIONS.map((role) => (
                                 <SelectItem key={role.value} value={String(role.value)}>
                                   {role.label}
                                 </SelectItem>
                               ))}
-                              {!ROLE_OPTIONS.some((role) => role.value === draft.id_role) && (
-                                <SelectItem value={String(draft.id_role)}>{getRoleLabel(draft.id_role)}</SelectItem>
+                              {!ROLE_OPTIONS.some((role) => role.value === user.id_role) && (
+                                <SelectItem value={String(user.id_role)}>{getRoleLabel(user.id_role)}</SelectItem>
                               )}
                             </SelectContent>
                           </Select>
@@ -400,22 +291,6 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                         <td className="px-3 py-2 align-middle font-medium text-center text-gray-300">{user.failed_login_attempts ?? 0}</td>
                         <td className="px-3 py-2 align-middle whitespace-nowrap text-gray-400">{formatBogotaDateTime(user.last_failed_login)}</td>
                         <td className="px-3 py-2 align-middle whitespace-nowrap text-gray-400">{formatBogotaDateTime(user.locked_until)}</td>
-                        <td className="px-3 py-2 align-middle">
-                          <Button
-                            type="button"
-                            size="sm"
-                            className={
-                              hasPendingChanges
-                                ? 'bg-teal-600 text-white hover:bg-teal-700 border-none w-full'
-                                : 'border-gray-600 text-gray-400 hover:text-gray-200 hover:bg-gray-700 w-full'
-                            }
-                            variant={hasPendingChanges ? 'default' : 'default'}
-                            disabled={!canEditRoles || !hasPendingChanges || savingUserId === user.id_user}
-                            onClick={() => handleSaveUserChanges(user.id_user)}
-                          >
-                            {savingUserId === user.id_user ? 'Saving...' : 'Save'}
-                          </Button>
-                        </td>
                       </tr>
                       )})
                   )}

@@ -1,3 +1,21 @@
+/* Scrollbar styles for user management table */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #14b8a6 #23272a;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  background: #23272a;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #14b8a6;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}
 @custom-variant dark (&:is(.dark *));
 
 :root {

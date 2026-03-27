@@ -230,7 +230,7 @@ export default function EmployeeDashboard() {
       <main className="w-full flex-grow p-4 md:p-8 relative z-10">
         
         {/* STATS: Ajustadas para que nunca se amontonen */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
           {/* Botón Total */}
           <button onClick={() => setFilter('all')} className="text-left transition-transform active:scale-95">
             <Card className={`h-full bg-gray-900 border-gray-700 text-white ${filter === 'all' ? 'ring-2 ring-teal-500' : ''}`}>
@@ -241,22 +241,6 @@ export default function EmployeeDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl md:text-3xl font-bold text-white">{myTicketsBase.length}</div>
-              </CardContent>
-            </Card>
-          </button>
-
-          {/* Botón Pending */}
-          <button onClick={() => setFilter('pending')} className="text-left transition-transform active:scale-95">
-            <Card className={`h-full bg-gray-900 border-gray-700 ${filter === 'pending' ? 'ring-2 ring-amber-500' : ''}`}>
-              <CardHeader className="pb-2 text-amber-400">
-                <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Pending
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl md:text-3xl font-bold text-white">
-                  {myTicketsBase.filter((t) => t.status === 'pending').length}
-                </div>
               </CardContent>
             </Card>
           </button>

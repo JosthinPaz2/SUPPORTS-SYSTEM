@@ -46,7 +46,7 @@ export default function TicketForm({
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [stations, setStations] = useState<StationOption[]>([]);
-  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [, setLoadingMetadata] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -229,7 +229,7 @@ export default function TicketForm({
 
  return (
   <Dialog open onOpenChange={onClose}>
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-[9999]">
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-[9999]">
       
       <DialogHeader>
         <DialogTitle className="text-xl md:text-2xl font-bold text-white leading-tight">

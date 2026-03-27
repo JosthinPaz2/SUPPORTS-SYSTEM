@@ -284,7 +284,8 @@ export default function DownloadButtons({ tickets }: Props) {
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleColumn(column.key)}
-                            className="accent-teal-500 w-3.5 h-3.5"
+                            className="rounded-full accent-teal-400 w-5 h-5 border-2 border-teal-400 bg-slate-900 focus:ring-2 focus:ring-teal-500/40 transition-all duration-150 checked:bg-teal-500 checked:border-teal-400 checked:shadow-md appearance-none"
+                            style={{ accentColor: '#14b8a6' }}
                           />
                           <span className="truncate font-medium">{column.label}</span>
                         </label>

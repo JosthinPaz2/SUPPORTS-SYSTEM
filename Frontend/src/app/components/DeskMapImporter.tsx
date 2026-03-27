@@ -147,7 +147,7 @@ export default function DeskMapImporter() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-white rounded p-4 max-h-64 overflow-y-auto">
+            <div className="bg-white rounded p-4 max-h-64 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {previewDesks.slice(0, 50).map((desk) => (
                   <div

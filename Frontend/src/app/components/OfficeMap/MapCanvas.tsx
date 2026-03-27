@@ -334,7 +334,7 @@ export default function MapCanvas({
       {/* Área del canvas: manejo de drop y mouse */}
       <div
         ref={containerRef}
-        className={`w-full h-full overflow-auto ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`w-full h-full overflow-auto custom-scrollbar ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
         onDrop={isReadOnly ? undefined : onDrop}
         onDragOver={isReadOnly ? undefined : (e) => e.preventDefault()} // Necesario para permitir drop
         onMouseMove={(e) => {

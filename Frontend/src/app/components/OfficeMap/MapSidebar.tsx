@@ -166,7 +166,7 @@ export default function MapSidebar({
       </CardHeader>
 
       {/* Lista de elementos del inventario (scrollable) */}
-      <CardContent className="flex-1 overflow-y-auto space-y-2">
+      <CardContent className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
         {/* Mapeo de cada elemento del inventario */}
         {displayedItems.map(item => (
           <div

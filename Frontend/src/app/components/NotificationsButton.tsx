@@ -320,7 +320,7 @@ export default function NotificationsButton() {
             </div>
 
             {/* LISTA */}
-            <ul className="max-h-64 overflow-auto divide-y divide-slate-700/50">
+            <ul className="max-h-64 overflow-auto custom-scrollbar divide-y divide-slate-700/50">
               {notifications.length === 0 ? (
                 <li className="p-4 text-sm text-center text-slate-400">
                   No notifications
@@ -346,7 +346,7 @@ export default function NotificationsButton() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   unreadCount === 0
                     ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-900/30"
+                    : "bg-teal-400 hover:bg-teal-500 text-gray-900 shadow-md shadow-teal-900/20"
                 }`}
                 disabled={unreadCount === 0}
               >
@@ -380,7 +380,7 @@ export default function NotificationsButton() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <ul className="max-h-80 overflow-auto divide-y divide-gray-100">
+              <ul className="max-h-80 overflow-auto custom-scrollbar divide-y divide-gray-100">
                 {notifications.map((n) => (
                   <NotificationListItem key={n.id} notification={n} onOpen={handleOpenNotification} onDelete={handleDelete} />
                 ))}

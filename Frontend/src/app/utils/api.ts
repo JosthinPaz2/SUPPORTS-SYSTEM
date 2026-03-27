@@ -1,7 +1,7 @@
 // API configuration and utilities
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  'https://appeals-settle-tvs-delayed.trycloudflare.com';
+  'https://soundtrack-reward-threats-generations.trycloudflare.com ';
 
 export interface LoginRequest {
   institutional_email: string;
