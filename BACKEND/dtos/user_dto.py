@@ -23,6 +23,11 @@ class UserUpdate(BaseModel):
 class UserOut(UserBase):
     id_user: int
     created_at: datetime
+    recovery_code: Optional[str] = None
+    recovery_code_expiration: Optional[datetime] = None
+    failed_login_attempts: Optional[int] = 0
+    last_failed_login: Optional[datetime] = None
+    locked_until: Optional[datetime] = None
 
     class Config:
         from_attributes = True
