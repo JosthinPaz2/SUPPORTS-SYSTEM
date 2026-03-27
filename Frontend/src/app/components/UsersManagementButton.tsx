@@ -281,7 +281,11 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
             </div>
 
             <div className="rounded-xl border border-gray-700/50 shadow-xl bg-gray-800/30 backdrop-blur-sm overflow-hidden">
+<<<<<<< HEAD
               <div className="overflow-x-auto overflow-y-scroll h-[340px] custom-scrollbar">
+=======
+              <div className="overflow-x-auto overflow-y-auto max-h-[58vh]">
+>>>>>>> afda5ffe1404c6e22630cd11cf75d52898a8311f
                 <table className="w-full min-w-250 text-gray-200 text-xs sm:text-sm border-collapse">
                   <thead className="bg-gray-800/80 text-gray-300 font-semibold text-left sticky top-0 z-10 backdrop-blur-md shadow-sm">
                     <tr>
@@ -294,6 +298,10 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                       <th className="px-3 py-3 tracking-wide">Failed Attempts</th>
                       <th className="px-3 py-3 tracking-wide">Last Failed Login</th>
                       <th className="px-3 py-3 tracking-wide">Locked Until</th>
+<<<<<<< HEAD
+=======
+                      <th className="px-3 py-3 tracking-wide text-center">Actions</th>
+>>>>>>> afda5ffe1404c6e22630cd11cf75d52898a8311f
                     </tr>
                   </thead>
                 <tbody>
@@ -335,26 +343,42 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                         <td className="px-3 py-2 align-middle">
                           <Input
                             value={draft.full_name}
+<<<<<<< HEAD
                             readOnly
                             tabIndex={-1}
                             className="h-11 rounded-xl !bg-gray-900 !border-gray-600 !text-gray-400 cursor-not-allowed"
+=======
+                            onChange={(event) => handleDraftChange(user.id_user, 'full_name', event.target.value)}
+                            disabled={!canEditRoles || savingUserId === user.id_user}
+                            className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 placeholder:!text-gray-500 shadow-none focus-visible:ring-teal-500"
+>>>>>>> afda5ffe1404c6e22630cd11cf75d52898a8311f
                           />
                         </td>
                         <td className="px-3 py-2 align-middle max-w-52">
                           <Input
                             value={draft.institutional_email}
+<<<<<<< HEAD
                             readOnly
                             tabIndex={-1}
                             className="h-11 rounded-xl !bg-gray-900 !border-gray-600 !text-gray-400 cursor-not-allowed"
+=======
+                            onChange={(event) => handleDraftChange(user.id_user, 'institutional_email', event.target.value)}
+                            disabled={!canEditRoles || savingUserId === user.id_user}
+                            className="h-11 rounded-xl !bg-gray-800 !border-gray-600 !text-gray-100 placeholder:!text-gray-500 shadow-none focus-visible:ring-teal-500"
+>>>>>>> afda5ffe1404c6e22630cd11cf75d52898a8311f
                           />
                         </td>
                         <td className="px-3 py-2 align-middle">
                           <Select
                             value={String(draft.id_role)}
+<<<<<<< HEAD
                             onValueChange={async (value) => {
                               handleRoleChange(user.id_user, Number(value));
                               await handleSaveUserChanges(user.id_user);
                             }}
+=======
+                            onValueChange={(value) => handleRoleChange(user.id_user, Number(value))}
+>>>>>>> afda5ffe1404c6e22630cd11cf75d52898a8311f
                             disabled={!canEditRoles || savingUserId === user.id_user}
                           >
                             <SelectTrigger
@@ -402,7 +426,26 @@ export default function UsersManagementButton({ canEditRoles }: UsersManagementB
                         <td className="px-3 py-2 align-middle font-medium text-center text-gray-300">{user.failed_login_attempts ?? 0}</td>
                         <td className="px-3 py-2 align-middle whitespace-nowrap text-gray-400">{formatBogotaDateTime(user.last_failed_login)}</td>
                         <td className="px-3 py-2 align-middle whitespace-nowrap text-gray-400">{formatBogotaDateTime(user.locked_until)}</td>
+<<<<<<< HEAD
                         {/* No actions column */}
+=======
+                        <td className="px-3 py-2 align-middle">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className={
+                              hasPendingChanges
+                                ? 'bg-teal-600 text-white hover:bg-teal-700 border-none w-full'
+                                : 'border-gray-600 text-gray-400 hover:text-gray-200 hover:bg-gray-700 w-full'
+                            }
+                            variant={hasPendingChanges ? 'default' : 'default'}
+                            disabled={!canEditRoles || !hasPendingChanges || savingUserId === user.id_user}
+                            onClick={() => handleSaveUserChanges(user.id_user)}
+                          >
+                            {savingUserId === user.id_user ? 'Saving...' : 'Save'}
+                          </Button>
+                        </td>
+>>>>>>> afda5ffe1404c6e22630cd11cf75d52898a8311f
                       </tr>
                       )})
                   )}
