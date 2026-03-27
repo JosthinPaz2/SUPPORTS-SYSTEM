@@ -419,87 +419,100 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     }
   };
 
-  const handleAuthorizationDecision = async (
-    decision: 'approved' | 'rejected' | 'preapproved_more_specs',
-  ) => {
-    if (!isSupremeAdmin || !user?.id) {
-      return;
+const handleAuthorizationDecision = async (
+  decision: 'approved' | 'rejected' | 'preapproved_more_specs',
+) => {
+  if (!isSupremeAdmin || !user?.id) {
+    return;
+  }
+
+  setSubmittingAuthorizationDecision(true);
+  try {
+    const decisionLabel = authorizationDecisionLabels[decision];
+   
+    const updates: Record<string, string> = {
+      authorization_decision: decision,
+      authorization_by: String(user.id),
+      authorization_updated_at: new Date().toISOString(),
+    };
+   
+    // Solo agregar asset_status si tiene valor real
+    if (assetStatus && assetStatus.trim() !== '') {
+      updates.asset_status = assetStatus;
+    }
+   
+    if (hardwareComponent && hardwareComponent.trim() !== '') {
+      updates.hardware_component = hardwareComponent;
     }
 
-    setSubmittingAuthorizationDecision(true);
-    try {
-      const decisionLabel = authorizationDecisionLabels[decision];
-      const updatedDetail = mergeCategoryDetail(ticket.categoryDetail, {
-        authorization_decision: decision,
-        authorization_by: String(user.id),
-        authorization_updated_at: new Date().toISOString(),
-      });
+    const updatedDetail = mergeCategoryDetail(ticket.categoryDetail, updates);
 
-      await apiService.updateTicket(Number(ticket.id), {
-        category_detail: updatedDetail,
-        moved_by: Number(user.id),
-      });
+    await apiService.updateTicket(Number(ticket.id), {
+      category_detail: updatedDetail,
+      moved_by: Number(user.id),
+    });
 
-      const commentPrefix = `[Authorization] ${decisionLabel}`;
-      const decisionComment = authorizationInternalComment.trim()
-        ? `${commentPrefix}\n${authorizationInternalComment.trim()}`
-        : commentPrefix;
+    const commentPrefix = `[Authorization] ${decisionLabel}`;
+    const decisionComment = authorizationInternalComment.trim()
+      ? `${commentPrefix}\n${authorizationInternalComment.trim()}`
+      : commentPrefix;
 
-      const savedComment = await apiService.createComment({
+    const savedComment = await apiService.createComment({
+      id_ticket: Number(ticket.id),
+      id_user: Number(user.id),
+      content: decisionComment,
+      internal_note: true,
+    });
+
+    const newComment: Comment = {
+      id: String(savedComment.id_comment),
+      ticketId: String(savedComment.id_ticket),
+      userId: String(savedComment.id_user),
+      userName: usersById.get(savedComment.id_user) ?? user.name ?? `User #${savedComment.id_user}`,
+      content: savedComment.content,
+      isInternal: savedComment.internal_note ?? false,
+      createdAt: new Date(savedComment.created_at),
+    };
+    setLocalComments((prev) => [...prev, newComment]);
+
+    let publicDecisionMessage: string | undefined;
+    if (decision === 'approved') {
+      publicDecisionMessage = 'Cambio autorizado, proximamente se hara.';
+    }
+    if (decision === 'rejected') {
+      publicDecisionMessage = 'No se acepto el cambio, por politicas de IT.';
+    }
+
+    if (publicDecisionMessage) {
+      const savedPublicComment = await apiService.createComment({
         id_ticket: Number(ticket.id),
         id_user: Number(user.id),
-        content: decisionComment,
-        internal_note: true,
+        content: publicDecisionMessage,
+        internal_note: false,
       });
 
-      const newComment: Comment = {
-        id: String(savedComment.id_comment),
-        ticketId: String(savedComment.id_ticket),
-        userId: String(savedComment.id_user),
-        userName: usersById.get(savedComment.id_user) ?? user.name ?? `User #${savedComment.id_user}`,
-        content: savedComment.content,
-        isInternal: savedComment.internal_note ?? false,
-        createdAt: new Date(savedComment.created_at),
+      const newPublicComment: Comment = {
+        id: String(savedPublicComment.id_comment),
+        ticketId: String(savedPublicComment.id_ticket),
+        userId: String(savedPublicComment.id_user),
+        userName: usersById.get(savedPublicComment.id_user) ?? user.name ?? `User #${savedPublicComment.id_user}`,
+        content: savedPublicComment.content,
+        isInternal: savedPublicComment.internal_note ?? false,
+        createdAt: new Date(savedPublicComment.created_at),
       };
-      setLocalComments((prev) => [...prev, newComment]);
-
-      let publicDecisionMessage: string | undefined;
-      if (decision === 'approved') {
-        publicDecisionMessage = 'Cambio autorizado, proximamente se hara.';
-      }
-      if (decision === 'rejected') {
-        publicDecisionMessage = 'No se acepto el cambio, por politicas de IT.';
-      }
-
-      if (publicDecisionMessage) {
-        const savedPublicComment = await apiService.createComment({
-          id_ticket: Number(ticket.id),
-          id_user: Number(user.id),
-          content: publicDecisionMessage,
-          internal_note: false,
-        });
-
-        const newPublicComment: Comment = {
-          id: String(savedPublicComment.id_comment),
-          ticketId: String(savedPublicComment.id_ticket),
-          userId: String(savedPublicComment.id_user),
-          userName: usersById.get(savedPublicComment.id_user) ?? user.name ?? `User #${savedPublicComment.id_user}`,
-          content: savedPublicComment.content,
-          isInternal: savedPublicComment.internal_note ?? false,
-          createdAt: new Date(savedPublicComment.created_at),
-        };
-        setLocalComments((prev) => [...prev, newPublicComment]);
-      }
-
-      setAuthorizationInternalComment('');
-      setShowAuthorizationModal(false);
-      toast.success('Authorization decision saved');
-    } catch (error) {
-      toast.error((error as Error).message || 'Could not save authorization decision');
-    } finally {
-      setSubmittingAuthorizationDecision(false);
+      setLocalComments((prev) => [...prev, newPublicComment]);
     }
-  };
+
+    setAuthorizationInternalComment('');
+    setShowAuthorizationModal(false);
+    toast.success('Authorization decision saved');
+   
+  } catch (error) {
+    toast.error((error as Error).message || 'Could not save authorization decision');
+  } finally {
+    setSubmittingAuthorizationDecision(false);
+  }
+};
 
   const publicComments = localComments.filter((c) => {
     if (c.isInternal) return false;
@@ -628,7 +641,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                       <SelectTrigger className="bg-slate-800/50 border-emerald-500/30 text-slate-200 focus:ring-emerald-500/40">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[9999]">
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
                         <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Básico USB</SelectItem>
                         <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP Óptico negro 100</SelectItem>
                         <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
@@ -646,12 +659,12 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
-                        <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
-                        <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>
-                        <SelectItem value="maintenance" className="focus:bg-teal-500/10 focus:text-teal-400">Missing</SelectItem>
-                        <SelectItem value="Damage" className="focus:bg-teal-500/10 focus:text-teal-400">Damage</SelectItem>
-                        <SelectItem value="Return" className="focus:bg-teal-500/10 focus:text-teal-400">Return</SelectItem>
+                          <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
+                          <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
+                          <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>
+                          <SelectItem value="Missing" className="focus:bg-teal-500/10 focus:text-teal-400">Missing</SelectItem>
+                          <SelectItem value="Damage" className="focus:bg-teal-500/10 focus:text-teal-400">Damage</SelectItem>
+                          <SelectItem value="Return" className="focus:bg-teal-500/10 focus:text-teal-400">Return</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
