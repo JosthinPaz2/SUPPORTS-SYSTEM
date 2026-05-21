@@ -1,7 +1,7 @@
 // API configuration and utilities
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  'https://soundtrack-reward-threats-generations.trycloudflare.com ';
+  'http://10.158.149.71:8000';
 
 export interface LoginRequest {
   institutional_email: string;
