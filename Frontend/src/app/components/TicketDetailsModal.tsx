@@ -51,8 +51,11 @@ const priorityLabels = {
 };
 
 const hardwareComponentLabels: Record<string, string> = {
+  'pantalla-derecha': 'Pantalla derecha',
+  'pantalla-izquierda': 'Pantalla izquierda',
   teclado: 'Teclado ESENSES Basico USB',
   mouse: 'Mouse Alambrico HP Optico negro 100',
+  cpu: 'CPU',
   ethernet: 'Ethernet 3.0 LAN a USB',
   'cable-vga': 'Cable Display Port a VGA 18',
   'cable-vga-vga': 'Cable Display VGA a VGA 18',
@@ -634,6 +637,7 @@ const handleAuthorizationDecision = async (
                   <Laptop className="w-5 h-5 text-emerald-400" />
                   <h3 className="font-semibold text-emerald-500">Hardware Information</h3>
                 </div>
+                <p className="text-rose-400 text-sm font-semibold italic">Screens are ordered left to right</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-emerald-400 font-medium">Device Type</Label>
@@ -642,8 +646,11 @@ const handleAuthorizationDecision = async (
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectItem value="pantalla-derecha" className="focus:bg-emerald-500/10 focus:text-emerald-400">Pantalla derecha</SelectItem>
+                        <SelectItem value="pantalla-izquierda" className="focus:bg-emerald-500/10 focus:text-emerald-400">Pantalla izquierda</SelectItem>
                         <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Básico USB</SelectItem>
                         <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP Óptico negro 100</SelectItem>
+                        <SelectItem value="cpu" className="focus:bg-emerald-500/10 focus:text-emerald-400">CPU</SelectItem>
                         <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
                         <SelectItem value="cable-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a VGA 18</SelectItem>
                         <SelectItem value="cable-vga-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display VGA a VGA 18</SelectItem>

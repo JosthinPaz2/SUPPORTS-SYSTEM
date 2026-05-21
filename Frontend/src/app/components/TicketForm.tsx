@@ -10,6 +10,14 @@ import { TicketCategory } from '../types/ticket';
 import { toast } from 'sonner';
 import { apiService, CategoryOption, FloorOption, LocationOption, StationOption } from '../utils/api';
 
+const hardwareComponentOptions = [
+  { value: 'pantalla-derecha', label: 'Pantalla derecha' },
+  { value: 'pantalla-izquierda', label: 'Pantalla izquierda' },
+  { value: 'teclado', label: 'Teclado' },
+  { value: 'mouse', label: 'Mouse' },
+  { value: 'cpu', label: 'CPU' },
+];
+
 interface TicketFormProps {
   onClose: () => void;
   userId: string;
@@ -38,6 +46,7 @@ export default function TicketForm({
   const [description, setDescription] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [otherCategoryDetail, setOtherCategoryDetail] = useState('');
+  const [hardwareComponent, setHardwareComponent] = useState('');
   const [location, setLocation] = useState(presetStationId || '');
   const [selectedLocationId, setSelectedLocationId] = useState(presetLocationId || '');
   const [selectedFloorId, setSelectedFloorId] = useState(presetFloorId || '');
@@ -143,6 +152,8 @@ export default function TicketForm({
     normalizeCategoryName(selectedCategory?.category_name || ''),
   );
 
+  const isHardwareCategory = normalizeCategoryName(selectedCategory?.category_name || '') === 'hardware';
+
   const normalizeCategory = (name: string): TicketCategory => {
     const normalized = name.trim().toLowerCase();
     if (normalized === 'hardware') return 'hardware';
@@ -164,6 +175,12 @@ export default function TicketForm({
     return 'low';
   };
 
+  useEffect(() => {
+    if (!isHardwareCategory) {
+      setHardwareComponent('');
+    }
+  }, [isHardwareCategory]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -178,6 +195,11 @@ export default function TicketForm({
 
     if (isOtherCategory && !otherCategoryDetail.trim()) {
       toast.error('Please describe the "Other" category');
+      return;
+    }
+
+    if (isHardwareCategory && !hardwareComponent) {
+      toast.error('Please select a hardware component');
       return;
     }
 
@@ -196,7 +218,11 @@ export default function TicketForm({
         id_category: Number(selectedCategoryId),
         created_by: creatorId,
         id_station: location || undefined,
-        category_detail: isOtherCategory ? otherCategoryDetail.trim() : undefined,
+        category_detail: isOtherCategory
+          ? otherCategoryDetail.trim()
+          : isHardwareCategory
+            ? `hardware_component:${hardwareComponent}`
+            : undefined,
       });
 
       addTicket({
@@ -363,6 +389,30 @@ export default function TicketForm({
             </SelectContent>
           </Select>
         </div>
+
+        {isHardwareCategory && (
+          <div className="space-y-2">
+            <Label className="!text-white text-sm font-medium">Hardware Component *</Label>
+            <Select value={hardwareComponent} onValueChange={setHardwareComponent}>
+              <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
+                <SelectValue placeholder="Select component" />
+              </SelectTrigger>
+              <SelectContent
+                className="bg-slate-900 border-slate-700 z-[99999]"
+                position="popper"
+                side="bottom"
+                align="start"
+                avoidCollisions={false}
+              >
+                {hardwareComponentOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="text-slate-100">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* OTHER CATEGORY */}
         {isOtherCategory && (

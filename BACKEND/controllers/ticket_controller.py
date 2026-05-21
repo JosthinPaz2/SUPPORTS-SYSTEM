@@ -23,8 +23,11 @@ INVENTORY_API_URL = os.getenv('INVENTORY_API_URL', 'http://localhost:8000')
 INVENTORY_API_KEY = os.getenv('INVENTORY_API_KEY', '')
 
 _HARDWARE_COMPONENT_MAP = {
+    "pantalla-derecha": "Pantalla derecha",
+    "pantalla-izquierda": "Pantalla izquierda",
     "teclado": "Teclado ESENSES Basico USB",
     "mouse": "Mouse Alambrico HP Optico negro 100",
+    "cpu": "CPU",
     "ethernet": "Ethernet 3.0 LAN a USB",
     "cable-vga": "Cable Display Port a VGA 18",
     "cable-vga-vga": "Cable Display VGA a VGA 18",
