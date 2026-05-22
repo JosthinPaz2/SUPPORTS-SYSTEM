@@ -51,16 +51,18 @@ const priorityLabels = {
 };
 
 const hardwareComponentLabels: Record<string, string> = {
-  'pantalla-derecha': 'Pantalla derecha',
-  'pantalla-izquierda': 'Pantalla izquierda',
   teclado: 'Teclado ESENSES Basico USB',
-  mouse: 'Mouse Alambrico HP Optico negro 100',
-  cpu: 'CPU',
+  mouse: 'Mouse Álambrico HP óptico negro 100',
+  'cable-vga': 'Cable Display Port a VGA 1,8',
+  'cable-vga-vga': 'Cable Display VGA a VGA 1,8',
+  extension: 'Extension de Cable eléctrico',
+  'cable-hdmi': 'Cable HDMI a HDMI 1,8 Metros',
+  'cable-vga-hdmi': 'Cable VGA a HDMI 1,8 Metros',
+  'conversor-vga': 'Conversores Displayport a VGA Hembra',
+  'cable-display-port-hdmi': 'Cable Display Port a HDMI 1,8 Metros',
   ethernet: 'Ethernet 3.0 LAN a USB',
-  'cable-vga': 'Cable Display Port a VGA 18',
-  'cable-vga-vga': 'Cable Display VGA a VGA 18',
-  extension: 'Extension de Cable electrico',
-  'cable-hdmi': 'Cable Display Port a HDMI 18',
+  'ethernet-usb-2': 'Ethernet USB 2,0',
+  'ethernet-usb': 'Ethernet USB',
 };
 
 const assetStatusLabels: Record<string, string> = {
@@ -68,6 +70,12 @@ const assetStatusLabels: Record<string, string> = {
   replace: 'Needs Replacement',
   tested: 'Operational',
   maintenance: 'Missing',
+  missing: 'Missing',
+  damage: 'Damage',
+  return: 'Return',
+  Missing: 'Missing',
+  Damage: 'Damage',
+  Return: 'Return',
 };
 
 const authorizationDecisionLabels: Record<string, string> = {
@@ -185,20 +193,42 @@ function buildDescriptionWithHardware(baseDescription: string, component: string
   const assetStatusLabel = assetStatusLabels[status] ?? status;
 
   const hardwareBlock = [
-    '[Hardware Details]',
-    `Device Type: ${deviceTypeLabel}`,
-    `Asset Condition: ${assetStatusLabel}`,
-    '[/Hardware Details]',
+    'DAMAGE SPECIFICATION',
+    `- Device Type: ${deviceTypeLabel}`,
+    `- Asset Condition: ${assetStatusLabel}`,
   ].join('\n');
 
-  const existingBlockRegex = /\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g;
   const cleanBase = (baseDescription ?? '').trim();
+  const strippedBase = cleanBase
+    .replace(/\n{2}(?:DAMAGE SPECIFICATION|ESPECIFICACION DEL DAÑO)[\s\S]*$/g, '')
+    .replace(/\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g, '')
+    .trim();
 
-  if (existingBlockRegex.test(cleanBase)) {
-    return cleanBase.replace(existingBlockRegex, hardwareBlock).trim();
+  return strippedBase ? `${strippedBase}\n\n${hardwareBlock}` : hardwareBlock;
+}
+
+function splitHardwareDescription(rawDescription?: string): { plainText: string; hardwareItems: string[] } {
+  const cleanDescription = (rawDescription ?? '').trim();
+  if (!cleanDescription) {
+    return { plainText: '', hardwareItems: [] };
   }
 
-  return cleanBase ? `${cleanBase}\n\n${hardwareBlock}` : hardwareBlock;
+  const normalized = cleanDescription.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  const titleIndex = lines.findIndex((line) => ['DAMAGE SPECIFICATION', 'ESPECIFICACION DEL DAÑO'].includes(line.trim()));
+
+  if (titleIndex === -1) {
+    return { plainText: cleanDescription, hardwareItems: [] };
+  }
+
+  const plainText = lines.slice(0, titleIndex).join('\n').trim();
+  const hardwareItems = lines
+    .slice(titleIndex + 1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^[-•]\s*/, ''));
+
+  return { plainText, hardwareItems };
 }
 
 export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketDetailsModalProps) {
@@ -595,10 +625,36 @@ const handleAuthorizationDecision = async (
           )}
 
           <div>
-            <h3 className="!text-white text-sm font-medium flex items-center gap-2">Description</h3>
-            <p className="!bg-slate-800 !text-slate-100 !border-slate-700 placeholder:!text-slate-500 focus:!border-teal-500 focus:!ring-teal-500/20 rounded-md p-3 whitespace-pre-wrap">
-              {ticket.description}
-            </p>
+            <h3 className="text-white text-sm font-medium flex items-center gap-2">Description</h3>
+            {(() => {
+              const formattedDescription = splitHardwareDescription(ticket.description);
+
+              if (!formattedDescription.plainText && formattedDescription.hardwareItems.length === 0) {
+                return (
+                  <p className="rounded-md border border-slate-700 bg-slate-800 p-3 whitespace-pre-wrap text-slate-100">
+                    {ticket.description}
+                  </p>
+                );
+              }
+
+              return (
+                <div className="rounded-md border border-slate-700 bg-slate-800 p-3 text-slate-100">
+                  {formattedDescription.plainText && (
+                    <p className="whitespace-pre-wrap text-slate-100">{formattedDescription.plainText}</p>
+                  )}
+                  {formattedDescription.hardwareItems.length > 0 && (
+                    <div className={formattedDescription.plainText ? 'mt-4' : ''}>
+                      <p className="font-semibold text-white">DAMAGE SPECIFICATION</p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-200">
+                        {formattedDescription.hardwareItems.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Employee view: Technicians */}
@@ -645,17 +701,19 @@ const handleAuthorizationDecision = async (
                       <SelectTrigger className="bg-slate-800/50 border-emerald-500/30 text-slate-200 focus:ring-emerald-500/40">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectItem value="pantalla-derecha" className="focus:bg-emerald-500/10 focus:text-emerald-400">Pantalla derecha</SelectItem>
-                        <SelectItem value="pantalla-izquierda" className="focus:bg-emerald-500/10 focus:text-emerald-400">Pantalla izquierda</SelectItem>
-                        <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Básico USB</SelectItem>
-                        <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP Óptico negro 100</SelectItem>
-                        <SelectItem value="cpu" className="focus:bg-emerald-500/10 focus:text-emerald-400">CPU</SelectItem>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[10020]">
+                        <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Basico USB</SelectItem>
+                        <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP óptico negro 100</SelectItem>
+                        <SelectItem value="cable-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a VGA 1,8</SelectItem>
+                        <SelectItem value="cable-vga-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display VGA a VGA 1,8</SelectItem>
+                        <SelectItem value="extension" className="focus:bg-emerald-500/10 focus:text-emerald-400">Extension de Cable eléctrico</SelectItem>
+                        <SelectItem value="cable-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable HDMI a HDMI 1,8 Metros</SelectItem>
+                        <SelectItem value="cable-vga-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable VGA a HDMI 1,8 Metros</SelectItem>
+                        <SelectItem value="conversor-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Conversores Displayport a VGA Hembra</SelectItem>
+                        <SelectItem value="cable-display-port-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a HDMI 1,8 Metros</SelectItem>
                         <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
-                        <SelectItem value="cable-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a VGA 18</SelectItem>
-                        <SelectItem value="cable-vga-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display VGA a VGA 18</SelectItem>
-                        <SelectItem value="extension" className="focus:bg-emerald-500/10 focus:text-emerald-400">Extensión de Cable eléctrico</SelectItem>
-                        <SelectItem value="cable-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a HDMI 18</SelectItem>
+                        <SelectItem value="ethernet-usb-2" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet USB 2,0</SelectItem>
+                        <SelectItem value="ethernet-usb" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet USB</SelectItem>
                       </SelectContent>
                    </Select>
                   </div>
@@ -665,7 +723,7 @@ const handleAuthorizationDecision = async (
                       <SelectTrigger className="bg-slate-800/50 border-teal-500/30 text-slate-200 focus:ring-teal-500/40">
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[10020]">
                           <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
                           <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
                           <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>

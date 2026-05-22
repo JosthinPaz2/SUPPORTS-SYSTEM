@@ -11,12 +11,32 @@ import { toast } from 'sonner';
 import { apiService, CategoryOption, FloorOption, LocationOption, StationOption } from '../utils/api';
 
 const hardwareComponentOptions = [
-  { value: 'pantalla-derecha', label: 'Pantalla derecha' },
-  { value: 'pantalla-izquierda', label: 'Pantalla izquierda' },
-  { value: 'teclado', label: 'Teclado' },
+  { value: 'pantalla-derecha', label: 'Right screen' },
+  { value: 'pantalla-izquierda', label: 'Left screen' },
+  { value: 'teclado', label: 'Keyboard' },
   { value: 'mouse', label: 'Mouse' },
   { value: 'cpu', label: 'CPU' },
 ];
+
+const hardwareComponentLabels: Record<string, string> = {
+  'pantalla-derecha': 'Right screen',
+  'pantalla-izquierda': 'Left screen',
+  teclado: 'Keyboard',
+  mouse: 'Mouse',
+  cpu: 'CPU',
+};
+
+function buildHardwareDescription(baseDescription: string, component: string): string {
+  const deviceTypeLabel = hardwareComponentLabels[component] ?? component;
+  const hardwareBlock = ['DAMAGE SPECIFICATION', `- Device Type: ${deviceTypeLabel}`].join('\n');
+  const cleanBase = (baseDescription ?? '').trim();
+  const strippedBase = cleanBase
+    .replace(/\n{2}(?:DAMAGE SPECIFICATION|ESPECIFICACION DEL DAÑO)[\s\S]*$/g, '')
+    .replace(/\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g, '')
+    .trim();
+
+  return strippedBase ? `${strippedBase}\n\n${hardwareBlock}` : hardwareBlock;
+}
 
 interface TicketFormProps {
   onClose: () => void;
@@ -212,9 +232,13 @@ export default function TicketForm({
     try {
       setSubmitting(true);
 
+      const descriptionWithHardware = isHardwareCategory
+        ? buildHardwareDescription(description.trim(), hardwareComponent)
+        : description.trim();
+
       const createdTicket = await apiService.createTicket({
         title: title.trim(),
-        description: description.trim(),
+        description: descriptionWithHardware,
         id_category: Number(selectedCategoryId),
         created_by: creatorId,
         id_station: location || undefined,
@@ -255,7 +279,7 @@ export default function TicketForm({
 
  return (
   <Dialog open onOpenChange={onClose}>
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-[9999]">
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-9999">
       
       <DialogHeader>
         <DialogTitle className="text-xl md:text-2xl font-bold text-white leading-tight">
@@ -267,7 +291,7 @@ export default function TicketForm({
 
         {/* TITLE */}
         <div className="space-y-2">
-          <Label htmlFor="title" className="!text-white text-sm font-medium">
+          <Label htmlFor="title" className="text-white! text-sm font-medium">
             Issue Title *
           </Label>
           <Input
@@ -276,13 +300,13 @@ export default function TicketForm({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="E.g., Computer won't turn on"
             required
-            className="!bg-slate-900 !text-slate-100 !border-slate-700 placeholder:!text-slate-500 focus:!border-teal-500 focus:!ring-teal-500/20"
+            className="bg-slate-900! text-slate-100! border-slate-700! placeholder:text-slate-500! focus:border-teal-500! focus:ring-teal-500/20!"
           />
         </div>
 
         {/* DESCRIPTION */}
         <div className="space-y-2">
-          <Label htmlFor="description" className="!text-white text-sm font-medium">
+          <Label htmlFor="description" className="text-white! text-sm font-medium">
             Detailed Description *
           </Label>
           <Textarea
@@ -322,12 +346,12 @@ export default function TicketForm({
           <>
             {/* LOCATION */}
             <div className="space-y-2">
-              <Label className="!text-white text-sm font-medium">Select Location</Label>
+              <Label className="text-white! text-sm font-medium">Select Location</Label>
               <Select value={selectedLocationId} onValueChange={handleLocationChange}>
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 z-[99999]" position="popper">
+                <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
                   {locations.map((loc) => (
                     <SelectItem key={loc.id_location} value={String(loc.id_location)} className="text-slate-100">
                       {loc.location_name}
@@ -339,12 +363,12 @@ export default function TicketForm({
 
             {/* FLOOR */}
             <div className="space-y-2">
-              <Label className="!text-white text-sm font-medium">Select Floor</Label>
+              <Label className="text-white! text-sm font-medium">Select Floor</Label>
               <Select value={selectedFloorId} onValueChange={handleFloorChange} disabled={!selectedLocationId}>
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
                   <SelectValue placeholder="Select floor" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 z-[99999]" position="popper">
+                <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
                   {availableFloors.map((floor) => (
                     <SelectItem key={floor.id_floor} value={String(floor.id_floor)} className="text-slate-100">
                       {floor.floor_name}
@@ -356,12 +380,12 @@ export default function TicketForm({
 
             {/* DESK */}
             <div className="space-y-2">
-              <Label className="!text-white text-sm font-medium">Desk Location</Label>
+              <Label className="text-white! text-sm font-medium">Desk Location</Label>
               <Select value={location} onValueChange={setLocation} disabled={!selectedFloorId}>
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
                   <SelectValue placeholder="Select your desk" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 z-[99999]" position="popper">
+                <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
                   {availableStations.map((station) => (
                     <SelectItem key={station.id_station} value={station.id_station} className="text-slate-100">
                       {station.id_station}
@@ -375,12 +399,12 @@ export default function TicketForm({
 
         {/* CATEGORY */}
         <div className="space-y-2">
-          <Label className="!text-white text-sm font-medium">Category *</Label>
+          <Label className="text-white! text-sm font-medium">Category *</Label>
           <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
             <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700 z-[99999]" position="popper">
+            <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
               {categories.map((category) => (
                 <SelectItem key={category.id_category} value={String(category.id_category)} className="text-slate-100">
                   {category.category_name}
@@ -392,13 +416,13 @@ export default function TicketForm({
 
         {isHardwareCategory && (
           <div className="space-y-2">
-            <Label className="!text-white text-sm font-medium">Hardware Component *</Label>
+            <Label className="text-white! text-sm font-medium">Hardware Component *</Label>
             <Select value={hardwareComponent} onValueChange={setHardwareComponent}>
               <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
                 <SelectValue placeholder="Select component" />
               </SelectTrigger>
-              <SelectContent
-                className="bg-slate-900 border-slate-700 z-[99999]"
+                <SelectContent
+                  className="bg-slate-900 border-slate-700 z-100000"
                 position="popper"
                 side="bottom"
                 align="start"
@@ -417,7 +441,7 @@ export default function TicketForm({
         {/* OTHER CATEGORY */}
         {isOtherCategory && (
           <div className="space-y-2">
-            <Label className="!text-white text-sm font-medium">What is "Other"?</Label>
+            <Label className="text-white! text-sm font-medium">What is "Other"?</Label>
             <Input
               value={otherCategoryDetail}
               onChange={(e) => setOtherCategoryDetail(e.target.value)}

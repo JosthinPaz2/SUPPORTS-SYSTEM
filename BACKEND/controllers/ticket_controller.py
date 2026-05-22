@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional
+import re
 import requests
 import os
 import logging
@@ -23,16 +24,30 @@ INVENTORY_API_URL = os.getenv('INVENTORY_API_URL', 'http://localhost:8000')
 INVENTORY_API_KEY = os.getenv('INVENTORY_API_KEY', '')
 
 _HARDWARE_COMPONENT_MAP = {
-    "pantalla-derecha": "Pantalla derecha",
-    "pantalla-izquierda": "Pantalla izquierda",
-    "teclado": "Teclado ESENSES Basico USB",
-    "mouse": "Mouse Alambrico HP Optico negro 100",
+    "pantalla-derecha": "Right screen",
+    "pantalla-izquierda": "Left screen",
+    "teclado": "Keyboard ESENSES Basic USB",
+    "mouse": "Wired HP optical mouse black 100",
     "cpu": "CPU",
-    "ethernet": "Ethernet 3.0 LAN a USB",
-    "cable-vga": "Cable Display Port a VGA 18",
-    "cable-vga-vga": "Cable Display VGA a VGA 18",
-    "extension": "Extension de Cable electrico",
-    "cable-hdmi": "Cable Display Port a HDMI 18",
+    "cable-vga": "DisplayPort to VGA cable",
+    "cable-vga-vga": "VGA to VGA cable",
+    "extension": "Power cable extension",
+    "cable-hdmi": "HDMI to HDMI cable",
+    "cable-vga-hdmi": "VGA to HDMI cable",
+    "conversor-vga": "DisplayPort to VGA adapter",
+    "ethernet": "Ethernet 3.0 LAN to USB",
+    "ethernet-usb-2": "Ethernet USB 2.0",
+    "ethernet-usb": "Ethernet USB",
+}
+
+_ASSET_STATUS_LABELS = {
+    "repair": "Needs Repair",
+    "replace": "Needs Replacement",
+    "tested": "Operational",
+    "maintenance": "Missing",
+    "missing": "Missing",
+    "damage": "Damage",
+    "return": "Return",
 }
 
 _PRIORITY_RANK = {
@@ -178,6 +193,26 @@ def _get_asset_item_from_ticket(ticket: Ticket) -> Optional[str]:
     return None
 
 
+def _build_hardware_description(base_description: Optional[str], component_key: str, asset_status: Optional[str] = None) -> str:
+    device_type_label = _HARDWARE_COMPONENT_MAP.get(component_key, component_key)
+    block_lines = [
+        'DAMAGE SPECIFICATION',
+        f'- Device Type: {device_type_label}',
+    ]
+
+    if asset_status:
+        asset_status_label = _ASSET_STATUS_LABELS.get(asset_status.strip().lower(), asset_status)
+        block_lines.append(f'- Asset Condition: {asset_status_label}')
+
+    hardware_block = '\n'.join(block_lines)
+
+    clean_base = (base_description or '').strip()
+    stripped_base = re.sub(r'\n{2}(?:DAMAGE SPECIFICATION|ESPECIFICACION DEL DAÑO)[\s\S]*$', '', clean_base)
+    stripped_base = re.sub(r'\[Hardware Details\][\s\S]*?\[\/Hardware Details\]', '', stripped_base).strip()
+
+    return f'{stripped_base}\n\n{hardware_block}'.strip() if stripped_base else hardware_block
+
+
 def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override: Optional[str] = None, asset_condition_override: Optional[str] = None) -> dict:
     try:
         desk_location = ticket.id_station
@@ -238,9 +273,15 @@ def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
                 detail="This station is blocked: it already has 3 active reports",
             )
 
+    parsed_detail = _parse_category_detail(ticket.category_detail)
+    description = ticket.description or ''
+    hardware_component = parsed_detail.get('hardware_component')
+    if hardware_component:
+        description = _build_hardware_description(description, hardware_component, parsed_detail.get('asset_status'))
+
     db_ticket = Ticket(
         title=ticket.title,
-        description=ticket.description,
+        description=description,
         id_category=ticket.id_category,
         id_station=ticket.id_station,
         priority=ticket.priority,
@@ -308,6 +349,17 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
     for key, value in ticket.dict(exclude_unset=True).items():
         setattr(db_ticket, key, value)
 
+    effective_category_detail = ticket.category_detail or db_ticket.category_detail
+    if effective_category_detail:
+        parsed_detail = _parse_category_detail(effective_category_detail)
+        hardware_component = parsed_detail.get('hardware_component')
+        if hardware_component:
+            db_ticket.description = _build_hardware_description(
+                db_ticket.description,
+                hardware_component,
+                parsed_detail.get('asset_status'),
+            )
+
     db.add(db_ticket)
     db.flush()
 
@@ -317,7 +369,6 @@ def update_ticket(ticket_id: int, ticket: TicketUpdate, db: Session = Depends(ge
     # ============================================
     # ✅ HOOK FIX: Evaluar autorización SIN depender de que category_detail "cambie"
     # ============================================
-    effective_category_detail = ticket.category_detail or db_ticket.category_detail
     
     if effective_category_detail:
         try:

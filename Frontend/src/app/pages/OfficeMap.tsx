@@ -123,6 +123,30 @@ type SmartGuides = {
   labels: SmartGuideLabel[];
 };
 
+function splitHardwareDescription(rawDescription?: string): { plainText: string; hardwareItems: string[] } {
+  const cleanDescription = (rawDescription ?? '').trim();
+  if (!cleanDescription) {
+    return { plainText: '', hardwareItems: [] };
+  }
+
+  const normalized = cleanDescription.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  const titleIndex = lines.findIndex((line) => ['DAMAGE SPECIFICATION', 'ESPECIFICACION DEL DAÑO'].includes(line.trim()));
+
+  if (titleIndex === -1) {
+    return { plainText: cleanDescription, hardwareItems: [] };
+  }
+
+  const plainText = lines.slice(0, titleIndex).join('\n').trim();
+  const hardwareItems = lines
+    .slice(titleIndex + 1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^[-•]\s*/, ''));
+
+  return { plainText, hardwareItems };
+}
+
 type MapTransferFile = {
   version: number;
   exported_at: string;
@@ -1829,7 +1853,31 @@ export default function OfficeMap() {
 
                   {/* Description */}
                   {ticket.description && (
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{ticket.description}</p>
+                    (() => {
+                      const formattedDescription = splitHardwareDescription(ticket.description);
+
+                      if (!formattedDescription.plainText && formattedDescription.hardwareItems.length === 0) {
+                        return <p className="text-sm text-slate-600 whitespace-pre-wrap">{ticket.description}</p>;
+                      }
+
+                      return (
+                        <div className="space-y-2 text-sm text-slate-600">
+                          {formattedDescription.plainText && (
+                            <p className="whitespace-pre-wrap">{formattedDescription.plainText}</p>
+                          )}
+                          {formattedDescription.hardwareItems.length > 0 && (
+                            <div className={formattedDescription.plainText ? 'pt-1' : ''}>
+                              <p className="font-semibold text-slate-900">DAMAGE SPECIFICATION</p>
+                              <ul className="mt-1 list-disc space-y-1 pl-5">
+                                {formattedDescription.hardwareItems.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
                   )}
 
                   {/* Category + Reported by */}
@@ -1926,9 +1974,35 @@ export default function OfficeMap() {
             {selectedDeskTicketDetail.description && (
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-500">Description</p>
-                <p className="rounded-md border border-slate-200 bg-slate-50 p-3 whitespace-pre-wrap text-slate-700">
-                  {selectedDeskTicketDetail.description}
-                </p>
+                {(() => {
+                  const formattedDescription = splitHardwareDescription(selectedDeskTicketDetail.description);
+
+                  if (!formattedDescription.plainText && formattedDescription.hardwareItems.length === 0) {
+                    return (
+                      <p className="rounded-md border border-slate-200 bg-slate-50 p-3 whitespace-pre-wrap text-slate-700">
+                        {selectedDeskTicketDetail.description}
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">
+                      {formattedDescription.plainText && (
+                        <p className="whitespace-pre-wrap">{formattedDescription.plainText}</p>
+                      )}
+                      {formattedDescription.hardwareItems.length > 0 && (
+                        <div className={formattedDescription.plainText ? 'pt-2' : ''}>
+                          <p className="font-semibold text-slate-900">DAMAGE SPECIFICATION</p>
+                          <ul className="mt-1 list-disc space-y-1 pl-5">
+                            {formattedDescription.hardwareItems.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
