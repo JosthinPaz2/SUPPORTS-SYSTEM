@@ -10,7 +10,7 @@ class InventorySyncService:
     """
     
     def __init__(self):
-        self.inventory_api_url = os.getenv('INVENTORY_API_URL', 'http://localhost:3002')
+        self.inventory_api_url = os.getenv('INVENTORY_API_URL', 'http://localhost:8000')
         self.inventory_api_key = os.getenv('INVENTORY_API_KEY', '')
     
     async def notify_ticket_approved(self, ticket_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -19,20 +19,31 @@ class InventorySyncService:
         
         Args:
             ticket_data: Diccionario con los datos del ticket
+                Requerido: id, desk_location, asset_item, asset_condition
+                Opcional: description, monitor_location
             
         Returns:
             Respuesta del sistema de inventario
         """
         try:
+            # 🔹 Construir payload con TODOS los campos requeridos
             payload = {
-                "ticketId": ticket_data.get('id'),
+                "ticketId": str(ticket_data.get('id')),
                 "deskLocation": ticket_data.get('desk_location'),
+                "assetItem": ticket_data.get('asset_item'),
                 "assetCondition": ticket_data.get('asset_condition'),
-                "description": ticket_data.get('description', '')
+                "description": ticket_data.get('description', ''),
+                "monitorLocation": ticket_data.get('monitor_location')
             }
             
-            # Filtrar valores None
-            payload = {k: v for k, v in payload.items() if v is not None}
+            # 🔹 Filtrar valores None Y el string 'None' (para consistencia)
+            payload = {k: v for k, v in payload.items() if v is not None and v != 'None'}
+            
+            if not payload.get('assetItem') or not payload.get('assetCondition'):
+                return {
+                    "success": False,
+                    "error": "Faltan campos requeridos: asset_item y asset_condition"
+                }
             
             response = requests.post(
                 f"{self.inventory_api_url}/api/ticket-approved",
@@ -41,7 +52,7 @@ class InventorySyncService:
                     "X-API-Token": self.inventory_api_key
                 },
                 json=payload,
-                timeout=10  # 10 segundos de timeout
+                timeout=10
             )
             
             if response.status_code == 200:
@@ -72,5 +83,4 @@ class InventorySyncService:
             }
 
 
-# Instancia global
 inventory_sync = InventorySyncService()

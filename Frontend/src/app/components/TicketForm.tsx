@@ -10,6 +10,34 @@ import { TicketCategory } from '../types/ticket';
 import { toast } from 'sonner';
 import { apiService, CategoryOption, FloorOption, LocationOption, StationOption } from '../utils/api';
 
+const hardwareComponentOptions = [
+  { value: 'pantalla-derecha', label: 'Right screen' },
+  { value: 'pantalla-izquierda', label: 'Left screen' },
+  { value: 'teclado', label: 'Keyboard' },
+  { value: 'mouse', label: 'Mouse' },
+  { value: 'cpu', label: 'CPU' },
+];
+
+const hardwareComponentLabels: Record<string, string> = {
+  'pantalla-derecha': 'Right screen',
+  'pantalla-izquierda': 'Left screen',
+  teclado: 'Keyboard',
+  mouse: 'Mouse',
+  cpu: 'CPU',
+};
+
+function buildHardwareDescription(baseDescription: string, component: string): string {
+  const deviceTypeLabel = hardwareComponentLabels[component] ?? component;
+  const hardwareBlock = ['DAMAGE SPECIFICATION', `- Device Type: ${deviceTypeLabel}`].join('\n');
+  const cleanBase = (baseDescription ?? '').trim();
+  const strippedBase = cleanBase
+    .replace(/\n{2}(?:DAMAGE SPECIFICATION|ESPECIFICACION DEL DAÑO)[\s\S]*$/g, '')
+    .replace(/\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g, '')
+    .trim();
+
+  return strippedBase ? `${strippedBase}\n\n${hardwareBlock}` : hardwareBlock;
+}
+
 interface TicketFormProps {
   onClose: () => void;
   userId: string;
@@ -38,6 +66,7 @@ export default function TicketForm({
   const [description, setDescription] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [otherCategoryDetail, setOtherCategoryDetail] = useState('');
+  const [hardwareComponent, setHardwareComponent] = useState('');
   const [location, setLocation] = useState(presetStationId || '');
   const [selectedLocationId, setSelectedLocationId] = useState(presetLocationId || '');
   const [selectedFloorId, setSelectedFloorId] = useState(presetFloorId || '');
@@ -46,10 +75,10 @@ export default function TicketForm({
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [floors, setFloors] = useState<FloorOption[]>([]);
   const [stations, setStations] = useState<StationOption[]>([]);
-  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [, setLoadingMetadata] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+    useEffect(() => {
     setSelectedLocationId(presetLocationId || '');
     setSelectedFloorId(presetFloorId || '');
     setLocation(presetStationId || '');
@@ -143,6 +172,8 @@ export default function TicketForm({
     normalizeCategoryName(selectedCategory?.category_name || ''),
   );
 
+  const isHardwareCategory = normalizeCategoryName(selectedCategory?.category_name || '') === 'hardware';
+
   const normalizeCategory = (name: string): TicketCategory => {
     const normalized = name.trim().toLowerCase();
     if (normalized === 'hardware') return 'hardware';
@@ -164,6 +195,12 @@ export default function TicketForm({
     return 'low';
   };
 
+  useEffect(() => {
+    if (!isHardwareCategory) {
+      setHardwareComponent('');
+    }
+  }, [isHardwareCategory]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -181,6 +218,11 @@ export default function TicketForm({
       return;
     }
 
+    if (isHardwareCategory && !hardwareComponent) {
+      toast.error('Please select a hardware component');
+      return;
+    }
+
     const creatorId = Number(userId);
     if (!Number.isFinite(creatorId)) {
       toast.error('Invalid user identifier. Please sign in again.');
@@ -190,13 +232,21 @@ export default function TicketForm({
     try {
       setSubmitting(true);
 
+      const descriptionWithHardware = isHardwareCategory
+        ? buildHardwareDescription(description.trim(), hardwareComponent)
+        : description.trim();
+
       const createdTicket = await apiService.createTicket({
         title: title.trim(),
-        description: description.trim(),
+        description: descriptionWithHardware,
         id_category: Number(selectedCategoryId),
         created_by: creatorId,
         id_station: location || undefined,
-        category_detail: isOtherCategory ? otherCategoryDetail.trim() : undefined,
+        category_detail: isOtherCategory
+          ? otherCategoryDetail.trim()
+          : isHardwareCategory
+            ? `hardware_component:${hardwareComponent}`
+            : undefined,
       });
 
       addTicket({
@@ -227,154 +277,196 @@ export default function TicketForm({
     }
   };
 
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Ticket</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">Issue Title *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="E.g., Computer won't turn on"
-              required
-            />
-          </div>
+ return (
+  <Dialog open onOpenChange={onClose}>
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-slate-950 border border-teal-500/40 shadow-[0_0_20px_rgba(20,184,166,0.15)] w-full z-9999">
+      
+      <DialogHeader>
+        <DialogTitle className="text-xl md:text-2xl font-bold text-white leading-tight">
+          Create New Ticket
+        </DialogTitle>
+      </DialogHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Detailed Description *</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the problem in as much detail as possible..."
-              rows={5}
-              required
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-5">
 
-          {hideStationSelectors ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Selected Station
-              </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-slate-500">Location</p>
-                  <p className="text-sm font-medium text-slate-800">{presetLocationName || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Floor</p>
-                  <p className="text-sm font-medium text-slate-800">{presetFloorName || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Desk</p>
-                  <p className="text-sm font-medium text-slate-800">{presetStationId || '-'}</p>
-                </div>
+        {/* TITLE */}
+        <div className="space-y-2">
+          <Label htmlFor="title" className="text-white! text-sm font-medium">
+            Issue Title *
+          </Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="E.g., Computer won't turn on"
+            required
+            className="bg-slate-900! text-slate-100! border-slate-700! placeholder:text-slate-500! focus:border-teal-500! focus:ring-teal-500/20!"
+          />
+        </div>
+
+        {/* DESCRIPTION */}
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-white! text-sm font-medium">
+            Detailed Description *
+          </Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the problem in as much detail as possible..."
+            rows={5}
+            required
+            className="bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-teal-500 focus:ring-teal-500/20 resize-none"
+          />
+        </div>
+
+        {/* LOCATION BLOCK */}
+        {hideStationSelectors ? (
+          <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+              Selected Station
+            </p>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-emerald-500">Location</p>
+                <p className="text-sm font-medium text-slate-200">{presetLocationName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-emerald-500">Floor</p>
+                <p className="text-sm font-medium text-slate-200">{presetFloorName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-emerald-500">Desk</p>
+                <p className="text-sm font-medium text-slate-200">{presetStationId || '-'}</p>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="siteLocation">Select Location</Label>
-                <Select value={selectedLocationId} onValueChange={handleLocationChange}>
-                  <SelectTrigger id="siteLocation">
-                    <SelectValue placeholder={loadingMetadata ? 'Loading locations...' : 'Select location'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.id_location} value={String(loc.id_location)}>
-                        {loc.location_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          </div>
+        ) : (
+          <>
+            {/* LOCATION */}
+            <div className="space-y-2">
+              <Label className="text-white! text-sm font-medium">Select Location</Label>
+              <Select value={selectedLocationId} onValueChange={handleLocationChange}>
+                <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id_location} value={String(loc.id_location)} className="text-slate-100">
+                      {loc.location_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="floor">Select Floor</Label>
-                <Select
-                  value={selectedFloorId}
-                  onValueChange={handleFloorChange}
-                  disabled={!selectedLocationId}
-                >
-                  <SelectTrigger id="floor">
-                    <SelectValue placeholder={!selectedLocationId ? 'Select location first' : 'Select floor'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableFloors.map((floor) => (
-                      <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
-                        {floor.floor_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* FLOOR */}
+            <div className="space-y-2">
+              <Label className="text-white! text-sm font-medium">Select Floor</Label>
+              <Select value={selectedFloorId} onValueChange={handleFloorChange} disabled={!selectedLocationId}>
+                <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
+                  <SelectValue placeholder="Select floor" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
+                  {availableFloors.map((floor) => (
+                    <SelectItem key={floor.id_floor} value={String(floor.id_floor)} className="text-slate-100">
+                      {floor.floor_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Desk Location</Label>
-                <Select value={location} onValueChange={setLocation} disabled={!selectedFloorId}>
-                  <SelectTrigger id="location">
-                    <SelectValue placeholder={!selectedFloorId ? 'Select floor first' : 'Select your desk'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableStations.map((station) => (
-                      <SelectItem key={station.id_station} value={station.id_station}>
-                        {station.id_station}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">
-                  Select the desk where the issue occurs (filtered by location and floor)
-                </p>
-              </div>
-            </>
-          )}
+            {/* DESK */}
+            <div className="space-y-2">
+              <Label className="text-white! text-sm font-medium">Desk Location</Label>
+              <Select value={location} onValueChange={setLocation} disabled={!selectedFloorId}>
+                <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
+                  <SelectValue placeholder="Select your desk" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
+                  {availableStations.map((station) => (
+                    <SelectItem key={station.id_station} value={station.id_station} className="text-slate-100">
+                      {station.id_station}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
 
+        {/* CATEGORY */}
+        <div className="space-y-2">
+          <Label className="text-white! text-sm font-medium">Category *</Label>
+          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+            <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700 z-99999" position="popper">
+              {categories.map((category) => (
+                <SelectItem key={category.id_category} value={String(category.id_category)} className="text-slate-100">
+                  {category.category_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {isHardwareCategory && (
           <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
-            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder={loadingMetadata ? 'Loading categories...' : 'Select category'} />
+            <Label className="text-white! text-sm font-medium">Hardware Component *</Label>
+            <Select value={hardwareComponent} onValueChange={setHardwareComponent}>
+              <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-100">
+                <SelectValue placeholder="Select component" />
               </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id_category} value={String(category.id_category)}>
-                    {category.category_name}
+                <SelectContent
+                  className="bg-slate-900 border-slate-700 z-100000"
+                position="popper"
+                side="bottom"
+                align="start"
+                avoidCollisions={false}
+              >
+                {hardwareComponentOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="text-slate-100">
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          {isOtherCategory && (
-            <div className="space-y-2">
-              <Label htmlFor="otherCategory">What is "Other"? *</Label>
-              <Input
-                id="otherCategory"
-                value={otherCategoryDetail}
-                onChange={(e) => setOtherCategoryDetail(e.target.value)}
-                placeholder="Describe the specific category"
-                required
-              />
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Ticket'}
-            </Button>
+        {/* OTHER CATEGORY */}
+        {isOtherCategory && (
+          <div className="space-y-2">
+            <Label className="text-white! text-sm font-medium">What is "Other"?</Label>
+            <Input
+              value={otherCategoryDetail}
+              onChange={(e) => setOtherCategoryDetail(e.target.value)}
+              className="bg-slate-900 text-slate-100 border-slate-700"
+            />
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+        )}
+
+        {/* ACTIONS */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={onClose} className="bg-slate-800 border-slate-700 text-slate-300">
+            Cancel
+          </Button>
+
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+          >
+            {submitting ? 'Creating...' : 'Create Ticket'}
+          </Button>
+        </div>
+
+      </form>
+    </DialogContent>
+  </Dialog>
+);
 }

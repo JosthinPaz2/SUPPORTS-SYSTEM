@@ -80,10 +80,9 @@ import {
   TicketResponseDto,
 } from '../utils/api';
 import { formatBogotaDateTime } from '../utils/datetime';
-import { toast } from 'sonner'; // Importamos toast para las notificaciones
+import { toast } from 'sonner';
 
 // Objetos por defecto disponibles para agregar al mapa
-// Incluye zonas, marcos, áreas de tienda, gestión y entrada
 const defaultObjects = [
   { id: 'GRAY-ZONE', type: 'zone', width: 600, height: 400, placed: false, isDefault: true },
   { id: 'FRAME-OBJECT', type: 'frame', width: 300, height: 600, placed: false, isDefault: true },
@@ -122,6 +121,30 @@ type SmartGuides = {
   lines: SmartGuideLine[];
   labels: SmartGuideLabel[];
 };
+
+function splitHardwareDescription(rawDescription?: string): { plainText: string; hardwareItems: string[] } {
+  const cleanDescription = (rawDescription ?? '').trim();
+  if (!cleanDescription) {
+    return { plainText: '', hardwareItems: [] };
+  }
+
+  const normalized = cleanDescription.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  const titleIndex = lines.findIndex((line) => ['DAMAGE SPECIFICATION', 'ESPECIFICACION DEL DAÑO'].includes(line.trim()));
+
+  if (titleIndex === -1) {
+    return { plainText: cleanDescription, hardwareItems: [] };
+  }
+
+  const plainText = lines.slice(0, titleIndex).join('\n').trim();
+  const hardwareItems = lines
+    .slice(titleIndex + 1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^[-•]\s*/, ''));
+
+  return { plainText, hardwareItems };
+}
 
 type MapTransferFile = {
   version: number;
@@ -336,8 +359,6 @@ export default function OfficeMap() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [search, setSearch] = useState('');
-  // Inicializar desks con los objetos por defecto en el inventario
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [desks, setDesks] = useState<any[]>(defaultObjects);
   const [activeTab, setActiveTab] = useState<'inventory' | 'objects'>('inventory');
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -345,14 +366,12 @@ export default function OfficeMap() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{clientX:number;clientY:number;id:string} | null>(null);
-  // offset between cursor and element top-left when starting drag
   const [dragOffset, setDragOffset] = useState<{x:number,y:number} | null>(null);
   const [groupDragStart, setGroupDragStart] = useState<{
     mouseX: number;
     mouseY: number;
     initialPositions: Record<string, { x: number; y: number }>;
   } | null>(null);
-  // data for active resize operation
   const [resizeStartData, setResizeStartData] = useState<{
     id: string;
     startX: number;
@@ -406,8 +425,8 @@ export default function OfficeMap() {
   
   useEffect(() => {
     if (activeMode === 'view') {
-      setSelectedId(null); // Quitamos la selección al entrar en modo vista
-      setDraggingId(null); // Por seguridad, detenemos cualquier arrastre
+      setSelectedId(null);
+      setDraggingId(null);
     }
   }, [activeMode]);
 
@@ -418,7 +437,6 @@ export default function OfficeMap() {
 
   const BASE_CANVAS_WIDTH = 5000;
   const BASE_CANVAS_HEIGHT = 5800;
-  // Bases de guardado: X usa el ancho, Y usa el alto — deben coincidir con WIDTH/HEIGHT
   const BASE_CANVAS_SAVE_X = 1700;
   const BASE_CANVAS_SAVE_Y = 4000;
 
@@ -475,7 +493,6 @@ export default function OfficeMap() {
     setGroupDragStart(null);
   }, [canUseHistory, cloneDesksSnapshot, desks]);
 
-  // 📊 Stats
   const totalDesks = desks.filter(d => d.type === 'desk').length;
   const reports = desks.filter(d => d.hasReport).length;
   const noIssues = desks.filter(d => d.type === 'desk' && !d.hasReport).length;
@@ -493,7 +510,6 @@ export default function OfficeMap() {
         .map((row) => row.trim())
         .filter((row) => row.length > 0);
 
-      // Parse header to find column indices dynamically
       const allLines = text.split('\n').map((r) => r.trim()).filter((r) => r.length > 0);
       const headerLine = allLines[0] ?? '';
       const headers = headerLine.toLowerCase().split(',').map((h) => h.trim());
@@ -516,7 +532,6 @@ export default function OfficeMap() {
 
         return {
           id: idVal || `D-${100 + index}`,
-          // CSV desks always start in inventory and are placed manually by drag/drop.
           x: null,
           y: null,
           width: Number(widthVal) || 140,
@@ -531,7 +546,6 @@ export default function OfficeMap() {
       pushHistorySnapshot();
       setDesks(prev => [...prev, ...parsed]);
       
-      // Notificación de éxito al importar CSV
       toast.success('CSV imported correctly', {
         description: `${parsed.length} desks have been imported`,
         duration: 5000,
@@ -542,13 +556,11 @@ export default function OfficeMap() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Función para rotar un elemento (intercambia width por height)
   const rotateItem = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => 
       prev.map(d => d.id === id ? { ...d, width: d.height, height: d.width } : d)
     );
-    // Notificación de éxito al rotar
     toast.success('Element rotated', {
       description: 'The element has been rotated 90 degrees',
       duration: 3000,
@@ -562,7 +574,6 @@ export default function OfficeMap() {
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
     
-    // Corregimos sumando el scroll igual que en el movimiento
     const x = (e.clientX - rect.left + target.scrollLeft) / scale;
     const y = (e.clientY - rect.top + target.scrollTop) / scale;
 
@@ -580,7 +591,6 @@ export default function OfficeMap() {
 
       pushHistorySnapshot();
 
-      // Es un objeto por defecto: crear nueva instancia
       const newObj = {
         ...data,
         id: `${data.id}-${Date.now()}`,
@@ -590,7 +600,6 @@ export default function OfficeMap() {
         placed: true
       };
       setDesks(prev => [...prev, newObj]);
-      // Notificación de éxito al agregar elemento
       toast.success('Element added', {
         description: `The element ${data.id} has been added to the map`,
         duration: 3000,
@@ -646,7 +655,6 @@ export default function OfficeMap() {
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
     
-    // Agregamos target.scrollLeft y target.scrollTop para compensar el scroll
     let mouseX = (e.clientX - rect.left + target.scrollLeft) / scale;
     let mouseY = (e.clientY - rect.top + target.scrollTop) / scale;
 
@@ -741,14 +749,9 @@ export default function OfficeMap() {
     }
   };
 
-  // ??? Context menu helpers ???
-  // Capas de fondo: zonas, marcos y otros objetos placed en el mapa
   const bgLayers = desks.filter(d => d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance' || d.type === 'note'));
-  // Items: escritorios placed en el mapa
   const items = desks.filter(d => d.placed && d.type === 'desk');
-  // Inventario: elementos no placed que coinciden con la búsqueda
   const inventory = desks.filter(d => !d.placed && d.type === 'desk' && d.id.toLowerCase().includes(search.toLowerCase()));
-  // Objects: objetos no placed (zonas, frames, store, management, entrance)
   const objects = desks.filter(d => !d.placed && (d.type === 'zone' || d.type === 'frame' || d.type === 'store' || d.type === 'management' || d.type === 'entrance' || d.type === 'note') && d.id.toLowerCase().includes(search.toLowerCase()));
 
   const allPlaced = useMemo(() => [...bgLayers, ...items], [bgLayers, items]);
@@ -778,7 +781,6 @@ export default function OfficeMap() {
   const zoomedViewBBox = useMemo(() => {
     const zoomedWidth = viewBBox.w / viewScale;
     const zoomedHeight = viewBBox.h / viewScale;
-    // viewPanOffset is stored in SVG units (converted in handleViewPanMove using getBoundingClientRect)
     return {
       minX: viewBBox.minX + (viewBBox.w - zoomedWidth) / 2 - viewPanOffset.x,
       minY: viewBBox.minY + (viewBBox.h - zoomedHeight) / 2 - viewPanOffset.y,
@@ -836,7 +838,6 @@ export default function OfficeMap() {
     };
   }, [desks]);
 
-  // Handler para el mouse up global
   const handleMouseUp = () => {
     setDraggingId(null);
     setDragOffset(null);
@@ -889,9 +890,6 @@ export default function OfficeMap() {
     idsToDelete.forEach((id) => handleDeleteItem(id, false));
   };
 
-  // Handler para iniciar drag desde el canvas.
-  // Recibe un desplazamiento precomputado (offsetX/offsetY) proporcionado
-  // por MapCanvas para que el elemento no "salte" al arrastrarse.
   const handleCanvasMouseDown = (
     id: string,
     offsetX: number,
@@ -909,7 +907,6 @@ export default function OfficeMap() {
           ? selectedIds.filter((selected) => selected !== id)
           : [...selectedIds, id])
       : (
-          // Keep the current multi-selection when clicking one of the selected items.
           selectedIds.length > 1 && selectedIds.includes(id)
             ? selectedIds
             : (selectedIds.includes(id) && selectedIds.length === 1 ? selectedIds : [id])
@@ -950,7 +947,6 @@ export default function OfficeMap() {
     setDraggingId(id);
   };
 
-  // Handler para iniciar el redimensionamiento
   const handleResizeStart = (
     id: string,
     mouseX: number,
@@ -976,7 +972,6 @@ export default function OfficeMap() {
     }
   };
 
-  // context menu / z-order operations
   const handleItemContextMenu = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -987,8 +982,6 @@ export default function OfficeMap() {
 
   const closeContextMenu = () => setContextMenu(null);
 
-  // ─── Z-Order helpers ─────────────────────────────────────────────────────────
-  // Mueve el elemento al frente (último en el array → se renderiza encima)
   const moveToFront = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => {
@@ -1001,7 +994,6 @@ export default function OfficeMap() {
     closeContextMenu();
   };
 
-  // Mueve el elemento al fondo (primero en el array → se renderiza debajo)
   const moveToBack = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => {
@@ -1014,7 +1006,6 @@ export default function OfficeMap() {
     closeContextMenu();
   };
 
-  // Sube el elemento un nivel en el orden de renderizado
   const moveForward = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => {
@@ -1027,7 +1018,6 @@ export default function OfficeMap() {
     closeContextMenu();
   };
 
-  // Baja el elemento un nivel en el orden de renderizado
   const moveBackward = (id: string) => {
     pushHistorySnapshot();
     setDesks(prev => {
@@ -1040,12 +1030,33 @@ export default function OfficeMap() {
     closeContextMenu();
   };
 
-  // Elimina el elemento desde el context menu
   const deleteItemFromContextMenu = (id: string) => {
     handleDeleteItem(id);
     closeContextMenu();
   };
-  // ─────────────────────────────────────────────────────────────────────────────
+
+  const handleDeleteItem = (id: string, recordHistory = true) => {
+    if (recordHistory) {
+      pushHistorySnapshot();
+    }
+    setDesks(prev => {
+      const item = prev.find(d => d.id === id);
+      if (!item) return prev;
+
+      if (item.type === 'desk') {
+        return prev.map(d => 
+          d.id === id ? { ...d, placed: false, x: null, y: null } : d
+        );
+      } else {
+        return prev.filter(d => d.id !== id);
+      }
+    });
+    
+    setSelectedId(null);
+    setSelectedIds([]);
+    setDraggingId(null);
+    setGroupDragStart(null);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1078,7 +1089,6 @@ export default function OfficeMap() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedId, selectedIds, desks, handleRedo, handleUndo]);
 
-  // close context menu when clicking anywhere else
   useEffect(() => {
     if (!contextMenu) return;
     const handleClick = () => closeContextMenu();
@@ -1086,12 +1096,10 @@ export default function OfficeMap() {
     return () => window.removeEventListener('mousedown', handleClick);
   }, [contextMenu]);
 
-  // Handler para cambiar el modo activo
   const handleModeChange = (mode: 'add' | 'edit' | 'view') => {
     setActiveMode(mode);
   };
 
-  // cerrar selecciones al cambiar modo o entrar en vista
   useEffect(() => {
     closeContextMenu();
     setSelectedId(null);
@@ -1174,7 +1182,6 @@ export default function OfficeMap() {
     if (!currentZoneId) return;
     if (!isViewOnly && activeMode !== 'edit' && activeMode !== 'view') return;
 
-    // X e Y usan sus propias bases para evitar distorsión al cargar
     const toCanvasX = (value: number) => (value / 100) * BASE_CANVAS_SAVE_X;
     const toCanvasY = (value: number) => (value / 100) * BASE_CANVAS_SAVE_Y;
 
@@ -1260,7 +1267,6 @@ export default function OfficeMap() {
       return;
     }
 
-    // X e Y usan sus propias bases para preservar posición correctamente
     const toPercentX = (value: number) => Math.max(0, Math.min(100, (value / BASE_CANVAS_SAVE_X) * 100));
     const toPercentY = (value: number) => Math.max(0, Math.min(100, (value / BASE_CANVAS_SAVE_Y) * 100));
 
@@ -1277,7 +1283,6 @@ export default function OfficeMap() {
         height: toPercentY(d.height),
       }));
 
-    // Only clear coordinates for desks that were on canvas when edit started and are now removed.
     const removedDeskPayload: MapStationSavePayload[] = initialPlacedDeskIds
       .filter((id) => !placedDeskIds.has(id))
       .map((id) => {
@@ -1325,7 +1330,6 @@ export default function OfficeMap() {
     }
   };
 
-  // Handler para volver al menú inicial
   const handleBackToMenu = () => {
     if (isViewOnly) {
       navigate('/employee');
@@ -1333,10 +1337,9 @@ export default function OfficeMap() {
     }
 
     setActiveMode('select');
-    setScale(1); // Resetear zoom al volver al menú
+    setScale(1);
   };
 
-  // Handlers para zoom
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.1, MAX_SCALE));
   const handleZoomOut = () => setScale((s) => Math.max(s - 0.1, MIN_SCALE));
   const handleViewZoomIn = () => {
@@ -1362,7 +1365,6 @@ export default function OfficeMap() {
     const svgEl = viewSvgRef.current;
     if (!svgEl) return;
     const rect = svgEl.getBoundingClientRect();
-    // px → SVG units: zoomedWidth SVG units span rect.width screen px
     const zoomedW = viewBBox.w / viewScale;
     const zoomedH = viewBBox.h / viewScale;
     const pxToSvgX = zoomedW / rect.width;
@@ -1372,32 +1374,6 @@ export default function OfficeMap() {
     setViewPanOffset({ x: viewPanRef.current.startPanX + dx, y: viewPanRef.current.startPanY + dy });
   };
   const handleViewPanEnd = () => { viewPanRef.current.isPanning = false; };
-
-  // Handler para eliminar un elemento placed y devolverlo al inventory
-  const handleDeleteItem = (id: string, recordHistory = true) => {
-    if (recordHistory) {
-      pushHistorySnapshot();
-    }
-    setDesks(prev => {
-      const item = prev.find(d => d.id === id);
-      if (!item) return prev;
-
-      if (item.type === 'desk') {
-        // Si es un escritorio, lo mandamos al inventario (placed: false)
-        return prev.map(d => 
-          d.id === id ? { ...d, placed: false, x: null, y: null } : d
-        );
-      } else {
-        // Si es un objeto decorativo (zona/marco), lo eliminamos de la lista
-        return prev.filter(d => d.id !== id);
-      }
-    });
-    
-    setSelectedId(null);
-    setSelectedIds([]);
-    setDraggingId(null);
-    setGroupDragStart(null);
-  };
 
   const normalizeTicketStatus = (status: string): 'pending' | 'in-progress' | 'resolved' => {
     const normalized = status.trim().toLowerCase().replace(/_/g, '-');
@@ -1465,7 +1441,6 @@ export default function OfficeMap() {
     : [];
 
   const openMapTransferDialog = (mode: 'import' | 'export') => {
-    // Reuse current filters to reduce clicks when opening import/export.
     setMapTransferMode(mode);
     setMapTransferDialogOpen(true);
     setMapTransferLocationId(adminSelectedLocationId);
@@ -1485,7 +1460,6 @@ export default function OfficeMap() {
 
     const selectedFloorId = Number(mapTransferFloorId);
     if (Number.isFinite(selectedFloorId) && mapTransferFloorId) {
-      // User selected an existing floor from the dropdown.
       return selectedFloorId;
     }
 
@@ -1502,11 +1476,9 @@ export default function OfficeMap() {
     );
 
     if (existingFloor) {
-      // If the typed floor already exists in this location, reuse it.
       return existingFloor.id_floor;
     }
 
-    // Create the floor on the fly when importing to a new floor name.
     const createdFloor = await apiService.createFloor({
       floor_name: typedFloorName,
       id_location: selectedLocationId,
@@ -1607,7 +1579,6 @@ export default function OfficeMap() {
 
       const existingMap = await apiService.getMapByZone(selectedFloorId);
       const importedStationIds = new Set(importedStations.map((station) => station.id_station));
-      // Desks not present in the import file are cleared from this map (moved out of canvas).
       const removedStationsPayload: MapStationSavePayload[] = existingMap.stations
         .filter((station) => !importedStationIds.has(station.id_station))
         .map((station) => ({
@@ -1622,7 +1593,6 @@ export default function OfficeMap() {
 
       const stationPayload = [...importedStations, ...removedStationsPayload];
 
-      // Save stations and decorations in DB as one import operation.
       const stationResult = await apiService.saveMapStations(stationPayload);
       const decorationResult = await apiService.saveMapDecorations(selectedFloorId, importedDecorations);
 
@@ -1692,7 +1662,6 @@ export default function OfficeMap() {
         })),
       };
 
-      // Export a portable JSON with full map state for the selected floor.
       const sanitizedLocation = locationName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const sanitizedFloor = floorName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -1754,6 +1723,11 @@ export default function OfficeMap() {
       return;
     }
 
+    if (user.id_role === 1) {
+      toast.error('Admins can only view the map. Ticket creation is available for employees.');
+      return;
+    }
+
     setSelectedDeskId(null);
     setSelectedDeskForTicket(stationId);
     setShowDeskTicketForm(true);
@@ -1763,22 +1737,20 @@ export default function OfficeMap() {
 
   const deskStatusDialog = (
     <Dialog open={Boolean(selectedDeskId)} onOpenChange={(open) => !open && setSelectedDeskId(null)}>
-      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col overflow-hidden p-0">
-        {/* Header */}
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-              <User className="h-4 w-4 text-slate-600" />
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col overflow-hidden p-0 bg-slate-900 border-slate-700">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-700 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800">
+              <User className="h-4 w-4 text-slate-300" />
             </span>
             Desk {selectedDeskId}
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-500">
+          <DialogDescription className="text-sm text-slate-400">
             Desk location and status information
           </DialogDescription>
         </DialogHeader>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4">
           {loadingDeskTicket && (
             <div className="flex items-center justify-center py-10 text-slate-400 text-sm">
               Loading report details...
@@ -1788,62 +1760,81 @@ export default function OfficeMap() {
           {!loadingDeskTicket && selectedDeskTickets.length === 0 && (
             <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
               <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} />
-              <p className="text-lg font-bold text-slate-800">No Active Reports</p>
-              <p className="text-sm italic text-slate-500">This desk has no reported issues</p>
+              <p className="text-lg font-bold text-slate-200">No Active Reports</p>
+              <p className="text-sm italic text-slate-400">This desk has no reported issues</p>
             </div>
           )}
 
           {!loadingDeskTicket && selectedDeskTickets.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2">
-                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-                <span className="text-sm font-medium text-red-700">
+              <div className="flex items-center gap-2 rounded-md bg-red-900/20 border border-red-700/50 px-3 py-2">
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                <span className="text-sm font-medium text-red-300">
                   {selectedDeskTickets.length} active report{selectedDeskTickets.length > 1 ? 's' : ''}
                 </span>
               </div>
 
               {selectedDeskTickets.map((ticket) => (
-                <div key={ticket.id_ticket} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-2">
-                  {/* Title row + status badge */}
+                <div key={ticket.id_ticket} className="rounded-lg border border-slate-700 bg-slate-800/50 p-4 shadow-sm space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-slate-900 text-sm leading-snug">{ticket.title}</p>
+                    <p className="font-semibold text-slate-100 text-sm leading-snug">{ticket.title}</p>
                     <Badge className={`text-xs shrink-0 border ${getStatusBadgeClass(ticket.status)}`}>
                       {getStatusLabel(ticket.status)}
                     </Badge>
                   </div>
 
-                  {/* Ticket ID + date */}
                   <p className="text-xs text-slate-400">
                     Ticket #{ticket.id_ticket} &bull; Created {formatTicketDate(ticket.created_at)}
                   </p>
 
-                  {/* Priority */}
                   <Badge className={`text-xs border ${getPriorityBadgeClass(ticket.priority)}`}>
                     {ticket.priority}
                   </Badge>
 
-                  {/* Description */}
                   {ticket.description && (
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{ticket.description}</p>
+                    (() => {
+                      const formattedDescription = splitHardwareDescription(ticket.description);
+
+                      if (!formattedDescription.plainText && formattedDescription.hardwareItems.length === 0) {
+                        return <p className="text-sm text-slate-300 whitespace-pre-wrap">{ticket.description}</p>;
+                      }
+
+                      return (
+                        <div className="space-y-2 text-sm text-slate-300">
+                          {formattedDescription.plainText && (
+                            <p className="whitespace-pre-wrap">{formattedDescription.plainText}</p>
+                          )}
+                          {formattedDescription.hardwareItems.length > 0 && (
+                            <div className={formattedDescription.plainText ? 'pt-1' : ''}>
+                              <p className="font-semibold text-slate-100">DAMAGE SPECIFICATION</p>
+                              <ul className="mt-1 list-disc space-y-1 pl-5">
+                                {formattedDescription.hardwareItems.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
                   )}
 
-                  {/* Category + Reported by */}
-                  <div className="pt-1 space-y-1 text-xs text-slate-500">
+                  <div className="pt-1 space-y-1 text-xs text-slate-400">
                     {ticket.id_category != null && (
                       <p>
-                        <span className="font-medium text-slate-600">Category:</span>{' '}
+                        <span className="font-medium text-slate-300">Category:</span>{' '}
                         {deskTicketCategories.get(ticket.id_category) ?? `#${ticket.id_category}`}
                       </p>
                     )}
                     {ticket.created_by != null && (
                       <p>
-                        <span className="font-medium text-slate-600">Reported by:</span>{' '}
+                        <span className="font-medium text-slate-300">Reported by:</span>{' '}
                         {deskTicketUsers.get(ticket.created_by) ?? `User #${ticket.created_by}`}
                       </p>
                     )}
                     {ticket.primary_technician != null && (
                       <p>
-                        <span className="font-medium text-slate-600">Assigned to:</span>{' '}
+                        <span className="font-medium text-slate-300">Assigned to:</span>{' '}
                         {deskTicketUsers.get(ticket.primary_technician) ?? `User #${ticket.primary_technician}`}
                       </p>
                     )}
@@ -1859,6 +1850,7 @@ export default function OfficeMap() {
                           setSelectedDeskId(null);
                           setSelectedDeskTicketDetail(ticket);
                         }}
+                        className="border-slate-600 text-slate-300 hover:bg-slate-800"
                       >
                         View details
                       </Button>
@@ -1870,18 +1862,18 @@ export default function OfficeMap() {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 px-6 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-          {isViewOnly && selectedDeskId && (
+        <div className="shrink-0 px-6 pb-5 pt-3 border-t border-slate-700 flex items-center justify-between gap-2">
+          {isViewOnly && user?.id_role !== 1 && selectedDeskId && (
             <Button
               type="button"
               disabled={stationReportLimitReached}
               onClick={() => openTicketFormForDesk(selectedDeskId)}
+              className="bg-teal-600 text-white hover:bg-teal-700"
             >
               {stationReportLimitReached ? 'Station blocked (3 reports)' : 'Create report'}
             </Button>
           )}
-          <Button variant="outline" onClick={() => setSelectedDeskId(null)}>Close</Button>
+          <Button variant="outline" onClick={() => setSelectedDeskId(null)} className="border-slate-600 text-slate-300 hover:bg-slate-800">Close</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1889,9 +1881,9 @@ export default function OfficeMap() {
 
   const deskTicketDetailsDialog = (
     <Dialog open={Boolean(selectedDeskTicketDetail)} onOpenChange={(open) => !open && setSelectedDeskTicketDetail(null)}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar bg-slate-900 border-slate-700">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-white">
             <span>Ticket #{selectedDeskTicketDetail?.id_ticket}</span>
             {selectedDeskTicketDetail && (
               <Badge className={`text-xs shrink-0 border ${getStatusBadgeClass(selectedDeskTicketDetail.status)}`}>
@@ -1899,7 +1891,7 @@ export default function OfficeMap() {
               </Badge>
             )}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-slate-400">
             Full report details for the selected desk issue.
           </DialogDescription>
         </DialogHeader>
@@ -1907,43 +1899,69 @@ export default function OfficeMap() {
         {selectedDeskTicketDetail && (
           <div className="space-y-4 text-sm">
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Title</p>
-              <p className="font-semibold text-slate-900">{selectedDeskTicketDetail.title}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Title</p>
+              <p className="font-semibold text-slate-100">{selectedDeskTicketDetail.title}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Badge className={`text-xs border ${getPriorityBadgeClass(selectedDeskTicketDetail.priority)}`}>
                 Priority: {selectedDeskTicketDetail.priority}
               </Badge>
-              <Badge variant="outline">Created: {formatTicketDate(selectedDeskTicketDetail.created_at)}</Badge>
+              <Badge variant="outline" className="border-slate-600 text-slate-300">Created: {formatTicketDate(selectedDeskTicketDetail.created_at)}</Badge>
             </div>
 
             {selectedDeskTicketDetail.description && (
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Description</p>
-                <p className="rounded-md border border-slate-200 bg-slate-50 p-3 whitespace-pre-wrap text-slate-700">
-                  {selectedDeskTicketDetail.description}
-                </p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">Description</p>
+                {(() => {
+                  const formattedDescription = splitHardwareDescription(selectedDeskTicketDetail.description);
+
+                  if (!formattedDescription.plainText && formattedDescription.hardwareItems.length === 0) {
+                    return (
+                      <p className="rounded-md border border-slate-700 bg-slate-800/50 p-3 whitespace-pre-wrap text-slate-300">
+                        {selectedDeskTicketDetail.description}
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="rounded-md border border-slate-700 bg-slate-800/50 p-3 text-slate-300">
+                      {formattedDescription.plainText && (
+                        <p className="whitespace-pre-wrap">{formattedDescription.plainText}</p>
+                      )}
+                      {formattedDescription.hardwareItems.length > 0 && (
+                        <div className={formattedDescription.plainText ? 'pt-2' : ''}>
+                          <p className="font-semibold text-slate-100">DAMAGE SPECIFICATION</p>
+                          <ul className="mt-1 list-disc space-y-1 pl-5">
+                            {formattedDescription.hardwareItems.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
             <div className="grid gap-2 sm:grid-cols-2">
               <p>
-                <span className="font-medium text-slate-600">Category:</span>{' '}
+                <span className="font-medium text-slate-300">Category:</span>{' '}
                 {deskTicketCategories.get(selectedDeskTicketDetail.id_category) ?? `#${selectedDeskTicketDetail.id_category}`}
               </p>
               <p>
-                <span className="font-medium text-slate-600">Reported by:</span>{' '}
+                <span className="font-medium text-slate-300">Reported by:</span>{' '}
                 {deskTicketUsers.get(selectedDeskTicketDetail.created_by) ?? `User #${selectedDeskTicketDetail.created_by}`}
               </p>
               <p>
-                <span className="font-medium text-slate-600">Assigned to:</span>{' '}
+                <span className="font-medium text-slate-300">Assigned to:</span>{' '}
                 {selectedDeskTicketDetail.primary_technician != null
                   ? (deskTicketUsers.get(selectedDeskTicketDetail.primary_technician) ?? `User #${selectedDeskTicketDetail.primary_technician}`)
                   : 'Unassigned'}
               </p>
               <p>
-                <span className="font-medium text-slate-600">Desk:</span>{' '}
+                <span className="font-medium text-slate-300">Desk:</span>{' '}
                 {selectedDeskTicketDetail.id_station || 'N/A'}
               </p>
             </div>
@@ -1951,7 +1969,7 @@ export default function OfficeMap() {
         )}
 
         <div className="flex justify-end pt-2">
-          <Button variant="outline" onClick={() => setSelectedDeskTicketDetail(null)}>Close</Button>
+          <Button variant="outline" onClick={() => setSelectedDeskTicketDetail(null)} className="border-slate-600 text-slate-300 hover:bg-slate-800">Close</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1964,15 +1982,15 @@ export default function OfficeMap() {
         if (!open) handleCancelNoteDrop();
       }}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-slate-900 border-slate-700">
         <DialogHeader>
-          <DialogTitle>Name your text box</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white">Name your text box</DialogTitle>
+          <DialogDescription className="text-slate-400">
             Write the label to display and save as map decoration.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <label htmlFor="noteLabelInput" className="text-sm font-medium text-slate-700">
+          <label htmlFor="noteLabelInput" className="text-sm font-medium text-slate-300">
             Text
           </label>
           <input
@@ -1981,15 +1999,15 @@ export default function OfficeMap() {
             value={pendingNoteLabel}
             onChange={(e) => setPendingNoteLabel(e.target.value)}
             placeholder="Example: Reception"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
             autoFocus
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={handleCancelNoteDrop}>
+          <Button type="button" variant="outline" onClick={handleCancelNoteDrop} className="border-slate-600 text-slate-300 hover:bg-slate-800">
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirmNoteDrop}>
+          <Button type="button" onClick={handleConfirmNoteDrop} className="bg-teal-600 text-white hover:bg-teal-700">
             Add
           </Button>
         </div>
@@ -2011,10 +2029,10 @@ export default function OfficeMap() {
         }
       }}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg bg-slate-900 border-slate-700 text-slate-200 shadow-2xl">
         <DialogHeader>
-          <DialogTitle>{mapTransferMode === 'import' ? 'Import map' : 'Export map'}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white">{mapTransferMode === 'import' ? 'Import map' : 'Export map'}</DialogTitle>
+          <DialogDescription className="text-slate-400">
             {mapTransferMode === 'import'
               ? 'Select location, floor and a JSON file to import and save automatically to database.'
               : 'Select location and floor to export the complete map data.'}
@@ -2023,7 +2041,7 @@ export default function OfficeMap() {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="mapTransferLocation" className="text-sm font-medium text-slate-700">
+            <label htmlFor="mapTransferLocation" className="text-sm font-medium text-slate-300">
               Location
             </label>
             <Select
@@ -2035,10 +2053,10 @@ export default function OfficeMap() {
               }}
               disabled={processingMapTransfer}
             >
-              <SelectTrigger id="mapTransferLocation" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="mapTransferLocation" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                 <SelectValue placeholder="Select a location" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 {adminLocations.map((location) => (
                   <SelectItem key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
@@ -2049,7 +2067,7 @@ export default function OfficeMap() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="mapTransferFloor" className="text-sm font-medium text-slate-700">
+            <label htmlFor="mapTransferFloor" className="text-sm font-medium text-slate-300">
               Floor
             </label>
             <Select
@@ -2062,7 +2080,7 @@ export default function OfficeMap() {
               }}
               disabled={!mapTransferLocationId || processingMapTransfer}
             >
-              <SelectTrigger id="mapTransferFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="mapTransferFloor" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                 <SelectValue
                   placeholder={
                     !mapTransferLocationId
@@ -2073,7 +2091,7 @@ export default function OfficeMap() {
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 {mapTransferAvailableFloors.map((floor) => (
                   <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
                     {floor.floor_name}
@@ -2083,7 +2101,7 @@ export default function OfficeMap() {
             </Select>
             {mapTransferMode === 'import' && (
               <>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-400">
                   Optional: if the floor does not exist, write it below and it will be created automatically.
                 </p>
                 <input
@@ -2098,7 +2116,7 @@ export default function OfficeMap() {
                   }}
                   placeholder="Write floor name (example: Floor 5)"
                   disabled={!mapTransferLocationId || processingMapTransfer}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus-visible:ring-teal-500"
                 />
               </>
             )}
@@ -2106,7 +2124,7 @@ export default function OfficeMap() {
 
           {mapTransferMode === 'import' && (
             <div className="space-y-2">
-              <label htmlFor="mapTransferFile" className="text-sm font-medium text-slate-700">
+              <label htmlFor="mapTransferFile" className="text-sm font-medium text-slate-300">
                 Map JSON file
               </label>
               <input
@@ -2119,9 +2137,9 @@ export default function OfficeMap() {
                   setMapTransferFile(selected);
                 }}
                 disabled={processingMapTransfer}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus-visible:ring-teal-500"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 Use a file exported from this module to preserve stations and map objects.
               </p>
             </div>
@@ -2131,9 +2149,10 @@ export default function OfficeMap() {
         <div className="flex justify-end gap-2 pt-2">
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             onClick={() => setMapTransferDialogOpen(false)}
             disabled={processingMapTransfer}
+            className="border-slate-600 text-slate-300 hover:bg-slate-800"
           >
             Cancel
           </Button>
@@ -2141,6 +2160,7 @@ export default function OfficeMap() {
             type="button"
             disabled={processingMapTransfer}
             onClick={mapTransferMode === 'import' ? handleImportMapData : handleExportMapData}
+            className="bg-teal-600 text-white hover:bg-teal-700 border-none"
           >
             {processingMapTransfer
               ? mapTransferMode === 'import'
@@ -2157,164 +2177,238 @@ export default function OfficeMap() {
 
   if (isViewOnly) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6" onMouseUp={handleMouseUp}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 text-slate-100" onMouseUp={handleMouseUp}>
         <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-7xl flex-col gap-4 overflow-hidden">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 
+                          rounded-2xl border border-slate-700/70 
+                          bg-slate-900/80 backdrop-blur-md 
+                          px-5 py-4 shadow-lg">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Office Map</h1>
-              <p className="text-sm text-gray-600">Read-only office layout view</p>
+              <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Office Map</h1>
+              <p className="text-sm text-slate-300">Read-only office layout view</p>
             </div>
-            <Button variant="outline" onClick={handleBackToMenu}>Back</Button>
+
+            <Button 
+            variant="outline"
+            onClick={handleBackToMenu}
+            className='border-slate-600 bg-slate-800/60 text-slate-200
+                   hover:bg-slate-700 hover:text-white 
+                   transition-all duration-300 shadow-sm'
+                   >Back
+            </Button>
+
           </div>
 
           <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <Card className="border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-              <CardContent className="pt-6 space-y-5">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Map Filter
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Choose the office area you want to inspect.
-                  </p>
-                </div>
+          <Card className="border border-slate-700/70 bg-slate-900/90 shadow-md backdrop-blur-md rounded-2xl">
+            <CardContent className="pt-6 space-y-5">
 
-                <div className="space-y-2">
-                  <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-700">
-                    Location
-                  </label>
-                  <Select
-                    value={selectedViewLocationId}
-                    onValueChange={(value) => {
-                      setSelectedViewLocationId(value);
-                      setSelectedViewFloorId('');
-                    }}
-                    disabled={loadingViewMetadata}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Map Filter
+                </p>
+                <p className="text-sm text-slate-300">
+                 Choose the office area you want to inspect.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="employeeViewLocation" className="text-sm font-medium text-slate-300">
+                  Location
+                </label>
+
+                <Select
+                  value={selectedViewLocationId}
+                  onValueChange={(value) => {
+                    setSelectedViewLocationId(value);
+                    setSelectedViewFloorId('');
+                  }}
+                  disabled={loadingViewMetadata}
+                >
+                  <SelectTrigger
+                    id="employeeViewLocation"
+                    className="h-11 rounded-xl 
+                              border-slate-700 
+                     bg-slate-800/70 
+                     text-slate-200
+                              hover:bg-slate-800 
+                              focus:ring-1 focus:ring-blue-500"
                   >
-                    <SelectTrigger
-                      id="employeeViewLocation"
-                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
-                    >
-                      <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {viewLocations.map((location) => (
-                        <SelectItem key={location.id_location} value={String(location.id_location)}>
-                          {location.location_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <SelectValue placeholder={loadingViewMetadata ? 'Loading locations...' : 'Select a location'} />
+                  </SelectTrigger>
 
-                <div className="space-y-2">
-                  <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-700">
-                    Floor
-                  </label>
-                  <Select
-                    value={selectedViewFloorId}
-                    onValueChange={setSelectedViewFloorId}
-                    disabled={!selectedViewLocationId || loadingViewMetadata}
+                  <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                    {viewLocations.map((location) => (
+                      <SelectItem 
+                        key={location.id_location} 
+                        value={String(location.id_location)}
+                        className="focus:bg-slate-800 focus:text-white"
+                      >
+                        {location.location_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="employeeViewFloor" className="text-sm font-medium text-slate-300">
+                 Floor
+                </label>
+
+                <Select
+                  value={selectedViewFloorId}
+                  onValueChange={setSelectedViewFloorId}
+                  disabled={!selectedViewLocationId || loadingViewMetadata}
+                >
+                  <SelectTrigger
+                    id="employeeViewFloor"
+                    className="h-11 rounded-xl 
+                              border-slate-700 
+                              bg-slate-800/70 
+                              text-slate-200
+                              hover:bg-slate-800 
+                              focus:ring-1 focus:ring-blue-500"
                   >
-                    <SelectTrigger
-                      id="employeeViewFloor"
-                      className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
-                    >
-                      <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableViewFloors.map((floor) => (
-                        <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
-                          {floor.floor_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <SelectValue placeholder={!selectedViewLocationId ? 'Select a location first' : 'Select a floor'} />
+                  </SelectTrigger>
 
-              </CardContent>
-            </Card>
+                  <SelectContent className="bg-slate-900 border-slate-700 text-slate-200">
+                    {availableViewFloors.map((floor) => (
+                      <SelectItem 
+                        key={floor.id_floor} 
+                        value={String(floor.id_floor)}
+                        className="focus:bg-slate-800 focus:text-white"
+                      >
+                        {floor.floor_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
             <div className="flex min-h-0 flex-col gap-3">
 
-              {/* Controles de zoom + leyenda de colores */}
               {currentZoneId && allPlacedView.length > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+                <div className="flex flex-wrap items-center justify-between gap-3 
+                                text-xs text-slate-400
+                                rounded-xl border border-slate-700/70 
+                                bg-slate-900/80 backdrop-blur-md 
+                                px-4 py-3 shadow-md">
+
                   <div className="flex items-center gap-2">
+
                     <button
                       type="button"
-                      className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      className="h-8 w-8 rounded-md border border-slate-600 
+                                bg-slate-800 text-slate-200 
+                                hover:bg-slate-700 hover:text-white
+                                transition-all duration-200"
                       onClick={handleViewZoomOut}
                       title="Zoom out"
                       aria-label="Zoom out"
                     >
-                      −
+                     −
                     </button>
-                    <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+
+                    <span className="text-xs font-medium text-slate-300 min-w-[3rem] text-center">
                       {Math.round(viewScale * 100)}%
                     </span>
+
                     <button
                       type="button"
-                      className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      className="h-8 w-8 rounded-md border border-slate-600 
+                                bg-slate-800 text-slate-200 
+                                hover:bg-slate-700 hover:text-white
+                                transition-all duration-200"
                       onClick={handleViewZoomIn}
                       title="Zoom in"
                       aria-label="Zoom in"
                     >
                       +
                     </button>
+
                     {(viewScale !== 1 || viewPanOffset.x !== 0 || viewPanOffset.y !== 0) && (
                       <button
                         type="button"
-                        className="h-8 px-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs font-medium"
-                        onClick={() => { setViewScale(1); setViewPanOffset({ x: 0, y: 0 }); }}
+                        className="h-8 px-3 rounded-md border border-slate-600 
+                                  bg-slate-800 text-slate-300 
+                                  hover:bg-slate-700 hover:text-white
+                                  text-xs font-medium transition-all duration-200"
+                        onClick={() => { 
+                          setViewScale(1); 
+                          setViewPanOffset({ x: 0, y: 0 }); 
+                        }}
                         title="Reset view"
                         aria-label="Reset view"
                       >
                         Reset
                       </button>
                     )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
+                 </div>
+
+                  <div className="flex flex-wrap items-center gap-4">
                     {[
-                      { color: '#22C55E', label: 'No issues' },
-                      { color: '#F97316', label: 'With issues' },
-                      { color: '#EF4444', label: 'With active reports' },
-                      { color: '#6B7280', label: 'Zone' },
+                     { color: '#22C55E', label: 'No issues' },
+                     { color: '#F97316', label: 'With issues' },
+                     { color: '#EF4444', label: 'With active reports' },
+                     { color: '#6B7280', label: 'Zone' },
                     ].map(({ color, label }) => (
-                      <span key={label} className="flex items-center gap-1.5">
-                        <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ background: color }} />
+                      <span 
+                       key={label} 
+                       className="flex items-center gap-1.5 text-slate-300"
+                      >
+                        <span 
+                          className="inline-block w-3 h-3 rounded-sm shrink-0 border border-slate-700" 
+                          style={{ background: color }} 
+                        />
                         {label}
                       </span>
-                    ))}
+                   ))}
                   </div>
+
                 </div>
               )}
 
-              {/* Mapa fit-to-content */}
-              <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden relative min-h-0">
-          {loadingMap && (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              Loading map...
-            </div>
-          )}
+              <div className="flex-1 rounded-2xl border border-slate-700/70 
+                bg-slate-900/80 backdrop-blur-md 
+                shadow-lg overflow-hidden relative min-h-0">
 
-          {!loadingMap && !currentZoneId && (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
-                <p className="mt-1 text-sm text-slate-400">The map will be displayed here.</p>
-              </div>
-            </div>
-          )}
+  {loadingMap && (
+    <div className="flex h-full items-center justify-center text-sm text-slate-400">
+      Loading map...
+    </div>
+  )}
 
-          {!loadingMap && currentZoneId && allPlacedView.length === 0 && (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-lg font-medium text-slate-600">No elements placed</p>
-                <p className="mt-1 text-sm text-slate-400">This floor has no elements added to the map yet.</p>
-              </div>
-            </div>
-          )}
+  {!loadingMap && !currentZoneId && (
+    <div className="flex h-full items-center justify-center text-center px-4">
+      <div>
+        <p className="text-lg font-semibold text-slate-200">
+          Select a location and floor
+        </p>
+
+        <p className="mt-1 text-sm text-slate-400">
+          The map will be displayed here.
+        </p>
+      </div>
+    </div>
+  )}
+
+  {!loadingMap && currentZoneId && allPlacedView.length === 0 && (
+    <div className="flex h-full items-center justify-center text-center px-4">
+      <div>
+        <p className="text-lg font-semibold text-slate-200">
+          No elements placed
+        </p>
+
+        <p className="mt-1 text-sm text-slate-400">
+          This floor has no elements added to the map yet.
+        </p>
+      </div>
+    </div>
+  )}
 
           {!loadingMap && currentZoneId && allPlacedView.length > 0 && (
             <svg
@@ -2329,14 +2423,12 @@ export default function OfficeMap() {
               onMouseUp={handleViewPanEnd}
               onMouseLeave={() => { handleViewPanEnd(); setHoveredDesk(null); }}
             >
-              {/* Fondo limpio */}
               <rect
                 x={viewBBoxEmp.minX} y={viewBBoxEmp.minY}
                 width={viewBBoxEmp.w} height={viewBBoxEmp.h}
-                fill="#f8fafc"
+                fill="#0f172a"
               />
 
-              {/* Capas de fondo (zonas, frames, store, etc.) primero */}
               {bgLayers.map(layer => (
                 <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
                   <rect
@@ -2358,9 +2450,7 @@ export default function OfficeMap() {
                 </g>
               ))}
 
-              {/* Escritorios encima — clickeables para ver tickets */}
               {items.map(item => {
-                // Mapear el status interno al label visible en el tooltip
                 const rawStatus = item.currentStatus ?? (item.hasReport ? 'Not available' : 'Available');
                 const displayStatus =
                   rawStatus === 'Not available'         ? 'With Active Reports' :
@@ -2385,7 +2475,6 @@ export default function OfficeMap() {
                     }}
                     onMouseLeave={() => setHoveredDesk(null)}
                   >
-                    {/* clipPath para evitar desbordamiento de texto */}
                     <defs>
                       <clipPath id={`eclip-${item.id}`}>
                         <rect width={item.width} height={item.height} rx={6} />
@@ -2412,13 +2501,12 @@ export default function OfficeMap() {
             </svg>
           )}
 
-                  {/* Tooltip flotante */}
               {hoveredDesk && (
                 <div
                   className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full"
                   style={{ left: hoveredDesk.x, top: hoveredDesk.y }}
                 >
-                  <div className="bg-gray-900 text-white rounded-lg px-3 py-2 shadow-xl whitespace-nowrap flex flex-col gap-0.5 min-w-[130px]">
+                  <div className="bg-slate-900 text-white rounded-lg px-3 py-2 shadow-xl whitespace-nowrap flex flex-col gap-0.5 min-w-[130px]">
                     <span className="font-bold text-sm">{hoveredDesk.id}</span>
                     <span className={`text-[11px] font-semibold ${
                       hoveredDesk.status === 'With Active Reports'   ? 'text-red-400' :
@@ -2429,17 +2517,17 @@ export default function OfficeMap() {
                     </span>
                   </div>
                   <div className="flex justify-center">
-                    <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-gray-900" />
+                    <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-slate-900" />
                   </div>
                 </div>
               )}
-              </div>{/* /mapa */}
-            </div>{/* /columna derecha */}
-          </div>{/* /grid */}
+              </div>
+            </div>
+          </div>
 
           {deskStatusDialog}
           {deskTicketDetailsDialog}
-          {showDeskTicketForm && selectedDeskForTicket && user?.id && (
+          {showDeskTicketForm && selectedDeskForTicket && user?.id && user.id_role !== 1 && (
             <TicketForm
               onClose={() => {
                 setShowDeskTicketForm(false);
@@ -2455,23 +2543,20 @@ export default function OfficeMap() {
               hideStationSelectors
             />
           )}
-        </div>{/* /outer flex */}
+        </div>
       </div>
     );
   }
 
-  // Si el modo es 'view', mostrar solo el canvas sin sidebars
   if (activeMode === 'view') {
     return (
-      <div className="p-6 bg-gray-50 min-h-screen select-none flex flex-col gap-4"
+      <div className="p-6 min-h-screen select-none flex flex-col gap-4 text-gray-200"
            onMouseUp={handleMouseUp}>
 
-        {/* Header simple */}
         <div className="shrink-0">
           <OfficeMapHeader />
         </div>
 
-        {/* Leyenda */}
         <div className="shrink-0">
           <MapLegend
             onModeChange={handleModeChange}
@@ -2482,9 +2567,9 @@ export default function OfficeMap() {
           />
         </div>
 
-        <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <div className="shrink-0 rounded-xl border border-slate-700/50 bg-slate-900/60 backdrop-blur-sm shadow-xl p-3 space-y-3">
           <div className="max-w-md">
-            <label htmlFor="adminViewLocationFilter" className="text-sm font-medium text-slate-700">
+            <label htmlFor="adminViewLocationFilter" className="text-sm font-medium text-slate-400">
               Filter by Location
             </label>
             <Select
@@ -2497,10 +2582,10 @@ export default function OfficeMap() {
               }}
               disabled={loadingAdminMetadata}
             >
-              <SelectTrigger id="adminViewLocationFilter" className="mt-2 h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="adminViewLocationFilter" className="mt-2 h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                 <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 {adminLocations.map((location) => (
                   <SelectItem key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
@@ -2510,11 +2595,11 @@ export default function OfficeMap() {
             </Select>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+          <div className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-2">
             {adminSelectedLocationId ? (
               adminAvailableFloors.length > 0 ? (
                 <div className="overflow-x-auto pb-1">
-                  <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-300">
+                  <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-700">
                     {adminAvailableFloors.map((floor) => {
                       const floorId = String(floor.id_floor);
                       const isActive = adminSelectedFloorId === floorId;
@@ -2529,8 +2614,8 @@ export default function OfficeMap() {
                           }}
                           className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
                             isActive
-                              ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                              ? 'bg-teal-900/40 text-teal-400 border-teal-500/50'
+                              : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200'
                           }`}
                         >
                           {floor.floor_name}
@@ -2540,10 +2625,10 @@ export default function OfficeMap() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 px-2 py-1">This location has no floors created yet.</p>
+                <p className="text-sm text-slate-400 px-2 py-1">This location has no floors created yet.</p>
               )
             ) : (
-              <p className="text-sm text-slate-500 px-2 py-1">Select a location to load floor tabs.</p>
+              <p className="text-sm text-slate-400 px-2 py-1">Select a location to load floor tabs.</p>
             )}
           </div>
         </div>
@@ -2552,19 +2637,19 @@ export default function OfficeMap() {
           <div className="shrink-0 flex items-center justify-end gap-2">
             <button
               type="button"
-              className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              className="h-8 w-8 rounded-md border-2 border-teal-400 bg-slate-900 text-teal-400 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
               onClick={handleViewZoomOut}
               title="Zoom out"
               aria-label="Zoom out"
             >
               −
             </button>
-            <span className="text-xs font-medium text-slate-500 min-w-[3rem] text-center">
+            <span className="text-xs font-medium text-white min-w-[3rem] text-center">
               {Math.round(viewScale * 100)}%
             </span>
             <button
               type="button"
-              className="h-8 w-8 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              className="h-8 w-8 rounded-md border-2 border-teal-400 bg-slate-900 text-teal-400 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
               onClick={handleViewZoomIn}
               title="Zoom in"
               aria-label="Zoom in"
@@ -2574,7 +2659,7 @@ export default function OfficeMap() {
             {(viewScale !== 1 || viewPanOffset.x !== 0 || viewPanOffset.y !== 0) && (
               <button
                 type="button"
-                className="h-8 px-2 rounded-md border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs font-medium"
+                className="h-8 px-2 rounded-md border-2 border-teal-400 bg-slate-900 text-teal-400 hover:bg-teal-500/10 hover:text-teal-300 text-xs font-medium transition-all duration-200 shadow-md"
                 onClick={() => { setViewScale(1); setViewPanOffset({ x: 0, y: 0 }); }}
                 title="Reset view"
                 aria-label="Reset view"
@@ -2585,8 +2670,7 @@ export default function OfficeMap() {
           </div>
         )}
 
-        {/* Mapa estático fit-to-content */}
-        <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden relative">
+        <div className="flex-1 rounded-xl border border-slate-700 bg-slate-900/50 shadow-sm overflow-hidden relative">
           {loadingMap && (
             <div className="flex h-64 items-center justify-center text-sm text-slate-400">
               Loading map...
@@ -2595,7 +2679,7 @@ export default function OfficeMap() {
           {!loadingMap && !currentZoneId && (
             <div className="flex h-64 items-center justify-center text-center">
               <div>
-                <p className="text-lg font-medium text-slate-600">Select a location and floor</p>
+                <p className="text-lg font-medium text-slate-300">Select a location and floor</p>
                 <p className="mt-1 text-sm text-slate-400">The map will be displayed here.</p>
               </div>
             </div>
@@ -2603,7 +2687,7 @@ export default function OfficeMap() {
           {!loadingMap && currentZoneId && allPlaced.length === 0 && (
             <div className="flex h-64 items-center justify-center text-center">
               <div>
-                <p className="text-lg font-medium text-slate-600">No elements placed</p>
+                <p className="text-lg font-medium text-slate-300">No elements placed</p>
                 <p className="mt-1 text-sm text-slate-400">This floor has no elements added to the map yet.</p>
               </div>
             </div>
@@ -2621,7 +2705,7 @@ export default function OfficeMap() {
               onMouseUp={handleViewPanEnd}
               onMouseLeave={() => { handleViewPanEnd(); setHoveredDesk(null); }}
             >
-              <rect x={viewBBox.minX} y={viewBBox.minY} width={viewBBox.w} height={viewBBox.h} fill="#f8fafc" />
+              <rect x={viewBBox.minX} y={viewBBox.minY} width={viewBBox.w} height={viewBBox.h} fill="#0f172a" />
               {bgLayers.map(layer => (
                 <g key={layer.id} transform={`translate(${layer.x}, ${layer.y})`}>
                   <rect width={layer.width} height={layer.height} fill={getViewFillColor(layer)} rx={6} />
@@ -2687,13 +2771,12 @@ export default function OfficeMap() {
             </svg>
           )}
 
-          {/* Tooltip flotante al hacer hover sobre un escritorio */}
           {hoveredDesk && (
             <div
               className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full"
               style={{ left: hoveredDesk.x, top: hoveredDesk.y }}
             >
-              <div className="bg-gray-900 text-white rounded-lg px-3 py-2 shadow-xl whitespace-nowrap flex flex-col gap-0.5 min-w-[130px]">
+              <div className="bg-slate-900 text-white rounded-lg px-3 py-2 shadow-xl whitespace-nowrap flex flex-col gap-0.5 min-w-[130px]">
                 <span className="font-bold text-sm">{hoveredDesk.id}</span>
                 <span className={`text-[11px] font-semibold ${
                   hoveredDesk.status === 'With Active Reports'   ? 'text-red-400' :
@@ -2704,37 +2787,16 @@ export default function OfficeMap() {
                 </span>
               </div>
               <div className="flex justify-center">
-                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-gray-900" />
+                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-slate-900" />
               </div>
             </div>
           )}
         </div>
 
-        {/* Leyenda de colores */}
-        {!loadingMap && currentZoneId && allPlaced.length > 0 && (
-          <div className="shrink-0 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700 text-sm">Legend:</span>
-            {[
-              { color: '#22C55E', label: 'No issues' },
-              { color: '#EF4444', label: 'With active reports' },
-              { color: '#6B7280', label: 'Zone' },
-              { color: 'rgba(156,163,175,0.5)', label: 'Wall', border: true },
-              { color: '#F59E0B', label: 'Store area' },
-              { color: '#EAB308', label: 'Management' },
-              { color: '#3B82F6', label: 'Entrance' },
-            ].map(({ color, label, border }) => (
-              <span key={label} className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-sm" style={{ background: color, border: border ? '1px solid #9CA3AF' : undefined }} />
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
-
         {deskStatusDialog}
         {deskTicketDetailsDialog}
 
-        {showDeskTicketForm && selectedDeskForTicket && user?.id && (
+        {showDeskTicketForm && selectedDeskForTicket && user?.id && user.id_role !== 1 && (
           <TicketForm
             onClose={() => {
               setShowDeskTicketForm(false);
@@ -2750,23 +2812,19 @@ export default function OfficeMap() {
     );
   }
 
-  // Si el modo es 'add' o 'edit', mostrar interfaz completa de mapeo
   if (activeMode === 'add' || activeMode === 'edit') {
     return (
-      <div className="space-y-6 p-6 bg-gray-50 min-h-screen select-none"
+      <div className="space-y-6 p-6 min-h-screen select-none text-gray-200"
            onMouseUp={handleMouseUp}>
 
-        {/* Header */}
         <OfficeMapHeader />
 
-        {/*Statistics */}
         <StatsCards 
           totalDesks={totalDesks} 
           reports={reports} 
           noIssues={noIssues} 
         />
 
-        {/* Leyenda del Mapa */}
         <MapLegend
           onModeChange={handleModeChange}
           onBackToMenu={handleBackToMenu}
@@ -2778,6 +2836,7 @@ export default function OfficeMap() {
           <Button
             type="button"
             variant="outline"
+            className="border-2 border-teal-400 text-teal-400 bg-slate-900 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
             onClick={handleSelectAllPlaced}
             disabled={items.length + bgLayers.length === 0}
           >
@@ -2786,6 +2845,7 @@ export default function OfficeMap() {
           <Button
             type="button"
             variant="outline"
+            className="border-2 border-teal-400 text-teal-400 bg-slate-900 hover:bg-teal-500/10 hover:text-teal-300 transition-all duration-200 shadow-md"
             onClick={() => {
               setSelectedId(null);
               setSelectedIds([]);
@@ -2795,16 +2855,14 @@ export default function OfficeMap() {
           >
             Clear selection
           </Button>
-          {loadingMap && <span className="text-sm text-slate-500">Loading map...</span>}
-          <Button onClick={handleSaveMap} disabled={savingMap}>
+          {loadingMap && <span className="text-sm text-slate-400">Loading map...</span>}
+          <Button onClick={handleSaveMap} disabled={savingMap} className="bg-teal-600 text-white hover:bg-teal-700 border-none">
             {savingMap ? 'Saving...' : 'Save'}
           </Button>
         </div>
 
-        {/* Layout */}
         <div className="flex gap-6 h-175 relative">
 
-          {/* Sidebar */}
           <MapSidebar
             search={search}
             setSearch={setSearch}
@@ -2816,7 +2874,6 @@ export default function OfficeMap() {
             onFileUpload={handleFileUpload}
           />
 
-          {/* Canvas */}
           <MapCanvas
             items={items}
             bgLayers={bgLayers}
@@ -2840,11 +2897,10 @@ export default function OfficeMap() {
             activeItemId={(draggingId || resizingId || selectedId) || undefined}
           />
 
-          {/* Botones de zoom en la esquina inferior derecha */}
           <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
             <button
               type="button"
-              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              className="bg-slate-900 text-teal-400 border-2 border-teal-400 rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-teal-500/10 hover:text-teal-300 transition font-semibold text-lg"
               onClick={handleZoomIn}
               aria-label="Zoom in"
               title="Zoom in"
@@ -2853,7 +2909,7 @@ export default function OfficeMap() {
             </button>
             <button
               type="button"
-              className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow hover:bg-blue-700 transition font-semibold text-lg"
+              className="bg-slate-900 text-teal-400 border-2 border-teal-400 rounded-full w-10 h-10 flex items-center justify-center shadow-md hover:bg-teal-500/10 hover:text-teal-300 transition font-semibold text-lg"
               onClick={handleZoomOut}
               aria-label="Zoom out"
               title="Zoom out"
@@ -2863,48 +2919,46 @@ export default function OfficeMap() {
           </div>
         </div>
 
-        {/* Tip */}
         <TipBox />
 
         {noteLabelDialog}
 
-        {/* Context Menu — Z-Layer Order (click derecho sobre un elemento) */}
         {contextMenu && (
           <div
-            className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 min-w-[180px]"
+            className="fixed z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[180px]"
             style={{ top: contextMenu.clientY, left: contextMenu.clientX }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 mb-1">
               Layer order
             </div>
             <button
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
               onClick={() => moveToFront(contextMenu.id)}
             >
               <span className="text-base">🡩</span> Bring to front
             </button>
             <button
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
               onClick={() => moveForward(contextMenu.id)}
             >
               <span className="text-base">🡡</span> Move forward
             </button>
             <button
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
               onClick={() => moveBackward(contextMenu.id)}
             >
               <span className="text-base">🡣</span> Move backward
             </button>
             <button
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
               onClick={() => moveToBack(contextMenu.id)}
             >
               <span className="text-base">🡫</span> Send to back
             </button>
-            <div className="border-t border-slate-100 mt-1">
+            <div className="border-t border-slate-700 mt-1">
               <button
-                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/20 flex items-center gap-2"
                 onClick={() => deleteItemFromContextMenu(contextMenu.id)}
               >
                 <span className="text-base">✕</span> Delete
@@ -2917,22 +2971,21 @@ export default function OfficeMap() {
     );
   }
 
-  // Si el modo es 'select', mostrar solo el menú de opciones y el canvas en blanco
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col p-6 space-y-6">
+    <div className="min-h-screen flex flex-col p-6 space-y-6 text-gray-200">
       <OfficeMapHeader />
       <MapLegend
         onModeChange={handleModeChange}
         onBackToMenu={handleBackToMenu}
         onZoneSelected={setCurrentZoneId}
         viewOnly={isViewOnly}
-        autoOpenViewModal={autoOpenViewSelector}
+        autoOpenViewSelector={autoOpenViewSelector}
       />
       
-      <div className="flex-1 bg-white rounded-lg border border-slate-200 shadow-sm p-5 space-y-5">
+      <div className="flex-1 bg-slate-900/60 backdrop-blur-sm rounded-lg border border-slate-700/50 shadow-xl p-5 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="max-w-md space-y-2">
-            <label htmlFor="adminLocationFilter" className="text-sm font-medium text-slate-700">
+            <label htmlFor="adminLocationFilter" className="text-sm font-medium text-slate-300">
               Filter by Location
             </label>
             <Select
@@ -2943,10 +2996,10 @@ export default function OfficeMap() {
               }}
               disabled={loadingAdminMetadata}
             >
-              <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+              <SelectTrigger id="adminLocationFilter" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                 <SelectValue placeholder={loadingAdminMetadata ? 'Loading locations...' : 'Select a location'} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 {adminLocations.map((location) => (
                   <SelectItem key={location.id_location} value={String(location.id_location)}>
                     {location.location_name}
@@ -2959,18 +3012,20 @@ export default function OfficeMap() {
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               onClick={() => openMapTransferDialog('import')}
               disabled={loadingAdminMetadata || adminLocations.length === 0}
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
             >
               <Upload className="mr-2 h-4 w-4" />
               Import map
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               onClick={() => openMapTransferDialog('export')}
               disabled={loadingAdminMetadata || adminLocations.length === 0}
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
             >
               <Download className="mr-2 h-4 w-4" />
               Export map
@@ -2978,11 +3033,11 @@ export default function OfficeMap() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+        <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3">
           {adminSelectedLocationId ? (
             adminAvailableFloors.length > 0 ? (
               <div className="overflow-x-auto pb-1">
-                <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-300">
+                <div className="inline-flex min-w-full items-end gap-1 border-b border-slate-700">
                   {adminAvailableFloors.map((floor) => {
                     const floorId = String(floor.id_floor);
                     const isActive = adminSelectedFloorId === floorId;
@@ -2999,8 +3054,8 @@ export default function OfficeMap() {
                         }}
                         className={`px-4 py-2 text-sm font-medium border border-b-0 rounded-t-md whitespace-nowrap transition-colors ${
                           isActive
-                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                            ? 'bg-teal-900/40 text-teal-400 border-teal-500/50'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200'
                         }`}
                       >
                         {floor.floor_name}
@@ -3017,8 +3072,8 @@ export default function OfficeMap() {
           )}
         </div>
 
-        <div className="flex-1 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center">
-          <p className="text-slate-400 text-base font-medium">Select a floor tab to open the map</p>
+        <div className="flex-1 rounded-xl border-2 border-dashed border-slate-700 bg-slate-800/30 flex items-center justify-center min-h-[400px]">
+          <p className="text-slate-500 text-base font-medium">Select a floor tab to open the map</p>
         </div>
         {mapTransferDialog}
       </div>

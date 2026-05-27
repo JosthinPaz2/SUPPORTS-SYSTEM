@@ -1,4 +1,12 @@
-/env/*
-/.venv/*
-/db/__pycache__/*
-/migraciones/*
+# Entornos virtuales (en cualquier carpeta)
+venv/
+.venv/
+env/
+BACKEND/venv/
+
+# Python cachés
+**/__pycache__/
+*.pyc
+
+# Base de datos local / Migraciones 
+BACKEND/migraciones/

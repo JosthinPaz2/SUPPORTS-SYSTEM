@@ -1,4 +1,3 @@
-// API configuration and utilities
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
   'http://localhost:8001';
@@ -37,6 +36,7 @@ export interface UpdateUserRequest {
   full_name?: string;
   institutional_email?: string;
   id_role?: number;
+  campaign?: string;
 }
 
 export interface PasswordRecoveryRequest {
@@ -260,6 +260,11 @@ class ApiService {
       headers.set('Content-Type', 'application/json');
     }
     headers.set('ngrok-skip-browser-warning', 'true');
+    
+    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
@@ -272,10 +277,14 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
-      // Check if response is HTML instead of JSON
+  
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('text/html')) {
         throw new Error('The server returned HTML instead of JSON. Verify that the backend is running correctly.');
+      }
+
+      if (response.status === 304) {
+        throw new Error('Received 304 Not Modified - cache headers should be disabled. Verify server configuration.');
       }
 
       if (!response.ok) {
@@ -312,7 +321,6 @@ class ApiService {
   }
 
   async register(data: RegisterRequest): Promise<LoginResponse> {
-    // backend returns a LoginResponse upon successful registration
     return this.request<LoginResponse>('/users/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -345,9 +353,13 @@ class ApiService {
   }
 
   async updateUserRole(userId: number, idRole: number): Promise<UserListItemDto> {
+    return this.updateUser(userId, { id_role: idRole });
+  }
+
+  async updateUser(userId: number, payload: UpdateUserRequest): Promise<UserListItemDto> {
     return this.request<UserListItemDto>(`/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify({ id_role: idRole } as UpdateUserRequest),
+      body: JSON.stringify(payload),
     });
   }
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { formatBogotaDateTime } from '../utils/datetime';
 
-// Colores para los gráficos
+// Colores para los gráficos (se mantienen igual para consistencia visual)
 const COLORS = { 
   pending: '#fbbf24',
   'in-progress': '#3b82f6',
@@ -122,48 +122,48 @@ export default function ReportsPanel() {
     <div className="space-y-6">
       {/* Resumen General */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate-400">
               Total Tickets
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{tickets.length}</div>
+            <div className="text-3xl font-bold text-slate-100">{tickets.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate-400">
               Pending
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">
+            <div className="text-3xl font-bold text-amber-400">
               {byStatus.pending}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate-400">
               In Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-3xl font-bold text-blue-400">
               {byStatus['in-progress']}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate-400">
               Resolved
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-emerald-400">
               {byStatus.resolved}
             </div>
           </CardContent>
@@ -173,9 +173,9 @@ export default function ReportsPanel() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Distribución por Estado */}
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Distribution by Status</CardTitle>
+            <CardTitle className="text-slate-100">Distribution by Status</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -194,16 +194,23 @@ export default function ReportsPanel() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1e293b', 
+                    border: '1px solid #334155',
+                    color: '#f1f5f9',
+                    borderRadius: '8px'
+                  }} 
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Distribución por Categoría */}
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Distribution by Category</CardTitle>
+            <CardTitle className="text-slate-100">Distribution by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -222,47 +229,68 @@ export default function ReportsPanel() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1e293b', 
+                    border: '1px solid #334155',
+                    color: '#f1f5f9',
+                    borderRadius: '8px'
+                  }} 
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Tickets por Prioridad */}
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Tickets by Priority</CardTitle>
+            <CardTitle className="text-slate-100">Tickets by Priority</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={priorityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Tickets" fill="#3b82f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="name" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1e293b', 
+                    border: '1px solid #334155',
+                    color: '#f1f5f9',
+                    borderRadius: '8px'
+                  }} 
+                />
+                <Legend wrapperStyle={{ color: '#f1f5f9' }} />
+                <Bar dataKey="Tickets" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Estado por Categoría */}
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Status by Category</CardTitle>
+            <CardTitle className="text-slate-100">Status by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={statusCategoryData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Pending" fill={COLORS.pending} />
-                <Bar dataKey="In Progress" fill={COLORS['in-progress']} />
-                <Bar dataKey="Resolved" fill={COLORS.resolved} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="category" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1e293b', 
+                    border: '1px solid #334155',
+                    color: '#f1f5f9',
+                    borderRadius: '8px'
+                  }} 
+                />
+                <Legend wrapperStyle={{ color: '#f1f5f9' }} />
+                <Bar dataKey="Pending" fill={COLORS.pending} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="In Progress" fill={COLORS['in-progress']} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Resolved" fill={COLORS.resolved} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -270,77 +298,85 @@ export default function ReportsPanel() {
       </div>
 
       {/* Tickets Recientes */}
-<Card className="bg-card text-foreground">
-  <CardHeader>
-    <CardTitle>Most Recent Tickets</CardTitle>
-  </CardHeader>
+      <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-slate-100">Most Recent Tickets</CardTitle>
+        </CardHeader>
 
-  <CardContent>
-    <div className="space-y-4">
-      {recentTickets.map((ticket) => (
-        <div
-          key={ticket.id}
-          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border"
-        >
-          <div className="flex-1">
-            <h4 className="font-medium text-foreground">
-              {ticket.title}
-            </h4>
+        <CardContent>
+          <div className="space-y-4">
+            {recentTickets.map((ticket) => (
+              <div
+                key={ticket.id}
+                className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
+              >
+                <div className="flex-1">
+                  <h4 className="font-medium text-slate-100">
+                    {ticket.title}
+                  </h4>
 
-            <p className="text-sm text-muted-foreground">
-              {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
-            </p>
+                  <p className="text-sm text-slate-400">
+                    {ticket.createdByName} - {formatBogotaDateTime(ticket.createdAt)}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400 capitalize">
+                    {ticket.category}
+                  </span>
+
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      ticket.status === 'pending'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : ticket.status === 'in-progress'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    {ticket.status === 'pending'
+                      ? 'Pending'
+                      : ticket.status === 'in-progress'
+                      ? 'In Progress'
+                      : 'Resolved'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground capitalize">
-              {ticket.category}
-            </span>
-
-            <span
-              className={`px-2 py-1 rounded text-xs font-medium ${
-ticket.status === 'pending'
-                  ? 'bg-amber-500/20 text-amber-700'
-                  : ticket.status === 'in-progress'
-                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
-                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-              }`}
-            >
-              {ticket.status === 'pending'
-                ? 'Pending'
-                : ticket.status === 'in-progress'
-                ? 'In Progress'
-                : 'Resolved'}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  </CardContent>
-</Card>
+        </CardContent>
+      </Card>
 
       {/* Resolved Tickets by Technician */}
-      <Card>
+      <Card className="bg-slate-800/50 border-slate-700 shadow-lg backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Resolved Reports by Technician</CardTitle>
+          <CardTitle className="text-slate-100">Resolved Reports by Technician</CardTitle>
         </CardHeader>
         <CardContent>
           {techData.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-8">No data available</p>
+            <p className="text-slate-400 text-sm text-center py-8">No data available</p>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={techData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
                   dataKey="name"
                   angle={-35}
                   textAnchor="end"
                   interval={0}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  stroke="#94a3b8"
                 />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend verticalAlign="top" />
+                <YAxis stroke="#94a3b8" allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1e293b', 
+                    border: '1px solid #334155',
+                    color: '#f1f5f9',
+                    borderRadius: '8px'
+                  }} 
+                />
+                <Legend wrapperStyle={{ color: '#f1f5f9' }} verticalAlign="top" />
                 <Bar dataKey="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

@@ -21,9 +21,6 @@
  - ../ui/button: Componente Button reutilizable
  */
 
-/* Interfaz de props para el componente OfficeMapHeader
- Define los parámetros opcionales que puede recibir el componente
- */
 interface OfficeMapHeaderProps {
   title?: string; /** Título principal de la página */
   subtitle?: string; /** Subtítulo descriptivo que aparece debajo del título */
@@ -40,12 +37,12 @@ export default function OfficeMapHeader({
 }: OfficeMapHeaderProps) {
 
   return (
-    // Contenedor principal con estilos de Tailwind: flexbox, padding, fondo blanco, borde y sombra
-    <div className="flex items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
+    // Contenedor principal con estilos de Tailwind: flexbox, padding, fondo oscuro, borde y sombra
+    <div className="flex items-center justify-between bg-slate-900/80 backdrop-blur-sm p-4 rounded-lg border border-slate-700/70 shadow-lg">
       {/* Sección izquierda: Título y subtítulo */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-        <p className="text-sm text-gray-500">{subtitle}</p>
+        <h1 className="text-xl font-bold text-slate-100">{title}</h1>
+        <p className="text-sm text-slate-400">{subtitle}</p>
       </div>
     </div>
   );

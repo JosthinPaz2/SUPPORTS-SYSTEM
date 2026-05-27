@@ -37,57 +37,66 @@ function NotificationListItem({
   onDelete: (id: number) => void;
 }) {
   const linkedTicketId = notification.ticketId ?? extractTicketIdFromMessage(notification.title);
+
+  
   const unreadClasses = notification.read
-    ? "bg-white hover:bg-gray-50"
+    ? "bg-[#1E293B] hover:bg-[#243146] border-l-4 border-transparent" 
     : notification.severity === "critical"
-      ? "bg-red-50 hover:bg-red-100 border-l-4 border-red-500"
-      : "bg-amber-50 hover:bg-amber-100 border-l-4 border-amber-400";
+      ? "bg-[#2D1B1E] hover:bg-[#3D2327] border-l-4 border-red-500"   
+      : "bg-[#2D281E] hover:bg-[#3D3524] border-l-4 border-amber-500"; 
 
   return (
     <li
       key={notification.id}
       onClick={() => onOpen(notification)}
-      className={`flex items-start gap-3 px-4 py-3 transition ${linkedTicketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
+      className={`flex items-start gap-3 px-4 py-3 transition border-b border-slate-800/50 ${linkedTicketId ? "cursor-pointer" : "cursor-default"} ${unreadClasses}`}
     >
       <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
         notification.severity === "critical"
-          ? "bg-red-100"
+          ? "bg-red-500/10" 
           : notification.read
-            ? "bg-gray-100"
-            : "bg-amber-100"
+            ? "bg-slate-700/50"
+            : "bg-amber-500/10"
       }`}>
         <Bell
           className={`w-4 h-4 ${
             notification.severity === "critical"
-              ? "text-red-600"
+              ? "text-red-400"
               : notification.read
-                ? "text-gray-500"
-                : "text-amber-600"
+                ? "text-slate-400"
+                : "text-amber-400"
           }`}
         />
       </div>
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className={`text-sm ${notification.read ? "text-gray-700" : "font-semibold text-gray-900"}`}>
+          <p className={`text-sm ${notification.read ? "text-slate-400" : "font-semibold text-slate-100"}`}>
             {notification.title}
           </p>
-          {!notification.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+          {!notification.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />}
         </div>
-        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+        
+        
+        <p className="text-xs text-slate-500">{notification.time}</p>
         {linkedTicketId && (
-          <p className="text-[11px] mt-1 text-gray-500">Open the related ticket.</p>
+          <p className="text-xs font-semibold text-blue-400/80 hover:text-blue-400 underline-offset-2 hover:underline mt-1">
+            Open the related ticket.
+          </p>
         )}
       </div>
+
+      {/* BOTÓN ELIMINAR */}
       <button
         onClick={(event) => {
           event.stopPropagation();
           onDelete(notification.id);
         }}
         aria-label={`Delete notification ${notification.id}`}
-        className="ml-2 p-1.5 rounded-md hover:bg-red-50 transition flex items-center justify-center shrink-0"
+        className="ml-2 p-1.5 rounded-md hover:bg-red-500/10 transition flex items-center justify-center shrink-0 group/btn"
         title="Delete"
       >
-        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+        <Trash2 className="w-4 h-4 text-slate-500 group-hover/btn:text-red-400" />
       </button>
     </li>
   );
@@ -288,63 +297,77 @@ export default function NotificationsButton() {
       {open && (
         <>
           {/* VISTA DESKTOP */}
-          <div className="hidden md:block absolute right-0 mt-2 w-80 z-50">
-            <div className="rounded-xl shadow-lg overflow-hidden border border-gray-200 bg-white">
-              <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Notifications
-                </h3>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="p-1 rounded-full transition hover:bg-gray-200"
-                >
-                  <X className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
+          <div className="hidden md:block absolute right-0 mt-2 w-80 z-[9999]">
+          <div className="rounded-2xl shadow-2xl overflow-hidden 
+                          border border-slate-700/80 
+                          bg-slate-900/90 backdrop-blur-md">
 
-              <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
-                {notifications.length === 0 ? (
-                  <li className="p-4 text-sm text-center text-gray-500">
-                    No notifications
-                  </li>
-                ) : (
-                  notifications.map((n) => (
-                    <NotificationListItem
-                      key={n.id}
-                      notification={n}
-                      onOpen={handleOpenNotification}
-                      onDelete={handleDelete}
-                    />
-                  ))
-                )}
-              </ul>
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-4 py-3 
+                            border-b border-slate-700/60 
+                            bg-slate-800/60">
+              <h3 className="text-sm font-semibold text-slate-200">
+                Notifications
+              </h3>
 
-              <div className="p-4 flex items-center justify-center gap-3 border-t border-gray-100">
-                <button
-                  onClick={handleMarkAllAsRead}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                    unreadCount === 0
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
-                  disabled={unreadCount === 0}
-                >
-                  Mark all as read
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                    notifications.length === 0
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  }`}
-                  disabled={notifications.length === 0}
-                >
-                  Clear all
-                </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1.5 rounded-full transition 
+                          hover:bg-slate-700 text-slate-400 hover:text-white"
+             >
+               <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* LISTA */}
+            <ul className="max-h-64 overflow-auto custom-scrollbar divide-y divide-slate-700/50">
+              {notifications.length === 0 ? (
+                <li className="p-4 text-sm text-center text-slate-400">
+                  No notifications
+                </li>
+              ) : (
+               notifications.map((n) => (
+                  <NotificationListItem
+                    key={n.id}
+                    notification={n}
+                    onOpen={handleOpenNotification}
+                    onDelete={handleDelete}
+                  />
+                ))
+             )}
+            </ul>
+
+           {/* FOOTER */}
+            <div className="p-4 flex items-center justify-center gap-3 
+                            border-t border-slate-700/60">
+              {/* MARK ALL */}
+              <button
+                onClick={handleMarkAllAsRead}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  unreadCount === 0
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    : "bg-teal-400 hover:bg-teal-500 text-gray-900 shadow-md shadow-teal-900/20"
+                }`}
+                disabled={unreadCount === 0}
+              >
+                Mark all as read
+              </button>
+
+                  {/* CLEAR ALL */}
+                  <button
+                    onClick={handleClearAll}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      notifications.length === 0
+                        ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                        : "bg-slate-800 hover:bg-slate-700 text-slate-300"
+                    }`}
+                    disabled={notifications.length === 0}
+                  >
+                    Clear all
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
           {/* VISTA MOBILE */}
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 md:hidden p-4 backdrop-blur-sm">
@@ -357,7 +380,7 @@ export default function NotificationsButton() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <ul className="max-h-80 overflow-auto divide-y divide-gray-100">
+              <ul className="max-h-80 overflow-auto custom-scrollbar divide-y divide-gray-100">
                 {notifications.map((n) => (
                   <NotificationListItem key={n.id} notification={n} onOpen={handleOpenNotification} onDelete={handleDelete} />
                 ))}
@@ -369,4 +392,3 @@ export default function NotificationsButton() {
     </div>
   );
 }
-

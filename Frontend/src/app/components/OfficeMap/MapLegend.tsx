@@ -186,33 +186,33 @@ export default function MapLegend({
 
   return (
     <>
-      <Card className="relative overflow-visible z-40 shadow-md border border-border bg-white">
+      <Card className="relative overflow-visible z-40 bg-slate-900/60 backdrop-blur-sm border-slate-700/50 shadow-xl">
         <CardContent className="flex flex-wrap items-center gap-6 py-4 pr-12">
 
           {/* Indicadores */}
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 border border-border rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-foreground">No issues</span>
+            <div className="w-4 h-4 bg-emerald-500/20 border-emerald-500/50 border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-slate-200">No issues</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 border border-border rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-foreground">With active reports</span>
+            <div className="w-4 h-4 bg-red-500/20 border border-red-500/50 rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-slate-200">With active reports</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-400 border border-border rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-foreground">Management / Store area</span>
+            <div className="w-4 h-4 bg-amber-500/20 border-amber-500/50 border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-slate-200">Management / Store area</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 border border-border rounded shadow-sm"></div>
-            <span className="text-sm font-medium text-foreground">Entrance area</span>
+            <div className="w-4 h-4 bg-blue-500/20 border-blue-500/50 border rounded shadow-sm"></div>
+            <span className="text-sm font-medium text-slate-200">Entrance area</span>
           </div>
 
-          <div className="flex items-center gap-2 border-l border-border pl-4">
-            <User className="w-4 h-4 text-blue-500" />
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 border-l border-slate-700/50 pl-4">
+            <User className="w-4 h-4 text-teal-400" />
+            <span className="text-sm text-slate-400">
               Click on any desk to view details
             </span>
           </div>
@@ -223,8 +223,8 @@ export default function MapLegend({
               onClick={() => setIsOpen(!isOpen)}
               className={`p-2 rounded-full transition-all duration-300 ${
                 isOpen 
-                  ? 'bg-blue-600 text-white shadow-lg scale-110'
-                  : 'bg-muted text-foreground hover:bg-blue-500/20'
+                  ? 'bg-teal-600 text-white shadow-lg scale-110'
+                  : 'bg-slate-800 text-slate-200 hover:bg-teal-500/20 hover:text-teal-400'
               }`}
               title="Options menu"
             >
@@ -232,46 +232,46 @@ export default function MapLegend({
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl z-50 py-2 border border-border bg-popover backdrop-blur-md">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl z-50 py-2 border border-slate-700 bg-slate-900 backdrop-blur-md">
 
                 {!viewOnly && (
                   <>
                     <button 
-                      className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-blue-500/10 gap-3 transition-all"
+                      className="flex items-center w-full px-4 py-3 text-sm text-slate-200 hover:bg-teal-500/10 hover:text-teal-400 gap-3 transition-all"
                       onClick={handleAddMap}
                     >
-                      <Plus size={18} className="text-blue-500 shrink-0" /> 
+                      <Plus size={18} className="text-teal-400 shrink-0" /> 
                       <span>Add Map</span>
                     </button>
 
                     <button 
-                      className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-green-500/10 gap-3 transition-all"
+                      className="flex items-center w-full px-4 py-3 text-sm text-slate-200 hover:bg-teal-500/10 hover:text-teal-400 gap-3 transition-all"
                       onClick={handleEditMap}
                     >
-                      <Edit2 size={18} className="text-green-500 shrink-0" /> 
+                      <Edit2 size={18} className="text-teal-400 shrink-0" /> 
                       <span>Edit Map</span>
                     </button>
                   </>
                 )}
 
                 <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-purple-500/10 gap-3 transition-all"
+                  className="flex items-center w-full px-4 py-3 text-sm text-slate-200 hover:bg-teal-500/10 hover:text-teal-400 gap-3 transition-all"
                   onClick={handleViewMap}
                >
-                  <Eye size={18} className="text-purple-500 shrink-0" /> 
+                  <Eye size={18} className="text-teal-400 shrink-0" /> 
                   <span>View Map</span>
                 </button>
 
-                <div className="border-t border-border my-1"></div>
+                <div className="border-t border-slate-700 my-1"></div>
 
                 <button 
-                  className="flex items-center w-full px-4 py-3 text-sm text-foreground hover:bg-red-500/10 gap-3 transition-all"
+                  className="flex items-center w-full px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 gap-3 transition-all"
                   onClick={() => {
                     setIsOpen(false);
                     onBackToMenu?.();
                   }}
                 >
-                  <Home size={18} className="text-red-500 shrink-0" /> 
+                  <Home size={18} className="text-red-400 shrink-0" /> 
                   <span>Back to Menu</span>
                 </button>
               </div>
@@ -283,22 +283,22 @@ export default function MapLegend({
 
       {/* MODAL: AGREGAR MAPA */}
       <Dialog open={addMapModal} onOpenChange={setAddMapModal}>
-        <DialogContent className="sm:max-w-106.25">
+        <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-700 text-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Add Map</DialogTitle>
+            <DialogTitle className="text-white">Add Map</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="addSeat">Select Location</Label>
+              <Label htmlFor="addSeat" className="!text-slate-300">Select Location</Label>
               <Select
                 value={addSeat}
                 onValueChange={setAddSeat}
                 disabled={loadingLocations}
               >
-                <SelectTrigger id="addSeat" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectTrigger id="addSeat" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                   <SelectValue placeholder={loadingLocations ? 'Loading locations...' : 'Select a location'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
                   {locations.map((location) => (
                     <SelectItem key={location.id_location} value={String(location.id_location)}>
                       {location.location_name}
@@ -308,21 +308,21 @@ export default function MapLegend({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="addFloor">Floor Number</Label>
+              <Label htmlFor="addFloor" className="text-sm !text-slate-300">Floor Number</Label>
               <Input
                 id="addFloor"
                 value={addFloor}
                 onChange={(e) => setAddFloor(e.target.value)}
                 placeholder="Type floor number. Ex: 1"
-                className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none"
+                className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 placeholder:!text-slate-500 shadow-none focus-visible:ring-teal-500"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddMapModal(false)}>
+            <Button variant="default" className="border-slate-600 text-slate-300 hover:bg-slate-800" onClick={() => setAddMapModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmAddMap} disabled={creatingFloor || loadingLocations}>
+            <Button className="bg-teal-600 text-white hover:bg-teal-700 border-none" onClick={handleConfirmAddMap} disabled={creatingFloor || loadingLocations}>
               {creatingFloor ? 'Creating...' : 'Add'}
             </Button>
           </DialogFooter>
@@ -331,13 +331,13 @@ export default function MapLegend({
 
       {/* MODAL: EDITAR MAPA */}
       <Dialog open={editMapModal} onOpenChange={setEditMapModal}>
-        <DialogContent className="sm:max-w-106.25">
+        <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-700 text-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Map</DialogTitle>
+            <DialogTitle className="text-white">Edit Map</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="editSeat">Select Location</Label>
+              <Label htmlFor="editSeat" className="!text-slate-300">Select Location</Label>
               <Select
                 value={editSeat}
                 onValueChange={(value) => {
@@ -346,10 +346,10 @@ export default function MapLegend({
                 }}
                 disabled={loadingLocations}
               >
-                <SelectTrigger id="editSeat" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectTrigger id="editSeat" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                   <SelectValue placeholder={loadingLocations ? 'Loading locations...' : 'Select a location'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
                   {locations.map((location) => (
                     <SelectItem key={location.id_location} value={String(location.id_location)}>
                       {location.location_name}
@@ -359,16 +359,16 @@ export default function MapLegend({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editFloor">Select Floor</Label>
+              <Label htmlFor="editFloor" className="!text-slate-300">Select Floor</Label>
               <Select
                 value={editFloor}
                 onValueChange={setEditFloor}
                 disabled={!editSeat || loadingFloors}
               >
-                <SelectTrigger id="editFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectTrigger id="editFloor" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                   <SelectValue placeholder={loadingFloors ? 'Loading floors...' : 'Select a floor'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
                   {editFloors.map((floor) => (
                     <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
                       {floor.floor_name}
@@ -379,10 +379,10 @@ export default function MapLegend({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditMapModal(false)}>
+            <Button variant="default" className="border-slate-600 text-slate-300 hover:bg-slate-800" onClick={() => setEditMapModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmEditMap}>
+            <Button className="bg-teal-600 text-white hover:bg-teal-700 border-none" onClick={handleConfirmEditMap}>
               Continue
             </Button>
           </DialogFooter>
@@ -391,13 +391,13 @@ export default function MapLegend({
 
       {/* MODAL: VER MAPA */}
       <Dialog open={viewMapModal} onOpenChange={setViewMapModal}>
-        <DialogContent className="sm:max-w-106.25">
+        <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-700 text-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>View Map</DialogTitle>
+            <DialogTitle className="text-white">View Map</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="selectSeat">Select Location</Label>
+              <Label htmlFor="selectSeat" className="text-sm font-medium !text-slate-300">Select Location</Label>
               <Select
                 value={selectedSeat}
                 onValueChange={(value) => {
@@ -406,10 +406,10 @@ export default function MapLegend({
                 }}
                 disabled={loadingLocations}
               >
-                <SelectTrigger id="selectSeat" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectTrigger id="selectSeat" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                   <SelectValue placeholder={loadingLocations ? 'Loading locations...' : 'Select a location'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
                   {locations.map((location) => (
                     <SelectItem key={location.id_location} value={String(location.id_location)}>
                       {location.location_name}
@@ -419,16 +419,16 @@ export default function MapLegend({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="selectFloor">Select Floor</Label>
+              <Label htmlFor="selectFloor" className="!text-slate-300">Select Floor</Label>
               <Select
                 value={selectedFloor}
                 onValueChange={setSelectedFloor}
                 disabled={!selectedSeat || loadingFloors}
               >
-                <SelectTrigger id="selectFloor" className="h-11 rounded-xl border-slate-200 bg-slate-50 shadow-none">
+                <SelectTrigger id="selectFloor" className="h-11 rounded-xl !bg-slate-800 !border-slate-600 !text-slate-100 shadow-none focus:ring-teal-500">
                   <SelectValue placeholder={loadingFloors ? 'Loading floors...' : 'Select a floor'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
                   {viewFloors.map((floor) => (
                     <SelectItem key={floor.id_floor} value={String(floor.id_floor)}>
                       {floor.floor_name}
@@ -439,10 +439,10 @@ export default function MapLegend({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewMapModal(false)}>
+            <Button variant="default" className="border-slate-600 text-slate-300 hover:bg-slate-800" onClick={() => setViewMapModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmViewMap}>
+            <Button className="bg-teal-600 text-white hover:bg-teal-700 border-none" onClick={handleConfirmViewMap}>
               View
             </Button>
           </DialogFooter>

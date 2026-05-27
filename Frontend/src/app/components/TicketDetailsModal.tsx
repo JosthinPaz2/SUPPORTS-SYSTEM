@@ -33,15 +33,15 @@ const categoryLabels: Record<TicketCategory, string> = {
 };
 
 const statusColors: Record<TicketStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  'in-progress': 'bg-blue-100 text-blue-800',
-  resolved: 'bg-green-100 text-green-800',
+  pending: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+  'in-progress': 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+  resolved: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
 };
 
 const priorityColors = {
-  low: 'bg-gray-100 text-gray-800',
-  medium: 'bg-orange-100 text-orange-800',
-  high: 'bg-red-100 text-red-800',
+  low: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+  medium: 'bg-orange-500/10 text-orange-400 border border-orange-500/20',
+  high: 'bg-red-500/10 text-red-400 border border-red-500/20',
 };
 
 const priorityLabels = {
@@ -52,12 +52,17 @@ const priorityLabels = {
 
 const hardwareComponentLabels: Record<string, string> = {
   teclado: 'Teclado ESENSES Basico USB',
-  mouse: 'Mouse Alambrico HP Optico negro 100',
+  mouse: 'Mouse Álambrico HP óptico negro 100',
+  'cable-vga': 'Cable Display Port a VGA 1,8',
+  'cable-vga-vga': 'Cable Display VGA a VGA 1,8',
+  extension: 'Extension de Cable eléctrico',
+  'cable-hdmi': 'Cable HDMI a HDMI 1,8 Metros',
+  'cable-vga-hdmi': 'Cable VGA a HDMI 1,8 Metros',
+  'conversor-vga': 'Conversores Displayport a VGA Hembra',
+  'cable-display-port-hdmi': 'Cable Display Port a HDMI 1,8 Metros',
   ethernet: 'Ethernet 3.0 LAN a USB',
-  'cable-vga': 'Cable Display Port a VGA 18',
-  'cable-vga-vga': 'Cable Display VGA a VGA 18',
-  extension: 'Extension de Cable electrico',
-  'cable-hdmi': 'Cable Display Port a HDMI 18',
+  'ethernet-usb-2': 'Ethernet USB 2,0',
+  'ethernet-usb': 'Ethernet USB',
 };
 
 const assetStatusLabels: Record<string, string> = {
@@ -65,6 +70,12 @@ const assetStatusLabels: Record<string, string> = {
   replace: 'Needs Replacement',
   tested: 'Operational',
   maintenance: 'Missing',
+  missing: 'Missing',
+  damage: 'Damage',
+  return: 'Return',
+  Missing: 'Missing',
+  Damage: 'Damage',
+  Return: 'Return',
 };
 
 const authorizationDecisionLabels: Record<string, string> = {
@@ -182,20 +193,42 @@ function buildDescriptionWithHardware(baseDescription: string, component: string
   const assetStatusLabel = assetStatusLabels[status] ?? status;
 
   const hardwareBlock = [
-    '[Hardware Details]',
-    `Device Type: ${deviceTypeLabel}`,
-    `Asset Condition: ${assetStatusLabel}`,
-    '[/Hardware Details]',
+    'DAMAGE SPECIFICATION',
+    `- Device Type: ${deviceTypeLabel}`,
+    `- Asset Condition: ${assetStatusLabel}`,
   ].join('\n');
 
-  const existingBlockRegex = /\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g;
   const cleanBase = (baseDescription ?? '').trim();
+  const strippedBase = cleanBase
+    .replace(/\n{2}(?:DAMAGE SPECIFICATION|ESPECIFICACION DEL DAÑO)[\s\S]*$/g, '')
+    .replace(/\[Hardware Details\][\s\S]*?\[\/Hardware Details\]/g, '')
+    .trim();
 
-  if (existingBlockRegex.test(cleanBase)) {
-    return cleanBase.replace(existingBlockRegex, hardwareBlock).trim();
+  return strippedBase ? `${strippedBase}\n\n${hardwareBlock}` : hardwareBlock;
+}
+
+function splitHardwareDescription(rawDescription?: string): { plainText: string; hardwareItems: string[] } {
+  const cleanDescription = (rawDescription ?? '').trim();
+  if (!cleanDescription) {
+    return { plainText: '', hardwareItems: [] };
   }
 
-  return cleanBase ? `${cleanBase}\n\n${hardwareBlock}` : hardwareBlock;
+  const normalized = cleanDescription.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  const titleIndex = lines.findIndex((line) => ['DAMAGE SPECIFICATION', 'ESPECIFICACION DEL DAÑO'].includes(line.trim()));
+
+  if (titleIndex === -1) {
+    return { plainText: cleanDescription, hardwareItems: [] };
+  }
+
+  const plainText = lines.slice(0, titleIndex).join('\n').trim();
+  const hardwareItems = lines
+    .slice(titleIndex + 1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^[-•]\s*/, ''));
+
+  return { plainText, hardwareItems };
 }
 
 export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketDetailsModalProps) {
@@ -220,9 +253,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
   const [savingTechs, setSavingTechs] = useState(false);
   const [viewerPrimaryTechName, setViewerPrimaryTechName] = useState<string | undefined>(ticket.assignedToName);
   const [viewerSecondaryTechName, setViewerSecondaryTechName] = useState<string | undefined>(ticket.secondaryTechnicianName);
-
   const [hardwareComponent, setHardwareComponent] = useState<string>('');
   const [assetStatus, setAssetStatus] = useState<string>('');
+  const [monitorLocation, setMonitorLocation] = useState<string>('');
   const [savingHardwareDetails, setSavingHardwareDetails] = useState(false);
   const [showAuthorizationModal, setShowAuthorizationModal] = useState(false);
   const [authorizationInternalComment, setAuthorizationInternalComment] = useState('');
@@ -306,6 +339,8 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     const parsed = parseHardwareCategoryDetail(ticket.categoryDetail);
     setHardwareComponent(parsed.component);
     setAssetStatus(parsed.status);
+    
+    setMonitorLocation('');
   }, [ticket.id, ticket.category, ticket.categoryDetail]);
 
   const handleStatusChange = (newStatus: TicketStatus) => {
@@ -419,7 +454,7 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     }
   };
 
- const handleAuthorizationDecision = async (
+const handleAuthorizationDecision = async (
   decision: 'approved' | 'rejected' | 'preapproved_more_specs',
 ) => {
   if (!isSupremeAdmin || !user?.id) {
@@ -429,38 +464,32 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
   setSubmittingAuthorizationDecision(true);
   try {
     const decisionLabel = authorizationDecisionLabels[decision];
-    
-    // ✅ FIX: Construir updates solo con valores válidos (no vacíos)
+   
     const updates: Record<string, string> = {
       authorization_decision: decision,
       authorization_by: String(user.id),
       authorization_updated_at: new Date().toISOString(),
     };
-    
-    // Solo agregar asset_status si tiene valor real
+   
     if (assetStatus && assetStatus.trim() !== '') {
       updates.asset_status = assetStatus;
-      console.log('[DEBUG] Incluyendo asset_status:', assetStatus);
-    } else {
-      console.warn('[DEBUG] assetStatus está vacío, no se incluirá en category_detail');
     }
-    
-    // Solo agregar hardware_component si tiene valor real
+   
     if (hardwareComponent && hardwareComponent.trim() !== '') {
       updates.hardware_component = hardwareComponent;
-      console.log('[DEBUG] Incluyendo hardware_component:', hardwareComponent);
-    } else {
-      console.warn('[DEBUG] hardwareComponent está vacío, no se incluirá en category_detail');
     }
 
+    if (monitorLocation && monitorLocation.trim() !== '' && monitorLocation !== 'N/A') {
+      updates.monitor_location = monitorLocation;
+    }
+
+    console.log('📤 Authorization payload debug:');
+    console.log('  hardwareComponent:', hardwareComponent);
+    console.log('  assetStatus:', assetStatus);
+    console.log('  monitorLocation:', monitorLocation, '| type:', typeof monitorLocation);
+    console.log('  updates:', updates);
+
     const updatedDetail = mergeCategoryDetail(ticket.categoryDetail, updates);
-    
-    // 🔍 Logs de debug para verificar qué se envía
-    console.log('[DEBUG] === handleAuthorizationDecision ===');
-    console.log('[DEBUG] ticket.categoryDetail original:', ticket.categoryDetail);
-    console.log('[DEBUG] updates:', updates);
-    console.log('[DEBUG] updatedDetail final:', updatedDetail);
-    console.log('[DEBUG] ===================================');
 
     await apiService.updateTicket(Number(ticket.id), {
       category_detail: updatedDetail,
@@ -521,9 +550,8 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
     setAuthorizationInternalComment('');
     setShowAuthorizationModal(false);
     toast.success('Authorization decision saved');
-    
+   
   } catch (error) {
-    console.error('[ERROR] handleAuthorizationDecision:', error);
     toast.error((error as Error).message || 'Could not save authorization decision');
   } finally {
     setSubmittingAuthorizationDecision(false);
@@ -539,9 +567,12 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-sm text-card-foreground border-border">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex-wrap items-center justify-between gap-3 
+                                text-xs text-slate-400
+                                rounded-xl bg-slate-900/80 backdrop-blur-md 
+                                px-4 py-3 z-[9999]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="text-xl md:text-2xl font-bold text-white leading-tight flex items-center gap-4">
             <span>{ticket.title}</span>
             <Badge className={statusColors[ticket.status]}>
               {statusLabels[ticket.status]}
@@ -551,33 +582,39 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
         <div className="space-y-6">
           {/* Main Information */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Tag className="w-4 h-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
+                <Tag className="w-4 h-4 text-emerald-400" />
                 Category
               </div>
               <div className="font-medium">{categoryLabels[ticket.category]}</div>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AlertCircle className="w-4 h-4" />
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-emerald-400" />
                 Priority
               </div>
               <Badge className={priorityColors[ticket.priority]}>
                 {priorityLabels[ticket.priority]}
               </Badge>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <User className="w-4 h-4" />
+            <div className="space-y-1.5 p-3 rounded-xl 
+                  border border-slate-700/60 
+                  bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
+                <User className="w-4 h-4 text-emerald-400" />
                 Created by
               </div>
               <div className="font-medium">{ticket.createdByName}</div>
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4 text-emerald-400" />
                 Date & Time
               </div>
               <div className="font-medium text-sm">
@@ -587,20 +624,48 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           </div>
 
           {ticket.location && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4" />
+            <div className="space-y-1.5 p-3 rounded-xl 
+                            border border-slate-700/60 
+                            bg-slate-900/70 backdrop-blur-sm">
+              <div className="!text-white text-sm font-medium flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-emerald-400" />
                 Desk Location
               </div>
-              <div className="font-medium">{ticket.location}</div>
+              <div className="!text-white text-sm font-medium flex items-center gap-2">{ticket.location}</div>
             </div>
           )}
 
           <div>
-            <h3 className="font-semibold mb-2">Description</h3>
-            <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
-              {ticket.description}
-            </p>
+            <h3 className="text-white text-sm font-medium flex items-center gap-2">Description</h3>
+            {(() => {
+              const formattedDescription = splitHardwareDescription(ticket.description);
+
+              if (!formattedDescription.plainText && formattedDescription.hardwareItems.length === 0) {
+                return (
+                  <p className="rounded-md border border-slate-700 bg-slate-800 p-3 whitespace-pre-wrap text-slate-100">
+                    {ticket.description}
+                  </p>
+                );
+              }
+
+              return (
+                <div className="rounded-md border border-slate-700 bg-slate-800 p-3 text-slate-100">
+                  {formattedDescription.plainText && (
+                    <p className="whitespace-pre-wrap text-slate-100">{formattedDescription.plainText}</p>
+                  )}
+                  {formattedDescription.hardwareItems.length > 0 && (
+                    <div className={formattedDescription.plainText ? 'mt-4' : ''}>
+                      <p className="font-semibold text-white">DAMAGE SPECIFICATION</p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-200">
+                        {formattedDescription.hardwareItems.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Employee view: Technicians */}
@@ -608,22 +673,22 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             <>
               <Separator />
               <div>
-                <h3 className="font-semibold mb-3">Technicians Attending</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                    <div className="text-xs text-blue-700 font-medium">First Technician</div>
-                    <div className="text-sm font-semibold text-blue-900 mt-1">
-                      {viewerPrimaryTechName ?? 'Not assigned'}
-                    </div>
+              <h3 className="font-semibold mb-3 text-slate-200">Technicians Attending</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-slate-800/40 border border-blue-500/30 rounded-lg p-3 shadow-sm">
+                  <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">First Technician</div>
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                    {viewerPrimaryTechName ?? 'Not assigned'}
                   </div>
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3">
-                    <div className="text-xs text-indigo-700 font-medium">Second Technician</div>
-                    <div className="text-sm font-semibold text-indigo-900 mt-1">
-                      {viewerSecondaryTechName ?? 'Not assigned'}
-                    </div>
+                </div>
+                <div className="bg-slate-800/40 border border-indigo-500/30 rounded-lg p-3 shadow-sm">
+                  <div className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">Second Technician</div>
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                    {viewerSecondaryTechName ?? 'Not assigned'}
                   </div>
                 </div>
               </div>
+            </div>
             </>
           )}
 
@@ -631,45 +696,83 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           {ticket.category === 'hardware' && (
             <>
               <Separator />
-              <div className="space-y-4">
+              <div className="space-y-5 
+                              p-4 rounded-2xl 
+                              border border-slate-700/70 
+                              bg-slate-900/80 backdrop-blur-md shadow-lg">
                 <div className="flex items-center gap-2">
-                  <Laptop className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-semibold text-emerald-900">Hardware Information</h3>
+                  <Laptop className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-semibold text-emerald-500">Hardware Information</h3>
                 </div>
+                <p className="text-rose-400 text-sm font-semibold italic">Screens are ordered left to right</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-emerald-700">Device Type</Label>
+                    <Label className="text-emerald-400 font-medium">Device Type</Label>
                     <Select value={hardwareComponent} onValueChange={setHardwareComponent} disabled={!canManageHardwareDetails}>
-                      <SelectTrigger className="bg-emerald-50 border-emerald-200">
+                      <SelectTrigger className="bg-slate-800/50 border-emerald-500/30 text-slate-200 focus:ring-emerald-500/40">
                         <SelectValue placeholder="Select component..." />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="teclado">Teclado ESENSES Básico USB</SelectItem>
-                        <SelectItem value="mouse">Mouse Álambrico HP Óptico negro 100</SelectItem>
-                        <SelectItem value="ethernet">Ethernet 3.0 LAN a USB</SelectItem>
-                        <SelectItem value="cable-vga">Cable Display Port a VGA 18</SelectItem>
-                        <SelectItem value="cable-vga-vga">Cable Display VGA a VGA 18</SelectItem>
-                        <SelectItem value="extension">Extensión de Cable eléctrico</SelectItem>
-                        <SelectItem value="cable-hdmi">Cable Display Port a HDMI 18</SelectItem>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[10020]">
+                        <SelectItem value="teclado" className="focus:bg-emerald-500/10 focus:text-emerald-400">Teclado ESENSES Basico USB</SelectItem>
+                        <SelectItem value="mouse" className="focus:bg-emerald-500/10 focus:text-emerald-400">Mouse Álambrico HP óptico negro 100</SelectItem>
+                        <SelectItem value="cable-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a VGA 1,8</SelectItem>
+                        <SelectItem value="cable-vga-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display VGA a VGA 1,8</SelectItem>
+                        <SelectItem value="extension" className="focus:bg-emerald-500/10 focus:text-emerald-400">Extension de Cable eléctrico</SelectItem>
+                        <SelectItem value="cable-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable HDMI a HDMI 1,8 Metros</SelectItem>
+                        <SelectItem value="cable-vga-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable VGA a HDMI 1,8 Metros</SelectItem>
+                        <SelectItem value="conversor-vga" className="focus:bg-emerald-500/10 focus:text-emerald-400">Conversores Displayport a VGA Hembra</SelectItem>
+                        <SelectItem value="cable-display-port-hdmi" className="focus:bg-emerald-500/10 focus:text-emerald-400">Cable Display Port a HDMI 1,8 Metros</SelectItem>
+                        <SelectItem value="ethernet" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet 3.0 LAN a USB</SelectItem>
+                        <SelectItem value="ethernet-usb-2" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet USB 2,0</SelectItem>
+                        <SelectItem value="ethernet-usb" className="focus:bg-emerald-500/10 focus:text-emerald-400">Ethernet USB</SelectItem>
                       </SelectContent>
-                    </Select>
+                   </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-teal-700">Asset Condition</Label>
+                    <Label className="text-teal-400 font-medium">Asset Condition</Label>
                     <Select value={assetStatus} onValueChange={setAssetStatus} disabled={!canManageHardwareDetails}>
-                      <SelectTrigger className="bg-teal-50 border-teal-200">
+                      <SelectTrigger className="bg-slate-800/50 border-teal-500/30 text-slate-200 focus:ring-teal-500/40">
                         <SelectValue placeholder="Current status..." />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="repair">Needs Repair</SelectItem>
-                        <SelectItem value="replace">Needs Replacement</SelectItem>
-                        <SelectItem value="tested">Operational</SelectItem>
-                        <SelectItem value="Missing">Missing</SelectItem>
-                        <SelectItem value="Damage">Damage</SelectItem>
-                        <SelectItem value="Return">Return</SelectItem>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[10020]">
+                          <SelectItem value="repair" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Repair</SelectItem>
+                          <SelectItem value="replace" className="focus:bg-teal-500/10 focus:text-teal-400">Needs Replacement</SelectItem>
+                          <SelectItem value="tested" className="focus:bg-teal-500/10 focus:text-teal-400">Operational</SelectItem>
+                          <SelectItem value="Missing" className="focus:bg-teal-500/10 focus:text-teal-400">Missing</SelectItem>
+                          <SelectItem value="Damage" className="focus:bg-teal-500/10 focus:text-teal-400">Damage</SelectItem>
+                          <SelectItem value="Return" className="focus:bg-teal-500/10 focus:text-teal-400">Return</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {(hardwareComponent === 'cable-vga' || 
+                    hardwareComponent === 'cable-vga-vga' || 
+                    hardwareComponent === 'cable-hdmi' ||
+                    hardwareComponent === 'cable-vga-hdmi' ||
+                    hardwareComponent === 'cable-display-port-hdmi' ||
+                    hardwareComponent === 'conversor-vga' ||
+                    hardwareComponent === 'pantalla-izquierda' ||
+                    hardwareComponent === 'pantalla-derecha' ||
+                    hardwareComponent?.includes('monitor')) && (
+                      
+                    <div className="space-y-2">
+                      <Label className="text-blue-400 font-medium">Monitor Affected</Label>
+                      <Select value={monitorLocation} onValueChange={setMonitorLocation} disabled={!canManageHardwareDetails}>
+                        <SelectTrigger className="bg-slate-800/50 border-blue-500/30 text-slate-200 focus:ring-blue-500/40">
+                          <SelectValue placeholder="Select monitor..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-900 border-slate-700 text-slate-200 z-[10020]">
+                          <SelectItem value="Left" className="focus:bg-blue-500/10 focus:text-blue-400">Left Monitor</SelectItem>
+                          <SelectItem value="Right" className="focus:bg-blue-500/10 focus:text-blue-400">Right Monitor</SelectItem>
+                          <SelectItem value="Both" className="focus:bg-blue-500/10 focus:text-blue-400">Both Monitors</SelectItem>
+                          <SelectItem value="N/A" className="focus:bg-blue-500/10 focus:text-blue-400">N/A (Single Monitor)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-slate-500">
+                        Optional: helps identify which monitor has the issue
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {canShowHardwareSaveButton && (
@@ -684,7 +787,6 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     </Button>
                   </div>
                 )}
-
                 {isSupremeAdmin && (
                   <div className="flex justify-end">
                     <Button
@@ -704,29 +806,34 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           {isAdmin && (
             <>
               <Separator />
-              <div className="space-y-4">
+              <div className="space-y-5 
+                              p-4 rounded-2xl 
+                              border border-slate-700/70 
+                              bg-slate-900/80 backdrop-blur-md shadow-lg">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Change Status</Label>
+                    <Label className='!text-white'>Change Status</Label>
                     <Select value={ticket.status} onValueChange={(value) => handleStatusChange(value as TicketStatus)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 focus:ring-blue-500/40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectItem value="pending" className="focus:bg-amber-500/10 focus:text-amber-400">Pending</SelectItem>
+                        <SelectItem value="in-progress" className="focus:bg-blue-500/10 focus:text-blue-400">In Progress</SelectItem>
+                        <SelectItem value="resolved" className="focus:bg-emerald-500/10 focus:text-emerald-400">Resolved</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Primary Technician</Label>
+                    <Label className='!text-white'>Primary Technician</Label>
                     <Select value={primaryTechId} onValueChange={setPrimaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign primary'} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— None —</SelectItem>
+                      <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)} className="focus:bg-blue-500/10 focus:text-blue-400">
                             {tech.full_name}
                           </SelectItem>
                         ))}
@@ -736,22 +843,30 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 </div>
                 <div className="grid grid-cols-[1fr_auto] items-end gap-4">
                   <div className="space-y-2">
-                    <Label>Secondary Technician</Label>
+                    <Label className='!text-white'>Secondary Technician</Label>
                     <Select value={secondaryTechId} onValueChange={setSecondaryTechId} disabled={loadingTechs}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-200 disabled:opacity-50">
                         <SelectValue placeholder={loadingTechs ? 'Loading...' : 'Assign secondary'} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— None —</SelectItem>
+                      <SelectContent className="z-[9999] bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectItem value="none" className="text-slate-500">— None —</SelectItem>
                         {technicians.map((tech) => (
-                          <SelectItem key={tech.id_user} value={String(tech.id_user)}>
+                          <SelectItem key={tech.id_user} value={String(tech.id_user)} className="focus:bg-blue-500/10 focus:text-blue-400">
                             {tech.full_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleSaveAssignments} disabled={savingTechs || loadingTechs}>
+                  <Button
+                   onClick={handleSaveAssignments}
+                  disabled={savingTechs || loadingTechs}
+                  className='h-11 px-4 rounded-xl
+                             bg-slate-800 border border-slate-700 
+                             text-slate-200
+                             hover:bg-slate-700 hover:text-white
+                             active:scale-[0.98]
+                             transition-all duration-200 shadow-sm'>
                     {savingTechs ? 'Saving…' : 'Save assignments'}
                   </Button>
                 </div>
@@ -764,14 +879,16 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
           {/* Comments Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="w-5 h-5 text-gray-600" />
-              <h3 className="font-semibold">Comments</h3>
+              <MessageSquare className="w-5 h-5 text-emerald-400" />
+              <h3 className="font-semibold text-slate-100">Comments</h3>
             </div>
-            <div className="flex border-b mb-4">
+            <div className="flex border-b border-slate-700 mb-4">
               <button
                 onClick={() => setActiveTab('comments')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'comments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
+                  activeTab === 'comments' 
+                  ? 'border-blue-500 text-blue-600' 
+                  : 'border-transparent text-slate-400 hover:text-blue-500'
                 }`}
               >
                 Public <span className="ml-1.5 bg-gray-100 px-1.5 py-0.5 rounded-full">{publicComments.length}</span>
@@ -780,7 +897,9 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                 <button
                   onClick={() => setActiveTab('internal')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'internal' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500'
+                    activeTab === 'internal' 
+                    ? 'border-amber-500 text-amber-600' 
+                    : 'border-transparent text-slate-400 hover:text-amber-500'
                   }`}
                 >
                   Internal Notes <span className="ml-1.5 bg-amber-100 px-1.5 py-0.5 rounded-full">{internalComments.length}</span>
@@ -789,30 +908,74 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
             </div>
 
             <div className="space-y-4 mb-4">
-              {loadingComments ? (
-                <p className="text-gray-500 text-center py-4">Loading comments…</p>
-              ) : tabComments.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No comments yet</p>
-              ) : (
-                tabComments.map((c) => (
-                  <div key={c.id} className={`p-4 rounded-lg ${c.isInternal ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{c.userName}</span>
-                        {c.isInternal && <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Internal note</Badge>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{formatBogotaDateTime(c.createdAt)}</span>
-                        <button onClick={() => handleReply(c)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500">
-                          <Reply className="w-3.5 h-3.5" /> Reply
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-gray-700 text-sm">{c.content}</p>
-                  </div>
-                ))
-              )}
-            </div>
+
+  {/* LOADING */}
+  {loadingComments ? (
+    <p className="text-slate-400 text-center py-4">
+      Loading comments…
+    </p>
+
+  ) : tabComments.length === 0 ? (
+
+    <p className="text-slate-500 text-center py-4">
+      No comments yet
+    </p>
+
+  ) : (
+
+    tabComments.map((c) => (
+      <div
+        key={c.id}
+        className={`p-4 rounded-xl border transition-all duration-300
+          ${
+            c.isInternal
+              ? 'bg-amber-900/20 border-amber-700/40'
+              : 'bg-slate-800/40 border-slate-700/60'
+          }
+          hover:border-slate-500 hover:shadow-md`}
+      >
+
+        {/* HEADER */}
+        <div className="flex items-start justify-between mb-2">
+
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-emerald-500">
+              {c.userName}
+            </span>
+
+            {c.isInternal && (
+              <Badge
+                variant="outline"
+                className="text-xs border-amber-500/60 text-amber-300 bg-amber-900/30"
+              >
+                Internal note
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">
+              {formatBogotaDateTime(c.createdAt)}
+            </span>
+
+            <button
+              onClick={() => handleReply(c)}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-400"
+            >
+              <Reply className="w-3.5 h-3.5" />
+              Reply
+            </button>
+          </div>
+        </div>
+
+        {/* CONTENT */}
+        <p className="text-slate-300 text-sm leading-relaxed">
+          {c.content}
+        </p>
+      </div>
+    ))
+  )}
+</div>
 
             <div className="space-y-3 border-t pt-4">
               {replyingTo && (
@@ -828,13 +991,15 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                   </button>
                 </div>
               )}
-              <Label>Add {isAdmin && isInternalNote ? 'Internal Note' : 'Comment'}</Label>
+              <Label  className="!text-white">
+                Add {isAdmin && isInternalNote ? 'Internal Note' : 'Comment'}</Label>
               <Textarea
                 ref={textareaRef}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Write your comment..."
                 rows={3}
+                className="!bg-slate-900 !text-slate-100 !border-slate-700 placeholder:!text-white focus:!border-teal-500 focus:!ring-teal-500/20"
               />
               <div className="flex items-center justify-between">
                 {isAdmin ? (
@@ -843,7 +1008,11 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
                     <span>Internal note</span>
                   </label>
                 ) : <span />}
-                <Button onClick={handleAddComment} disabled={!comment.trim() || submittingComment}>
+                <Button 
+                onClick={handleAddComment} 
+                disabled={!comment.trim() || submittingComment}
+                className='h-11 px-4 rounded-xl
+                           bg-slate-800 border border-slate-700'>
                   {submittingComment ? 'Saving…' : 'Add Comment'}
                 </Button>
               </div>
@@ -854,79 +1023,132 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
 
           {/* History Panel */}
           {isAdmin && showHistory && (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b">
-                <div className="flex items-center gap-2 font-semibold text-sm">
-                  <History className="w-4 h-4 text-gray-600" />
-                  History - Desk {ticket.location || 'N/A'}
-                </div>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="text-gray-400"
-                  aria-label="Close history"
-                  title="Close history"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="divide-y max-h-80 overflow-y-auto">
-                {loadingHistory ? <p className="text-center py-6 text-sm">Loading...</p> : 
-                  changeHistory.map((h) => (
-                    <div key={h.id_change} className="px-4 py-4 space-y-2">
-                      <div className="flex justify-between items-start">
-                        <span className="font-semibold text-sm">{h.ticket_title}</span>
-                        <Badge variant="outline">{h.ticket_status}</Badge>
-                      </div>
-                      <p className="text-xs text-gray-600">{h.change_description}</p>
-                      <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                        <span className="flex items-center gap-1"><User className="w-3 h-3"/> {usersById.get(h.action_user)}</span>
-                        <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3"/> {formatBogotaDateTime(h.created_at)}</span>
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
+           <div className="border border-slate-700/60 rounded-xl overflow-hidden bg-slate-900/60 backdrop-blur-md shadow-lg">
+
+  {/* HEADER */}
+  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60 bg-slate-800/60">
+    
+    <div className="flex items-center gap-2 font-semibold text-sm text-slate-100">
+      <History className="w-4 h-4 text-cyan-400" />
+      History - Desk {ticket.location || 'N/A'}
+    </div>
+
+    <button
+      onClick={() => setShowHistory(false)}
+      className="text-slate-400 hover:text-white transition-colors"
+      aria-label="Close history"
+      title="Close history"
+    >
+      <X className="w-4 h-4" />
+    </button>
+
+  </div>
+
+  {/* CONTENT */}
+  <div className="divide-y divide-slate-700/60 max-h-80 overflow-y-auto">
+
+    {loadingHistory ? (
+      <p className="text-center py-6 text-sm text-slate-400">
+        Loading...
+      </p>
+    ) : (
+
+      changeHistory.map((h) => (
+        <div
+          key={h.id_change}
+          className="px-4 py-4 space-y-2 transition-all duration-300 hover:bg-slate-800/40"
+        >
+
+          {/* TITLE + STATUS */}
+          <div className="flex justify-between items-start">
+
+            <span className="font-semibold text-sm text-slate-100">
+              {h.ticket_title}
+            </span>
+
+            <Badge
+              variant="outline"
+             className={priorityColors[ticket.priority]}>
+              {h.ticket_status}
+            </Badge>
+
+          </div>
+
+          {/* DESCRIPTION */}
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {h.change_description}
+          </p>
+
+          {/* META */}
+          <div className="flex items-center gap-3 text-[10px] text-slate-500">
+
+            <span className="flex items-center gap-1">
+              <User className="w-3 h-3 text-slate-400" />
+              {usersById.get(h.action_user)}
+            </span>
+
+            <span className="flex items-center gap-1">
+              <CalendarClock className="w-3 h-3 text-slate-400" />
+              {formatBogotaDateTime(h.created_at)}
+            </span>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</div>
           )}
 
           <div className="flex justify-between items-center">
             {isAdmin ? (
-              <Button variant="outline" onClick={handleOpenHistory} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={handleOpenHistory}
+                className="bg-teal-600 hover:bg-teal-700
+                           text-white font-medium disabled:opacity-50
+                           disabled:cursor-not-allowed shadow-lg shadow-teal-500/20">
                 <History className="w-4 h-4" /> Change History
               </Button>
             ) : <span />}
-            <Button variant="outline" onClick={onClose}>Close</Button>
+              <Button 
+                variant="outline" 
+                onClick={onClose}
+                className='bg-slate-900/50 border-slate-700
+                          text-slate-300 hover:bg-slate-800
+                          hover:text-slate-100 hover:border-slate-600'
+            >Close
+              </Button>
           </div>
         </div>
       </DialogContent>
 
       {isSupremeAdmin && (
         <Dialog open={showAuthorizationModal} onOpenChange={setShowAuthorizationModal}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700/50 text-slate-100 shadow-2xl z-[9999]">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                Authorize change
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                Authorize Change
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-slate-400">
                 Review internal notes and choose the authorization result for this ticket.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-5 px-1">
               <div>
-                <Label className="text-sm text-gray-700">Internal notes (general view)</Label>
-                <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+                <Label className="!text-slate-300 font-medium">Internal notes (general view)</Label>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-3 custom-scrollbar">
                   {internalComments.length === 0 ? (
-                    <p className="text-sm text-gray-500">No internal notes yet.</p>
+                    <p className="text-sm text-slate-500 italic">No internal notes yet.</p>
                   ) : (
                     internalComments.map((note) => (
-                      <div key={note.id} className="rounded-md border border-amber-100 bg-white p-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-amber-700">{note.userName}</span>
-                          <span className="text-[11px] text-gray-500">{formatBogotaDateTime(note.createdAt)}</span>
+                      <div key={note.id} className="rounded-lg border border-amber-500/20 bg-slate-800/80 p-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2 border-b border-amber-500/10 pb-2 mb-2">
+                          <span className="text-xs font-semibold text-amber-400 flex items-center gap-1.5"><User className="w-3.5 h-3.5"/> {note.userName}</span>
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3"/> {formatBogotaDateTime(note.createdAt)}</span>
                         </div>
-                        <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                        <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{note.content}</p>
                       </div>
                     ))
                   )}
@@ -934,36 +1156,37 @@ export default function TicketDetailsModal({ ticket, onClose, isAdmin }: TicketD
               </div>
 
               <div className="space-y-2">
-                <Label>Internal comment for decision</Label>
+                <Label className="!text-slate-300 font-medium">Internal comment for decision</Label>
                 <Textarea
                   value={authorizationInternalComment}
                   onChange={(event) => setAuthorizationInternalComment(event.target.value)}
                   placeholder="Add internal context for this authorization..."
                   rows={3}
+                  className="bg-slate-800/50 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 shadow-inner rounded-xl"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
                 <Button
                   onClick={() => handleAuthorizationDecision('approved')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 shadow-md transition-all duration-300 rounded-xl font-medium"
                 >
                   Accept change
                 </Button>
                 <Button
                   onClick={() => handleAuthorizationDecision('rejected')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-rose-600 hover:bg-rose-700"
+                  className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 shadow-md transition-all duration-300 rounded-xl font-medium"
                 >
                   Do not accept
                 </Button>
                 <Button
                   onClick={() => handleAuthorizationDecision('preapproved_more_specs')}
                   disabled={submittingAuthorizationDecision}
-                  className="bg-amber-500 hover:bg-amber-600 text-black"
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 shadow-md transition-all duration-300 rounded-xl font-medium"
                 >
-                  Pre-approved + specs
+                 In Process
                 </Button>
               </div>
             </div>

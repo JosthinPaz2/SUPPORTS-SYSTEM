@@ -33,9 +33,27 @@ function DropZone({ status, tickets, totalCount, onDrop, onTicketClick, allowDro
   }), [allowDrop, status, onDrop]);
 
   const statusConfig = {
-pending: { title: 'Pending', color: 'bg-amber-500/10 border-amber-500/30', badge: 'bg-amber-500' },
-'in-progress': { title: 'In Progress', color: 'bg-blue-500/10 border-blue-500/30', badge: 'bg-blue-500' },
-resolved: { title: 'Resolved', color: 'bg-emerald-500/10 border-emerald-500/30', badge: 'bg-emerald-500' },
+    pending: { 
+      title: 'Pending', 
+      color: 'border-t-amber-500 bg-amber-900/30 border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.1)]', 
+      headerColor: 'bg-amber-500/20 border-b-amber-500/30',
+      titleColor: 'text-amber-400', 
+      badge: 'bg-amber-500 text-amber-950' 
+    },
+    'in-progress': { 
+      title: 'In Progress', 
+      color: 'border-t-blue-500 bg-blue-900/30 border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]', 
+      headerColor: 'bg-blue-500/20 border-b-blue-500/30',
+      titleColor: 'text-blue-400', 
+      badge: 'bg-blue-500 text-blue-950' 
+    },
+    resolved: { 
+      title: 'Resolved', 
+      color: 'border-t-emerald-500 bg-emerald-900/30 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]', 
+      headerColor: 'bg-emerald-500/20 border-b-emerald-500/30',
+      titleColor: 'text-emerald-400', 
+      badge: 'bg-emerald-500 text-emerald-950' 
+    },
   };
 
   const config = statusConfig[status];
@@ -43,23 +61,23 @@ resolved: { title: 'Resolved', color: 'bg-emerald-500/10 border-emerald-500/30',
   return (
     <div
       ref={(node) => { drop(node); }}
-      className={`flex-1 min-h-[500px] transition-all duration-200 rounded-lg ${isOver ? 'bg-slate-200/50 scale-[1.01]' : ''}`}
+      className={`flex-1 min-h-[500px] transition-all duration-300 rounded-xl ${isOver ? 'scale-[1.02] ring-2 ring-white/20' : ''}`}
     >
-      <Card className={`h-full border-t-4 ${config.color} shadow-sm`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between text-lg">
+      <Card className={`h-full border border-t-4 shadow-xl backdrop-blur-md ${config.color}`}>
+        <CardHeader className={`pb-3 border-b rounded-t-sm ${config.headerColor}`}>
+          <CardTitle className={`flex items-center justify-between text-lg font-bold ${config.titleColor}`}>
             <span>{config.title}</span>
-            <Badge className={`${config.badge} text-white font-bold`}>
+            <Badge className={`${config.badge} px-2.5 py-0.5 rounded-md`}>
               {totalCount ?? tickets.length}
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 pt-4 px-3">
           {tickets.map((ticket) => (
             <TicketCard key={ticket.id} ticket={ticket} onClick={() => onTicketClick(ticket)} />
           ))}
           {tickets.length === 0 && (
-            <div className="text-center py-10 text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-lg">
+            <div className="text-center py-12 text-gray-500 text-sm italic border-2 border-dashed border-gray-700/50 rounded-xl bg-gray-800/20">
               No tickets found
             </div>
           )}
@@ -202,15 +220,15 @@ useEffect(() => {
         {/* Panel de Filtros Desplegable*/}
         {isIT && (
         <Card 
-          className="border-none shadow-md bg-card overflow-hidden transition-all duration-300 ease-in-out"
+          className="border border-gray-700/80 shadow-2xl bg-gray-900/95 backdrop-blur-md overflow-hidden transition-all duration-300 ease-in-out"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}>
 
   {/* HEADER CLICKABLE */}
   <div 
-    className="bg-muted p-2 text-foreground text-[11px] uppercase tracking-widest text-center font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors hover:bg-gray-700"
+    className="bg-gray-800 p-2 text-gray-300 text-[11px] uppercase tracking-widest text-center font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors hover:bg-gray-700 hover:text-white"
   >
-    <ShieldCheck className="w-4 h-4 text-blue-500" />
+    <ShieldCheck className="w-4 h-4 text-teal-400" />
     Admin Control Panel
     <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
   </div>
@@ -228,14 +246,14 @@ useEffect(() => {
 
         {/* SEARCH */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-            <User className="w-3 h-3 text-blue-500" /> Search
+          <label className="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+            <User className="w-3 h-3 text-teal-400" /> Search
           </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
             <Input 
               placeholder="Tech or title..."
-              className="pl-9 bg-background border-border text-sm"
+              className="pl-9 !bg-slate-800 !border-slate-600 !text-slate-100 placeholder:!text-slate-400 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -244,12 +262,13 @@ useEffect(() => {
 
         {/* DATE */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-blue-500" /> Date
+          <label className="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-teal-400" /> Date
           </label>
           <Input 
             type="date"
-            className="bg-background border-border text-sm"
+            className="!bg-slate-800 !border-slate-600 !text-slate-100 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 min-h-[36px]"
+            style={{ colorScheme: 'dark' }}
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           />
@@ -257,14 +276,14 @@ useEffect(() => {
 
         {/* CATEGORY */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase">
+          <label className="text-[11px] font-semibold text-gray-400 uppercase">
             Category
           </label>
           <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-            <SelectTrigger className="bg-background border-border text-sm">
+            <SelectTrigger className="bg-gray-800/80 border-gray-700 text-white text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
               <SelectValue placeholder="All" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-800 border-gray-700 text-white">
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="hardware">Hardware</SelectItem>
               <SelectItem value="software">Software</SelectItem>
@@ -275,14 +294,14 @@ useEffect(() => {
 
         {/* PRIORITY */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-            <BarChart3 className="w-3 h-3 text-blue-500" /> Priority
+          <label className="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+            <BarChart3 className="w-3 h-3 text-teal-400" /> Priority
           </label>
           <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as any)}>
-            <SelectTrigger className="bg-background border-border text-sm">
+            <SelectTrigger className="bg-gray-800/80 border-gray-700 text-white text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
               <SelectValue placeholder="All" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-800 border-gray-700 text-white">
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
@@ -294,14 +313,14 @@ useEffect(() => {
 
         {/* LOCATION */}
         <div className="space-y-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-blue-500" /> Location
+          <label className="text-[11px] font-semibold text-gray-400 uppercase flex items-center gap-1">
+            <MapPin className="w-3 h-3 text-teal-400" /> Location
           </label>
           <Select value={locationFilter} onValueChange={setLocationFilter}>
-            <SelectTrigger className="bg-background border-border text-sm">
+            <SelectTrigger className="bg-gray-800/80 border-gray-700 text-white text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
               <SelectValue placeholder="All" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-[300px]">
               <SelectItem value="all">All</SelectItem>
               {locationOptions.map((location) => (
                 <SelectItem key={location} value={location}>
@@ -319,7 +338,7 @@ useEffect(() => {
         <div className="mt-4 flex justify-end">
           <button 
             onClick={resetFilters}
-            className="text-xs flex items-center gap-2 text-blue-500 hover:text-red-500 transition-all font-semibold"
+            className="text-xs flex items-center gap-2 text-red-500 hover:text-red-400 transition-all font-semibold"
           >
             <XCircle className="w-4 h-4" /> Reset Filters
           </button>
