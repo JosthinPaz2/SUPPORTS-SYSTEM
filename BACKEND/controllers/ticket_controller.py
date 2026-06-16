@@ -256,7 +256,7 @@ def _build_hardware_description(base_description: Optional[str], component_key: 
     else:
         return final_damage_block
 def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override: Optional[str] = None, asset_condition_override: Optional[str] = None) -> dict:
-    logger.info(f"🚀 _notify_inventory_approved LLAMADO")
+    logger.info(f"   _notify_inventory_approved LLAMADO")
     logger.info(f"   ticket_id: {ticket.id_ticket}")
     logger.info(f"   id_station: {ticket.id_station}")
     logger.info(f"   category_detail: {ticket.category_detail}")
@@ -264,18 +264,15 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
     try:
         desk_location = ticket.id_station
         description = ticket.description or ""
-        title = ticket.title or ""  # ← EXTRAER TÍTULO
+        title = ticket.title or "" 
         asset_item = asset_item_override or _get_asset_item_from_ticket(ticket)
         asset_condition = asset_condition_override or _parse_category_detail(ticket.category_detail).get('asset_status')
         
-        # 🔹 EXTRAER monitor_location desde category_detail PRIMERO
         parsed_detail = _parse_category_detail(ticket.category_detail)
         component_key = parsed_detail.get('hardware_component')
         
-        # Intentar extraer de category_detail
         monitor_location = parsed_detail.get('monitor_location')
         
-        # 🔹 FALLBACK 1: Buscar en TÍTULO y descripción combinados
         if not monitor_location:
             combined_text = f"{title} {description}".lower()
             if any(word in combined_text for word in ['left', 'izquierda', 'izquierdo', 'left screen', 'screen left', 'pantalla izquierda', 'monitor izquierdo']):
@@ -285,7 +282,6 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
                 monitor_location = 'Right'
                 logger.info(f"   🔍 monitor_location inferido de título/descripción: 'Right'")
         
-     
         if not monitor_location:
             if component_key == 'pantalla-izquierda':
                 monitor_location = 'Left'
@@ -295,7 +291,7 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
         logger.info(f"   asset_item calculado: '{asset_item}'")
         logger.info(f"   asset_condition: '{asset_condition}'")
         logger.info(f"   desk_location: '{desk_location}'")
-        logger.info(f"   title: '{title}'")  # ← LOG DEL TÍTULO
+        logger.info(f"   title: '{title}'") 
         logger.info(f"   monitor_location final: '{monitor_location}'")
         
         if not desk_location:
@@ -308,14 +304,60 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
             logger.error(f"assetCondition inválido: {asset_condition}")
             return {"success": False, "error": f"assetCondition debe ser Return/Damage/Missing, recibido: {asset_condition}"}
         
+        # 🔹 OBTENER NOMBRES COMPLETOS DE USUARIOS
+        reviewed_by_name = None  # Analista que ESCALÓ
+        approved_by_name = None   # Admin que APROBÓ
+        
+        # 1. Admin que APROBÓ (de authorization_by en category_detail)
+        authorization_by_id = parsed_detail.get('authorization_by')
+        if authorization_by_id:
+            approver = db.query(User).filter(User.id_user == int(authorization_by_id)).first()
+            approved_by_name = approver.full_name if approver else f"User #{authorization_by_id}"
+            logger.info(f"   ✅ Admin que aprobó: {approved_by_name} (ID: {authorization_by_id})")
+        
+        # 2. Analista que ESCALÓ (buscar en ChangeHistory cambios ANTERIORES a la autorización)
+        # Buscar cambios que NO sean de autorización ni de inventory sync
+        escalator_changes = db.query(ChangeHistory).filter(
+            ChangeHistory.id_ticket == ticket.id_ticket,
+            ChangeHistory.action_user.isnot(None),
+            ~ChangeHistory.change_description.like('%authorization%'),
+            ~ChangeHistory.change_description.like('%Inventory sync%')
+        ).order_by(ChangeHistory.changed_at.desc()).all()
+        
+        # Buscar el primer cambio que no sea del mismo admin que aprobó
+        for change in escalator_changes:
+            if authorization_by_id and change.action_user == int(authorization_by_id):
+                continue  # Saltar si es el mismo admin
+            escalator = db.query(User).filter(User.id_user == change.action_user).first()
+            if escalator:
+                reviewed_by_name = escalator.full_name
+                logger.info(f"   ✅ Analista que escaló: {reviewed_by_name} (ID: {change.action_user})")
+                logger.info(f"      Cambio: {change.change_description}")
+                break
+        
+        # Fallback: si no se encontró, usar el creador del ticket
+        if not reviewed_by_name and ticket.created_by:
+            creator = db.query(User).filter(User.id_user == ticket.created_by).first()
+            reviewed_by_name = creator.full_name if creator else f"User #{ticket.created_by}"
+            logger.info(f"   ⚠️ Fallback: usando creador del ticket: {reviewed_by_name}")
+        
+        # Si approved_by está vacío, usar reviewed_by
+        if not approved_by_name:
+            approved_by_name = reviewed_by_name
+        
         payload = {
             "ticketId": str(ticket.id_ticket),
             "deskLocation": desk_location,
             "assetItem": asset_item,
             "assetCondition": asset_condition,
             "description": description,
-            "monitorLocation": monitor_location
+            "monitorLocation": monitor_location,
+            "reviewedBy": reviewed_by_name,   # Analista que ESCALÓ
+            "approvedBy": approved_by_name     # Admin que APROBÓ
         }
+        
+        logger.info(f"   📤 reviewed_by: {reviewed_by_name}")
+        logger.info(f"   📤 approved_by: {approved_by_name}")
         
         # Remover valores None correctamente
         payload = {k: v for k, v in payload.items() if v is not None and v != 'None'}
@@ -354,7 +396,6 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}", exc_info=True)
         return {"success": False, "error": f"Error inesperado: {str(e)}"}
-
 
 @router.post("/", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
 def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):

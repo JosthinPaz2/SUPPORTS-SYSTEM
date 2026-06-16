@@ -5,10 +5,7 @@ import os
 from typing import Optional, Dict, Any
 
 class InventorySyncService:
-    """
-    Servicio para sincronizar con el sistema de inventario
-    """
-    
+
     def __init__(self):
         self.inventory_api_url = os.getenv('INVENTORY_API_URL', 'http://localhost:8000')
         self.inventory_api_key = os.getenv('INVENTORY_API_KEY', '')
@@ -20,23 +17,23 @@ class InventorySyncService:
         Args:
             ticket_data: Diccionario con los datos del ticket
                 Requerido: id, desk_location, asset_item, asset_condition
-                Opcional: description, monitor_location
+                Opcional: description, monitor_location, reviewed_by, approved_by
             
         Returns:
             Respuesta del sistema de inventario
         """
         try:
-            # 🔹 Construir payload con TODOS los campos requeridos
             payload = {
                 "ticketId": str(ticket_data.get('id')),
                 "deskLocation": ticket_data.get('desk_location'),
                 "assetItem": ticket_data.get('asset_item'),
                 "assetCondition": ticket_data.get('asset_condition'),
                 "description": ticket_data.get('description', ''),
-                "monitorLocation": ticket_data.get('monitor_location')
+                "monitorLocation": ticket_data.get('monitor_location'),
+                "reviewedBy": ticket_data.get('reviewed_by'),
+                "approvedBy": ticket_data.get('approved_by')
             }
             
-            # 🔹 Filtrar valores None Y el string 'None' (para consistencia)
             payload = {k: v for k, v in payload.items() if v is not None and v != 'None'}
             
             if not payload.get('assetItem') or not payload.get('assetCondition'):
