@@ -305,18 +305,15 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
             return {"success": False, "error": f"assetCondition debe ser Return/Damage/Missing, recibido: {asset_condition}"}
         
         # 🔹 OBTENER NOMBRES COMPLETOS DE USUARIOS
-        reviewed_by_name = None  # Analista que ESCALÓ
-        approved_by_name = None   # Admin que APROBÓ
+        reviewed_by_name = None 
+        approved_by_name = None  
         
-        # 1. Admin que APROBÓ (de authorization_by en category_detail)
         authorization_by_id = parsed_detail.get('authorization_by')
         if authorization_by_id:
             approver = db.query(User).filter(User.id_user == int(authorization_by_id)).first()
             approved_by_name = approver.full_name if approver else f"User #{authorization_by_id}"
-            logger.info(f"   ✅ Admin que aprobó: {approved_by_name} (ID: {authorization_by_id})")
-        
-        # 2. Analista que ESCALÓ (buscar en ChangeHistory cambios ANTERIORES a la autorización)
-        # Buscar cambios que NO sean de autorización ni de inventory sync
+            logger.info(f"   Admin que aprobó: {approved_by_name} (ID: {authorization_by_id})")
+
         escalator_changes = db.query(ChangeHistory).filter(
             ChangeHistory.id_ticket == ticket.id_ticket,
             ChangeHistory.action_user.isnot(None),
@@ -324,24 +321,21 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
             ~ChangeHistory.change_description.like('%Inventory sync%')
         ).order_by(ChangeHistory.changed_at.desc()).all()
         
-        # Buscar el primer cambio que no sea del mismo admin que aprobó
         for change in escalator_changes:
             if authorization_by_id and change.action_user == int(authorization_by_id):
-                continue  # Saltar si es el mismo admin
+                continue 
             escalator = db.query(User).filter(User.id_user == change.action_user).first()
             if escalator:
                 reviewed_by_name = escalator.full_name
-                logger.info(f"   ✅ Analista que escaló: {reviewed_by_name} (ID: {change.action_user})")
+                logger.info(f"   Analista que escaló: {reviewed_by_name} (ID: {change.action_user})")
                 logger.info(f"      Cambio: {change.change_description}")
                 break
         
-        # Fallback: si no se encontró, usar el creador del ticket
         if not reviewed_by_name and ticket.created_by:
             creator = db.query(User).filter(User.id_user == ticket.created_by).first()
             reviewed_by_name = creator.full_name if creator else f"User #{ticket.created_by}"
-            logger.info(f"   ⚠️ Fallback: usando creador del ticket: {reviewed_by_name}")
+            logger.info(f"   Fallback: usando creador del ticket: {reviewed_by_name}")
         
-        # Si approved_by está vacío, usar reviewed_by
         if not approved_by_name:
             approved_by_name = reviewed_by_name
         
@@ -352,14 +346,13 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
             "assetCondition": asset_condition,
             "description": description,
             "monitorLocation": monitor_location,
-            "reviewedBy": reviewed_by_name,   # Analista que ESCALÓ
-            "approvedBy": approved_by_name     # Admin que APROBÓ
+            "reviewedBy": reviewed_by_name, 
+            "approvedBy": approved_by_name    
         }
         
-        logger.info(f"   📤 reviewed_by: {reviewed_by_name}")
-        logger.info(f"   📤 approved_by: {approved_by_name}")
+        logger.info(f"   reviewed_by: {reviewed_by_name}")
+        logger.info(f"   approved_by: {approved_by_name}")
         
-        # Remover valores None correctamente
         payload = {k: v for k, v in payload.items() if v is not None and v != 'None'}
         
         logger.info(f"Enviando POST a: {INVENTORY_API_URL}/api/ticket-approved")
