@@ -319,7 +319,7 @@ def _notify_inventory_approved(ticket: Ticket, db: Session, asset_item_override:
             ChangeHistory.action_user.isnot(None),
             ~ChangeHistory.change_description.like('%authorization%'),
             ~ChangeHistory.change_description.like('%Inventory sync%')
-        ).order_by(ChangeHistory.changed_at.desc()).all()
+        ).order_by(ChangeHistory.created_at.desc()).all()
         
         for change in escalator_changes:
             if authorization_by_id and change.action_user == int(authorization_by_id):
